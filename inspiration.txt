@@ -1,0 +1,64 @@
+# CYBER9 — INSTALLATION COMPLETE [RouterOS v7]
+# Collez TOUT dans le Terminal MikroTik (Winbox ou SSH)
+# Genere: 02/03/2026 04:32:11
+
+# --- Nettoyage Scripts & Schedulers ---
+/system scheduler remove [find where name~"cyber9"]
+:delay 1s
+/system script remove [find where name~"cyber9"]
+:delay 1s
+
+# --- Walled Garden: Nettoyage complet ---
+/ip hotspot walled-garden remove [find]
+:delay 1s
+:put "=== Walled Garden vide ==="
+
+
+# --- Walled Garden: FedaPay ---
+/ip hotspot walled-garden add dst-host="*.fedapay.com" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="cdn.fedapay.com" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="api.fedapay.com" dst-port=80,443 action=allow
+
+# --- Walled Garden: CinetPay ---
+/ip hotspot walled-garden add dst-host="*.cinetpay.com" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="cdn.cinetpay.com" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="api-checkout.cinetpay.com" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="aws-mm-webpayment.bizao.com*" dst-port=80,443 action=allow
+
+# --- Walled Garden: FeexPay ---
+/ip hotspot walled-garden add dst-host="*.feexpay.me" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="api.feexpay.me" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="feexpay.me" dst-port=80,443 action=allow
+
+# --- Walled Garden: FlexPay (RDC) ---
+/ip hotspot walled-garden add dst-host="*.flexpay.cd" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="backend.flexpay.cd" dst-port=80,443 action=allow
+
+
+# --- Walled Garden: Money Fusion ---
+/ip hotspot walled-garden add dst-host="*.moneyfusion.net" dst-port=80,443 action=allow
+/ip hotspot walled-garden add dst-host="pay.moneyfusion.net" dst-port=80,443 action=allow
+:delay 1sx
+
+
+
+
+# --- Creation Script Principal ---
+/system script add name="cyber9-tickets" policy=read,write,test,ftp source="{\n    :local adminId \"hatake\";\n    :local backendUrl \"https://wifizone.netlify.app/.netlify/functions/mikrotik\";\n    :local certCheck \"no\";\n    \n    :do {\n        :local fullUrl (\"\$backendUrl?adminId=\$adminId&certCheck=\$certCheck\");\n        :local result [/tool fetch url=\$fullUrl mode=https as-value output=user check-certificate=\$certCheck];\n        :if ([:len (\$result->\"data\")] > 20) do={\n            :local runCmd [:parse (\$result->\"data\")];\n            \$runCmd;\n        }\n    } on-error={\n        :log error \"CYBER9: Backend Netlify inaccessible.\";\n    }\n}"
+
+# --- Creation Script Sync ---
+/system script add name="cyber9-sync" policy=read,write,test,ftp source="{\n    :local adminId \"hatake\";\n    :local backendUrl \"https://wifizone.netlify.app/.netlify/functions/sync\";\n    :local certCheck \"no\";\n    :local currentVer \"0\";\n    \n    :do {\n        :local fullUrl (\"\$backendUrl?adminId=\$adminId&certCheck=\$certCheck&currentVer=\$currentVer\");\n        :local result [/tool fetch url=\$fullUrl mode=https as-value output=user check-certificate=\$certCheck];\n        :if ([:len (\$result->\"data\")] > 20) do={\n            :local runCmd [:parse (\$result->\"data\")];\n            \$runCmd;\n        }\n    } on-error={\n        :log error \"CYBER9-SYNC: Backend Netlify inaccessible.\";\n    }\n}"
+
+# --- Creation Schedulers (IMPORTANT pour l'execution automatique) ---
+/system scheduler add name="cyber9-tickets" interval=1m on-event="/system script run cyber9-tickets" start-time=startup policy=read,write,test,ftp
+/system scheduler add name="cyber9-sync" interval=5m on-event="/system script run cyber9-sync" start-time=startup policy=read,write,test,ftp
+
+# --- Verification ---
+:log info "CYBER9: Installation terminee!"
+:put "=== CYBER9 INSTALLE ==="
+/system script print where name~"cyber9"
+/system scheduler print where name~"cyber9"
+:put "=== WALLED GARDEN ==="
+/ip hotspot walled-garden print count-only
+:put "=== PORTAIL CAPTIF ==="
+/ip hotspot profile print where html-directory="flash/hotspot"

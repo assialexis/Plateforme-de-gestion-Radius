@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotspot WiFi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username" />
+        <input type="hidden" name="password" />
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+    </form>
+
+    <script src="./md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+    </script>
+    $(endif)
+
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap animated fadeIn">
+                <!-- Logo WiFi + Hotspot WiFi - Connexion -->
+                <div class="brand-logo">
+                    <div class="wifi-logo">
+                        <svg viewBox="0 0 24 24" class="wifi-icon"><path d="M12,3L2,12H5V20H11V14H13V20H19V12H22L12,3M12,7.7C14.1,7.7 15.8,9.4 15.8,11.5C15.8,13.6 14.1,15.3 12,15.3C9.9,15.3 8.2,13.6 8.2,11.5C8.2,9.4 9.9,7.7 12,7.7Z" fill="#fff"/></svg>
+                    </div>
+                    <h1 class="brand-name">Hotspot WiFi</h1>
+                </div>
+
+                <!-- Slider d'images -->
+                <div class="slider-container">
+                    <div class="slider" id="slider">
+                        <div class="slide slide-1" style="background-image: url('./img/1.jpg');">WiFi Rapide & Sécurisé
+                        </div>
+                        <div class="slide slide-2" style="background-image: url('./img/2.jpg');">Connexion Haute Vitesse
+                        </div>
+                        <div class="slide slide-3" style="background-image: url('./img/3.jpg');">Support Technique 24/7
+                        </div>
+                    </div>
+                    <div class="slider-dots" id="sliderDots">
+                        <div class="dot active" onclick="goToSlide(0)"></div>
+                        <div class="dot" onclick="goToSlide(1)"></div>
+                        <div class="dot" onclick="goToSlide(2)"></div>
+                    </div>
+                </div>
+
+                <!-- Mode de connexion -->
+                <div class="mode">
+                    <button id="voucher" class="mode-btn mode-btn-active"
+                        onclick="switchMode('voucher')">Voucher</button>
+                    <button id="member" class="mode-btn" onclick="switchMode('member')">Membre</button>
+                </div>
+
+                <!-- Formulaire de connexion -->
+                <form autocomplete="off" name="login" action="$(link-login-only)" method="post" $(if chap-id)
+                    onSubmit="return doLogin()" $(endif)>
+                    <input type="hidden" name="dst" value="$(link-orig)" />
+                    <input type="hidden" name="popup" value="true" />
+
+                    <div class="info" id="infologin">Entrez votre code voucher pour vous connecter</div>
+
+                    $(if error)
+                    <div class="notice" id="err">$(error)</div>
+                    $(endif)
+
+                    <div class="info">
+                        $(if trial == 'yes')
+                        <br />Essai gratuit disponible, <a
+                            href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)"
+                            style="color: #fff; text-decoration: underline;">cliquez ici</a>.
+                        $(endif)
+                    </div>
+
+                    <label>
+                        <img id="ico1" class="ico" src="img/voucher.svg" alt="Voucher" />
+                        <input name="username" id="username" type="text" value="$(username)" onchange=""
+                            oninput="setPass()" placeholder="Code Voucher" />
+                    </label>
+
+                    <label id="passwordLabel" style="display: none;">
+                        <img id="ico2" class="ico" src="img/password.svg" alt="Mot de passe" />
+                        <input name="password" id="password" type="password" placeholder="Mot de passe" />
+                    </label>
+
+                    <input type="submit" value="Se Connecter" />
+                </form>
+
+                <!-- Bouton récupérer un ticket -->
+                <div class="ticket-section">
+                    <button class="ticket-btn" onclick="getTicket()">
+                        <svg class="ticket-icon" viewBox="0 0 24 24">
+                            <path
+                                d="M22,10V6A2,2 0 0,0 20,4H4A2,2 0 0,0 2,6V10C3.11,10 4,10.9 4,12A2,2 0 0,1 2,14V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V14A2,2 0 0,1 20,12C20,10.9 20.9,10 22,10M13,17H11V15H13V17M13,13H11V7H13V13Z"
+                                fill="currentColor" />
+                        </svg>
+                        Récupérer un ticket
+                    </button>
+                </div>
+
+                <!-- Cartes de tarifs -->
+                <div class="tariffs-container">
+                    <h2 class="tariffs-title">Nos Tarifs WiFi</h2>
+
+                
+                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+                <p class="info bt">Propulsé par MNA</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar du bas -->
+    <nav class="bottom-navbar">
+
+        <a href="services.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M12,2l3.09,6.26L22,9.27l-5,4.87L18.18,22L12,18.27L5.82,22L7,14.14L2,9.27L8.91,8.26L12,2z" />
+            </svg>
+            <span class="nav-text">Services</span>
+        </a>
+        <a href="#" class="nav-item active" onclick="openQR()">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path
+                    d="M3,3h6v6h-6z M15,3h6v6h-6z M3,15h6v6h-6z M16,16h2v2h-2z M19,16h2v2h-2z M16,19h2v2h-2z M19,19h2v2h-2z M22,16h2v2h-2z M22,19h2v2h-2z" />
+            </svg>
+            <span class="nav-text">QR Code</span>
+        </a>
+        <a href="tarifs.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path
+                    d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2L11,7h2v2z" />
+            </svg>
+            <span class="nav-text">Tarifs</span>
+        </a>
+    </nav>
+
+    <script>
+        // Variables globales
+        let currentSlide = 0;
+        let currentMode = 'voucher';
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.dot');
+
+        // Initialiser le slider
+        function initializeSlider() {
+            if (slides.length > 0) {
+                setInterval(nextSlide, 3000);
+            }
+        }
+
+        // Aller à une slide spécifique
+        function goToSlide(index) {
+            currentSlide = index;
+            updateSlider();
+        }
+
+        // Slide suivante
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            updateSlider();
+        }
+
+        // Mettre à jour le slider
+        function updateSlider() {
+            const slider = document.getElementById('slider');
+            if (slider) {
+                slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+            }
+
+            // Mettre à jour les points
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+        }
+
+        // Changer de mode de connexion
+        function switchMode(mode) {
+            currentMode = mode;
+
+            // Mettre à jour les boutons
+            document.getElementById('voucher').classList.toggle('mode-btn-active', mode === 'voucher');
+            document.getElementById('member').classList.toggle('mode-btn-active', mode === 'member');
+
+            // Récupérer les éléments
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const passwordLabel = document.getElementById('passwordLabel');
+            const infoElement = document.getElementById('infologin');
+            const ico1 = document.getElementById('ico1');
+
+            if (mode === 'voucher') {
+                // Mode voucher
+                usernameInput.placeholder = 'Code Voucher';
+                infoElement.textContent = 'Entrez votre code voucher pour vous connecter';
+                ico1.src = 'img/voucher.svg';
+                passwordLabel.style.display = 'none'; // Cacher le champ password
+
+            } else {
+                // Mode member
+                usernameInput.placeholder = 'Nom d\'utilisateur';
+                infoElement.textContent = 'Utilisez votre nom d\'utilisateur et mot de passe';
+                ico1.src = 'img/user.svg';
+                passwordLabel.style.display = 'block';
+                passwordInput.value = "";
+            }
+
+        }
+
+        // En mode voucher remplir le champ password
+        function setPass() {
+            if (currentMode == 'voucher') {
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('password');
+                passwordInput.value = usernameInput.value; //usernameInput.value;
+            }
+        }
+
+        // Fonction pour ouvrir le QR code
+        function openQR() {
+            window.open('https://laksa19.github.io/myqr', '_blank');
+        }
+
+        // Fonction pour récupérer un ticket
+        function getTicket() {
+            // Ouvrir une nouvelle fenêtre ou rediriger vers la page de récupération de ticket
+            window.open('https://ticket.mna.tg', '_blank');
+        }
+
+        // Fonction pour faire défiler vers les tarifs
+        function scrollToTariffs() {
+            const tariffsContainer = document.querySelector('.tariffs-container');
+            if (tariffsContainer) {
+                tariffsContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+
+        // Initialiser quand le DOM est chargé
+        document.addEventListener('DOMContentLoaded', function () {
+            document.body.classList.add('loaded');
+            initializeSlider();
+
+            // Initialiser le mode voucher par défaut
+            switchMode('voucher');
+        });
+    </script>
+    <script>var audioAutoplay = true;</script>
+    <script src="js/audio-player.js"></script>
+
+
+
+
+
+<!-- REGISTRATION_SCRIPT_START -->
+<script>
+(function() {
+    var REG_PAGE = 'http://localhost/nas/web/public/registration.html';
+    var ADMIN_ID = 4;
+
+    var btn = document.createElement('a');
+    btn.href = REG_PAGE + '?admin_id=' + ADMIN_ID + '&ip=$(ip)&mac=$(mac)';
+    btn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(79,70,229,0.4);transition:transform 0.2s,box-shadow 0.2s;';
+    btn.onmouseover = function() { this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(79,70,229,0.5)'; };
+    btn.onmouseout = function() { this.style.transform=''; this.style.boxShadow='0 4px 14px rgba(79,70,229,0.4)'; };
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> S\'inscrire';
+
+    var container = document.createElement('div');
+    container.style.cssText = 'text-align:center;margin-top:16px;';
+    container.appendChild(btn);
+
+    var form = document.querySelector('form') || document.querySelector('.login-form');
+    if (form) {
+        form.parentNode.insertBefore(container, form.nextSibling);
+    } else {
+        document.body.appendChild(container);
+    }
+})();
+</script>
+<!-- REGISTRATION_SCRIPT_END --></body>
+
+</html>

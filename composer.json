@@ -1,0 +1,14 @@
+{
+    "name": "nas/isp-manager",
+    "description": "NAS ISP Management System",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Alex ASSI",
+            "email": "assialexis@gmail.com"
+        }
+    ],
+    "require": {
+        "dompdf/dompdf": "^3.1"
+    }
+}

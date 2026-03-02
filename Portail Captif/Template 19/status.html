@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+$(if refresh-timeout)
+<meta http-equiv="refresh" content="$(refresh-timeout-secs)">
+$(endif)
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />   
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="-1">
+<title>mnaSpot - Status</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+    .status-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .status-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .status-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .wifi-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        position: relative;
+    }
+
+    .wifi-icon::before {
+        content: '';
+        width: 20px;
+        height: 20px;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 3C7.95 3 4.21 4.34 1.2 6.6L3 9C5.5 7.12 8.62 6 12 6C15.38 6 18.5 7.12 21 9L22.8 6.6C19.79 4.34 16.05 3 12 3M12 9C9.3 9 6.81 9.89 4.8 11.4L6.6 13.8C8.1 12.67 9.97 12 12 12C14.03 12 15.9 12.67 17.4 13.8L19.2 11.4C17.19 9.89 14.7 9 12 9M12 15C10.65 15 9.4 15.45 8.4 16.2L10.2 18.6C10.8 18.2 11.4 18 12 18C12.6 18 13.2 18.2 13.8 18.6L15.6 16.2C14.6 15.45 13.35 15 12 15M12 21L9 18H15L12 21Z"/></svg>') no-repeat center;
+        background-size: contain;
+    }
+
+    .brand-name {
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .status-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .status-subtitle {
+        font-size: 16px;
+        color: #666;
+        margin: 5px 0 0 0;
+        animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .status-info {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        animation: fadeInUp 0.8s ease-out 0.6s both;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #555;
+        font-size: 14px;
+    }
+
+    .info-value {
+        font-weight: 500;
+        color: #333;
+        font-size: 14px;
+        text-align: right;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge.connected {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+
+    .status-badge.advert {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
+
+    .logout-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        animation: fadeInUp 0.8s ease-out 0.8s both;
+    }
+
+    .logout-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+    }
+
+    .logout-btn:active {
+        transform: translateY(0);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .status-container {
+            margin: 10px;
+            padding: 15px;
+        }
+        
+        .brand-name {
+            font-size: 24px;
+        }
+        
+        .status-title {
+            font-size: 20px;
+        }
+    }
+</style>
+
+<script>
+$(if advert-pending == 'yes')
+    var popup = '';
+    function focusAdvert() {
+	if (window.focus) popup.focus();
+    }
+    function openAdvert() {
+	popup = open('$(link-advert)', 'hotspot_advert', '');
+	setTimeout("focusAdvert()", 1000);
+    }
+$(endif)
+    function openLogout() {
+	if (window.name != 'hotspot_status') return true;
+        open('$(link-logout)', 'hotspot_logout', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=280,height=250');
+	window.close();
+	return false;
+    }
+</script>
+    
+</head>
+<body $(if advert-pending == 'yes') onLoad="openAdvert()" $(endif)>
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap">
+                <div class="status-container">
+                    <div class="status-header">
+                        <div class="status-logo">
+                            <div class="wifi-icon pulse"></div>
+                            <div class="brand-name">mnaSpot</div>
+                        </div>
+                        
+                        $(if login-by == 'trial')
+                        <h1 class="status-title">Hi, trial user!</h1>
+                        <p class="status-subtitle">Welcome to our WiFi network</p>
+                        $(elif login-by != 'mac')
+                        <h1 class="status-title">Hi, $(username)!</h1>
+                        <p class="status-subtitle">You're successfully connected</p>
+                        <span style="display: none" id="user">$(username)</span>
+                        $(endif)
+                    </div>
+
+                    <div class="status-info">
+                        <div class="info-row">
+                            <span class="info-label">IP Address</span>
+                            <span class="info-value">$(ip)</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">MAC Address</span>
+                            <span class="info-value">$(mac)</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Data Usage</span>
+                            <span class="info-value">$(bytes-in-nice) / $(bytes-out-nice)</span>
+                        </div>
+                        
+                        $(if remain-bytes-total)
+                        <div class="info-row">
+                            <span class="info-label">Data Remaining</span>
+                            <span class="info-value">$(remain-bytes-total-nice)</span>
+                        </div>
+                        $(endif)
+                        
+                        $(if session-time-left)
+                        <div class="info-row">
+                            <span class="info-label">Connected Time</span>
+                            <span class="info-value"><span id="upt1">$(uptime)</span></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Temps restant</span>
+                            <span class="info-value"><span id="stl">$(session-time-left)</span></span>
+                        </div>
+                        $(else)
+                        <div class="info-row">
+                            <span class="info-label">Connected Time</span>
+                            <span class="info-value"><span id="upt2">$(uptime)</span></span>
+                        </div>
+                        $(endif)
+                        
+                        $(if blocked == 'yes')
+                        <div class="info-row">
+                            <span class="info-label">Status</span>
+                            <span class="info-value">
+                                <a href="$(link-advert)" target="hotspot_advert" class="status-badge advert">Advertisement Required</a>
+                            </span>
+                        </div>
+                        $(elif refresh-timeout)
+                        <div class="info-row">
+                            <span class="info-label">Status</span>
+                            <span class="info-value">
+                                <span class="status-badge connected">Connected</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Auto Refresh</span>
+                            <span class="info-value">$(refresh-timeout)</span>
+                        </div>
+                        $(endif)
+                    </div>
+
+                    $(if login-by-mac != 'yes')
+                    <form action="$(link-logout)" name="logout" onSubmit="return openLogout()">
+                        <button type="submit" class="logout-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px; vertical-align: middle;">
+                                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                            </svg>
+                            Se déconnecter
+                        </button>
+                    </form>
+                    $(endif)
+                </div>
+            </div>
+        </div>
+    </div>
+<script src="conf.js"></script>
+
+<script type="text/javascript">
+    // Time formatting function
+    function timeNice(b) {
+        var d = b.innerHTML;
+        var f = d.search('w');
+        var g = d.search('d');
+        var h = d.search('h');
+        var j = d.search('m');
+        var k = d.search('s');
+        
+        if (f > 0) {
+            var weak = 7 * Number(d.split('w')[0]);
+            var t_day = d.substring(f + 1, d.length);
+        } else if (f < 0) {
+            var weak = '';
+            var t_day = d.substring(0, d.length);
+        }
+        
+        if (g > 0) {
+            if (weak > 0) {
+                var day = Number(t_day.split('d')[0]);
+            } else {
+                var day = t_day.split('d')[0];
+            }
+            var t_hour = d.substring(g + 1, d.length);
+        } else if (g < 0) {
+            var day = '';
+            var t_hour = t_day.substring(0, t_day.length);
+        }
+        
+        if (h > 0) {
+            var hour = t_hour.split('h')[0];
+            if (hour.length == 1) hour = '0' + hour + ':';
+            else hour += ':';
+            var t_minute = d.substring(h + 1, d.length);
+        } else if (h < 0) {
+            var hour = '';
+            var t_minute = d.substring(g + 1, d.length);
+        }
+        
+        if (j > 0) {
+            var minute = t_minute.split('m')[0];
+            if (minute.length == 1) minute = '0' + minute;
+            var t_sec = d.substring(j + 1, d.length);
+        } else if (j < 0 && h < 0) {
+            var minute = '00';
+            var t_sec = d.substring(g + 1, d.length);
+        } else if (j < 0) {
+            var minute = '00';
+            var t_sec = d.substring(h + 1, d.length);
+        }
+        
+        if (k > 0) {
+            var sec = t_sec.split('s')[0];
+            if (sec.length == 1) sec = ':0' + sec;
+            else sec = ':' + sec;
+        } else if (k < 0) {
+            var sec = ':00';
+        }
+        
+        var l = Number(weak) + Number(day);
+        if (l < 1) l = '';
+        else l += 'd ';
+        
+        b.innerHTML = l + hour + minute + sec;
+    }
+
+    // Apply time formatting to elements
+    if (document.getElementById('upt1')) {
+        timeNice(document.getElementById('upt1'));
+    }
+    if (document.getElementById('upt2')) {
+        timeNice(document.getElementById('upt2'));
+    }
+    if (document.getElementById('stl')) {
+        timeNice(document.getElementById('stl'));
+    }
+</script>
+<script src="js/audio-player.js"></script>
+</body>
+</html>

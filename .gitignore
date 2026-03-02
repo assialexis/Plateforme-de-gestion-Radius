@@ -1,0 +1,16 @@
+# Config avec credentials
+config/config.php
+
+# Fichiers temporaires
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Claude
+.claude/

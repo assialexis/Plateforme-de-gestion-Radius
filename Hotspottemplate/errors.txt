@@ -1,0 +1,71 @@
+# Ce fichier contient les messages d'erreur affiches aux utilisateurs
+# lors de la connexion HTTP/HTTPS au hotspot.
+#
+# Variables disponibles:
+#   $(error-orig)  - message d'erreur original du hotspot
+#   $(ip)          - adresse IP du client
+#   $(username)    - nom d'utilisateur
+
+# internal-error
+# Erreur interne du systeme
+internal-error = Erreur interne ($(error-orig))
+
+# config-error
+# Erreur de configuration du hotspot
+config-error = Erreur de configuration ($(error-orig))
+
+# not-logged-in
+# L'utilisateur n'est pas connecte
+not-logged-in = Vous n'etes pas connecte (IP $(ip))
+
+# ippool-empty
+# Plus d'adresses IP disponibles
+ippool-empty = Impossible d'attribuer une adresse IP - pool epuise
+
+# shutting-down
+# Service hotspot en arret
+shutting-down = Le service WiFi est temporairement indisponible
+
+# user-session-limit
+# Limite de sessions atteinte
+user-session-limit = Ce compte $(username) est deja actif sur un autre appareil
+
+# license-session-limit
+# Limite de licence atteinte
+license-session-limit = Nombre maximum de connexions atteint ($(error-orig))
+
+# wrong-mac-username
+# Adresse MAC incorrecte
+wrong-mac-username = Code/utilisateur $(username) invalide : cette adresse MAC ne vous appartient pas
+
+# chap-missing
+# Erreur d'authentification CHAP
+chap-missing = Echec de connexion. Veuillez reactualiser la page et reessayer.
+
+# invalid-username
+# Identifiants invalides
+invalid-username = Code voucher ou identifiants incorrects. Veuillez verifier et reessayer.
+
+# invalid-mac
+# MAC non autorisee
+invalid-mac = Le compte $(username) ne peut pas etre utilise depuis cet appareil
+
+# uptime-limit
+# Limite de temps atteinte
+uptime-limit = La duree de votre forfait $(username) est epuisee
+
+# traffic-limit
+# Limite de donnees atteinte
+traffic-limit = Votre quota de donnees $(username) est epuise
+
+# radius-timeout
+# Serveur RADIUS inaccessible
+radius-timeout = Le serveur d'authentification ne repond pas. Reessayez plus tard.
+
+# auth-in-progress
+# Authentification en cours
+auth-in-progress = Authentification en cours, veuillez patienter...
+
+# radius-reply
+# Reponse du serveur RADIUS
+radius-reply = $(error-orig)

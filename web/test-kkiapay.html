@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Kkiapay</title>
+    <script src="https://cdn.kkiapay.me/k.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4F46E5;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #4338CA;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test Kkiapay Widget</h1>
+
+    <div class="form-group">
+        <label>Clé publique:</label>
+        <input type="text" id="apiKey" value="1d918618bdecabeb4d46e899b1fc66d4aeebcd17">
+    </div>
+
+    <div class="form-group">
+        <label>Montant (XOF):</label>
+        <input type="number" id="amount" value="100">
+    </div>
+
+    <div class="form-group">
+        <label>Mode Sandbox:</label>
+        <select id="sandbox">
+            <option value="true">Oui (Test)</option>
+            <option value="false">Non (Production)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Téléphone (optionnel):</label>
+        <input type="tel" id="phone" placeholder="Ex: 97000000">
+    </div>
+
+    <button onclick="testPayment()">Tester le paiement</button>
+
+    <div id="log"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Vérifier que le SDK est chargé
+        window.addEventListener('load', function() {
+            if (typeof openKkiapayWidget === 'function') {
+                log('SDK Kkiapay chargé avec succès', 'success');
+            } else {
+                log('ERREUR: SDK Kkiapay non chargé!', 'error');
+            }
+
+            if (typeof addSuccessListener === 'function') {
+                log('addSuccessListener disponible', 'success');
+            }
+
+            if (typeof addFailedListener === 'function') {
+                log('addFailedListener disponible', 'success');
+            }
+        });
+
+        // Configurer les listeners une seule fois
+        if (typeof addSuccessListener === 'function') {
+            addSuccessListener(function(response) {
+                log('SUCCES! Transaction ID: ' + response.transactionId, 'success');
+                console.log('Kkiapay success response:', response);
+            });
+        }
+
+        if (typeof addFailedListener === 'function') {
+            addFailedListener(function(error) {
+                log('ECHEC: ' + JSON.stringify(error), 'error');
+                console.log('Kkiapay failed:', error);
+            });
+        }
+
+        function testPayment() {
+            const apiKey = document.getElementById('apiKey').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const sandbox = document.getElementById('sandbox').value === 'true';
+            const phone = document.getElementById('phone').value;
+
+            if (!apiKey) {
+                log('Veuillez entrer une clé API', 'error');
+                return;
+            }
+
+            if (!amount || amount < 1) {
+                log('Le montant doit être supérieur à 0', 'error');
+                return;
+            }
+
+            const config = {
+                amount: amount,
+                key: apiKey,
+                sandbox: sandbox,
+                position: 'center',
+                theme: '#4F46E5',
+                data: 'test-' + Date.now()
+            };
+
+            if (phone) {
+                config.phone = phone;
+            }
+
+            log('Configuration: ' + JSON.stringify(config, null, 2), 'info');
+            log('Ouverture du widget...', 'info');
+
+            try {
+                openKkiapayWidget(config);
+                log('Widget ouvert!', 'success');
+            } catch (error) {
+                log('Erreur: ' + error.message, 'error');
+                console.error('Error opening widget:', error);
+            }
+        }
+    </script>
+</body>
+</html>

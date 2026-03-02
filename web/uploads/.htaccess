@@ -1,0 +1,16 @@
+# Désactiver l'exécution PHP dans le dossier uploads
+<FilesMatch "\.php$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Alternative pour Apache 2.4+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+# Autoriser uniquement les types de fichiers média
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|mp3|wav|ogg|m4a)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

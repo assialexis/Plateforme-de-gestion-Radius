@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="2; url=$(link-redirect)">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <title>WiFi Zone - Connexion reussie</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <script>
+        function startClock() {
+            $(if popup == 'true')
+            open('$(link-status)', 'hotspot_status', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=320,height=350');
+            $(endif)
+            location.href = unescape('$(link-redirect-esc)');
+        }
+    </script>
+    <div class="bg-gradient"></div>
+    <div class="container">
+        <div class="page-card glass-card">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="60" height="60">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <h1>Connexion reussie!</h1>
+            <p class="info">Bienvenue <strong>$(username)</strong></p>
+            <p class="info">Redirection en cours...</p>
+            <p class="info small">Si rien ne se passe, <a href="$(link-redirect)">cliquez ici</a></p>
+        </div>
+    </div>
+    <script src="conf.js"></script>
+    <script>
+        if (config.theme === 'lite') document.body.classList.add('lite');
+        window.onload = startClock;
+    </script>
+</body>
+</html>

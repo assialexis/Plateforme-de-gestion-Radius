@@ -1,0 +1,1283 @@
+/* Reset et base */
+* {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Variables CSS pour les thèmes */
+:root {
+    --primary-color: #0066CC;
+    --secondary-color: #003366;
+    --text-color: #333;
+    --text-light: #fff;
+    --background: linear-gradient(135deg, #0066CC 0%, #003366 100%);
+    --card-bg: rgba(255,255,255,0.1);
+    --card-border: rgba(255,255,255,0.2);
+    --nav-bg: linear-gradient(135deg, #0066CC, #003366);
+    --shadow: rgba(0,0,0,0.2);
+}
+
+/* Mode sombre */
+[data-theme="dark"] {
+    --primary-color: #1a1a1a;
+    --secondary-color: #2d2d2d;
+    --text-color: #fff;
+    --text-light: #fff;
+    --background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    --card-bg: rgba(255,255,255,0.05);
+    --card-border: rgba(255,255,255,0.1);
+    --nav-bg: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    --shadow: rgba(0,0,0,0.4);
+}
+
+body, html {
+    min-height: 100%;
+    overflow-x: hidden;
+    background: var(--background);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+/* Container principal */
+.main {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.ie-fixMinHeight {
+    display: flex;
+    flex: 1;
+}
+
+/* Logo WiFi + mnaSpot */
+.brand-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin: 0 auto 30px auto;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 8px 25px var(--shadow);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Bouton de basculement du thème */
+.theme-toggle {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+    background: var(--card-border);
+    box-shadow: 0 4px 15px var(--shadow);
+}
+
+.theme-toggle svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-light);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover svg {
+    transform: rotate(180deg);
+}
+
+/* Animation pour le changement de thème */
+.theme-transition {
+    transition: all 0.3s ease;
+}
+
+.theme-changing {
+    animation: themeChange 0.3s ease;
+}
+
+@keyframes themeChange {
+    0% {
+        opacity: 0.8;
+        transform: scale(0.98);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(0.99);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Amélioration du bouton de thème pour mobile */
+@media (max-width: 480px) {
+    .theme-toggle {
+        width: 35px;
+        height: 35px;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .theme-toggle svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.brand-logo:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px var(--shadow);
+    background: var(--card-bg);
+}
+
+.wifi-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #0066CC, #003366);
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,102,204,0.4);
+    transition: all 0.3s ease;
+}
+
+.brand-logo:hover .wifi-logo {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 6px 20px rgba(0,102,204,0.6);
+}
+
+.wifi-icon {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    animation: wifiPulse 2s ease-in-out infinite;
+}
+
+@keyframes wifiPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+.brand-name {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+    margin: 0;
+    background: linear-gradient(135deg, #fff, #f0f0f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: textGlow 3s ease-in-out infinite;
+}
+
+@keyframes textGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 15px rgba(255,255,255,0.6));
+    }
+}
+
+/* Ancien logo (pour compatibilité) */
+.logo {
+    max-width: 180px;
+    display: block;
+    margin: 0 auto 20px auto;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.logo * {
+    fill: #fff;
+}
+
+/* Wrapper principal */
+.wrap {
+    margin: auto;
+    padding: 20px;
+    width: 100%;
+    max-width: 450px;
+    transition: all 0.3s ease;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fadeIn {
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* Mode buttons */
+.mode {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    background: var(--card-bg);
+    padding: 5px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.mode-btn {
+    background: var(--card-bg);
+    color: var(--text-light);
+    border-radius: 8px;
+    border: none;
+    text-align: center;
+    cursor: pointer;
+    height: 40px;
+    flex: 1;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.mode-btn:hover {
+    background: var(--card-border);
+    transform: translateY(-2px);
+}
+
+.mode-btn-active {
+    background: var(--text-light);
+    color: var(--primary-color);
+    box-shadow: 0 4px 15px var(--shadow);
+}
+
+/* Formulaire */
+form {
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.info {
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.notice {
+    background: linear-gradient(135deg, #FF6B35, #CC5500);
+    border-radius: 12px;
+    padding: 15px;
+    margin: 15px 0;
+    font-size: 14px;
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(255,107,53,0.3);
+}
+
+/* Inputs */
+label {
+    position: relative;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.ico {
+    height: 18px;
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    z-index: 2;
+    filter: brightness(0) invert(1);
+}
+
+input[type="text"], input[type="password"] {
+    width: 100%;
+    border: 2px solid var(--card-border);
+    height: 50px;
+    padding: 0 20px 0 45px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    color: var(--text-light);
+    font-size: 16px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+input[type="text"]::placeholder, input[type="password"]::placeholder {
+    color: var(--text-light);
+    opacity: 0.7;
+}
+
+input[type="text"]:focus, input[type="password"]:focus {
+    outline: none;
+    border-color: var(--text-light);
+    background: var(--card-border);
+    box-shadow: 0 0 20px var(--shadow);
+}
+
+input[type="submit"] {
+    background: linear-gradient(135deg, #0066CC, #003366);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    height: 50px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,102,204,0.4);
+}
+
+input[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,102,204,0.6);
+}
+
+/* Section ticket */
+.ticket-section {
+    margin: 25px 0;
+    text-align: center;
+}
+
+.ticket-btn {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+}
+
+.ticket-btn:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40,167,69,0.4);
+}
+
+.ticket-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Section Acheter un ticket */
+.buy-ticket-section {
+    margin: 25px 0;
+    text-align: center;
+}
+
+.buy-ticket-btn {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    color: #fff;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
+    text-decoration: none;
+}
+
+.buy-ticket-btn:hover {
+    background: linear-gradient(135deg, #d35400, #c0392b);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(230, 126, 34, 0.4);
+    color: #fff;
+    text-decoration: none;
+}
+
+.buy-ticket-btn .ticket-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* Cartes de tarifs */
+.tariffs-container {
+    margin: 30px 0;
+}
+
+.tariffs-title {
+    color: var(--text-light);
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 4px var(--shadow);
+}
+
+.tariff-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--card-border);
+    transition: all 0.3s ease;
+}
+
+.tariff-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px var(--shadow);
+}
+
+.tariff-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.tariff-name {
+    color: var(--text-light);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.tariff-price {
+    color: var(--text-light);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.tariff-features {
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+.tariff-features li {
+    color: var(--text-light);
+    opacity: 0.9;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.tariff-features li::before {
+    content: "✓";
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.buy-btn {
+    background: linear-gradient(135deg, #0066CC, #003366);
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.buy-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,102,204,0.4);
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Slider d'images */
+.slider-container {
+    margin: 30px 0;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px var(--shadow);
+    height: 200px;
+}
+
+.slider {
+    display: flex;
+    transition: transform 0.5s ease;
+    height: 100%;
+    width: 100%;
+}
+
+.slide {
+    min-width: 100%;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.slide::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.6));
+    z-index: 1;
+}
+
+.slide > * {
+    position: relative;
+    z-index: 2;
+}
+
+.slide-1 { background-image: url('img/1.jpg'); }
+.slide-2 { background-image: url('img/2.jpg'); }
+.slide-3 { background-image: url('img/3.jpg'); }
+
+.slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-light);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dot.active {
+    background: var(--text-light);
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+/* Navbar du bas - AMÉLIORÉE */
+.bottom-navbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--card-border);
+    padding: 15px 0 25px 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 20px var(--shadow);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 8px 15px;
+    border-radius: 12px;
+    color: var(--text-light);
+    opacity: 0.8;
+    text-decoration: none;
+    position: relative;
+}
+
+.nav-item:hover {
+    color: var(--text-light);
+    opacity: 1;
+    transform: translateY(-2px);
+    background: var(--card-bg);
+}
+
+.nav-item.active {
+    color: var(--text-light);
+    background: var(--card-border);
+}
+
+/* Bouton du milieu mis en valeur */
+.nav-item:nth-child(2) {
+    background: var(--card-border);
+    color: var(--text-light);
+    padding: 12px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px var(--shadow);
+    transform: translateY(-5px);
+    border: 1px solid var(--card-border);
+}
+
+.nav-item:nth-child(2):hover {
+    transform: translateY(-7px);
+    box-shadow: 0 6px 20px var(--shadow);
+    color: var(--text-light);
+    background: var(--card-bg);
+}
+
+.nav-item:nth-child(2).active {
+    background: var(--card-bg);
+    color: var(--text-light);
+    border: 1px solid var(--card-border);
+}
+
+/* Icône du bouton du milieu plus grande */
+.nav-item:nth-child(2) .nav-icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 8px;
+}
+
+.nav-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 5px;
+    fill: currentColor;
+}
+
+/* Texte du bouton du milieu plus visible */
+.nav-item:nth-child(2) .nav-text {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nav-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Section d'informations */
+.info-section {
+    margin: 40px 0;
+    padding: 25px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px var(--shadow);
+}
+
+.info-section h3 {
+    color: var(--text-light);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-list li {
+    color: var(--text-light);
+    font-size: 14px;
+    margin-bottom: 12px;
+    padding-left: 0;
+    opacity: 0.9;
+}
+
+.info-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* Cartes de services */
+.services-container {
+    margin: 30px 0;
+}
+
+.services-title {
+    color: var(--text-light);
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 4px var(--shadow);
+}
+
+.services-subtitle {
+    color: var(--text-light);
+    opacity: 0.8;
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+.service-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--card-border);
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #4CAF50);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.service-card:hover::before {
+    transform: scaleX(1);
+}
+
+.service-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 40px var(--shadow);
+    background: var(--card-border);
+}
+
+.service-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.service-card:hover .service-icon {
+    transform: scale(1.1) rotate(5deg);
+    background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.2));
+}
+
+.service-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: #fff;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.service-name {
+    color: var(--text-light);
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px var(--shadow);
+}
+
+.service-description {
+    color: var(--text-light);
+    opacity: 0.9;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.service-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.service-features li {
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 8px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.service-features li::before {
+    content: "✦";
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+.service-btn {
+    background: linear-gradient(135deg, #0066CC, #003366);
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    width: 100%;
+    transition: all 0.3s ease;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(0,102,204,0.3);
+}
+
+.service-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,102,204,0.5);
+    background: linear-gradient(135deg, #0052A3, #002244);
+}
+
+/* Page services spécifique */
+.services-page {
+    padding-bottom: 120px;
+}
+
+.back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+}
+
+.back-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* Ajustements pour le contenu principal avec navbar */
+.main {
+    padding-bottom: 100px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .wrap {
+        padding: 15px;
+    }
+    
+    .tariff-card, .service-card {
+        padding: 20px;
+    }
+    
+    .slider-container {
+        height: 150px;
+    }
+    
+    .slide {
+        font-size: 16px;
+    }
+    
+    .services-title {
+        font-size: 24px;
+    }
+    
+    .service-card {
+        padding: 25px;
+    }
+    
+    .service-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .service-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+    
+    /* Logo responsive */
+    .brand-logo {
+        gap: 12px;
+        padding: 15px;
+    }
+    
+    .wifi-logo {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .wifi-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .brand-name {
+        font-size: 28px;
+    }
+    
+    .ticket-btn {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+
+    .ticket-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .buy-ticket-btn {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+}
+
+/* Footer */
+.bt {
+    opacity: 0.7;
+    font-size: 12px;
+    margin-top: 20px;
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background: linear-gradient(135deg, #0066CC 0%, #003366 100%);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    transform: scale(0.7) translateY(50px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-overlay.show .modal {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #0066CC, #003366, #0066CC);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-title {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-title svg {
+    width: 24px;
+    height: 24px;
+    fill: #fff;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.modal-close svg {
+    width: 18px;
+    height: 18px;
+    fill: #fff;
+}
+
+.modal-content {
+    color: #fff;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.modal-content p {
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.modal-contact-info {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+}
+
+.contact-item:last-child {
+    margin-bottom: 0;
+}
+
+.contact-item svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+    opacity: 0.8;
+}
+
+.contact-item span {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.modal-btn.primary {
+    background: linear-gradient(135deg, #0066CC, #003366);
+    box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+}
+
+.modal-btn.primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+}
+
+/* Animation d'entrée pour le contenu modal */
+.modal-content {
+    animation: modalContentFadeIn 0.5s ease 0.2s both;
+}
+
+@keyframes modalContentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive pour les modales */
+@media (max-width: 480px) {
+    .modal {
+        width: 95%;
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .modal-title {
+        font-size: 20px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-btn {
+        width: 100%;
+    }
+}
+
+/* Bouton audio */
+.audio-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.audio-btn:hover {
+    transform: scale(1.1);
+    background: var(--card-border);
+    box-shadow: 0 4px 15px var(--shadow);
+}
+
+.audio-btn:hover svg {
+    transform: rotate(180deg);
+}
+
+.audio-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-light);
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 480px) {
+    .audio-btn {
+        width: 35px;
+        height: 35px;
+        top: 10px;
+        right: 10px;
+    }
+
+    .audio-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.audio-btn.playing {
+    background: var(--card-border);
+    box-shadow: 0 0 15px rgba(0,102,204,0.5);
+    animation: audioPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes audioPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(0,102,204,0.3); }
+    50% { box-shadow: 0 0 20px rgba(0,102,204,0.6); }
+}

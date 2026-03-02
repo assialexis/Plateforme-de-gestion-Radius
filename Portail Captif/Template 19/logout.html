@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="-1">
+    <title>mnaSpot - Logout</title>
+<link rel="stylesheet" href="css/style.css">
+    <style>
+        .logout-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logout-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logout-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .wifi-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            position: relative;
+        }
+
+        .wifi-icon::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 3C7.95 3 4.21 4.34 1.2 6.6L3 9C5.5 7.12 8.62 6 12 6C15.38 6 18.5 7.12 21 9L22.8 6.6C19.79 4.34 16.05 3 12 3M12 9C9.3 9 6.81 9.89 4.8 11.4L6.6 13.8C8.1 12.67 9.97 12 12 12C14.03 12 15.9 12.67 17.4 13.8L19.2 11.4C17.19 9.89 14.7 9 12 9M12 15C10.65 15 9.4 15.45 8.4 16.2L10.2 18.6C10.8 18.2 11.4 18 12 18C12.6 18 13.2 18.2 13.8 18.6L15.6 16.2C14.6 15.45 13.35 15 12 15M12 21L9 18H15L12 21Z"/></svg>') no-repeat center;
+            background-size: contain;
+        }
+
+        .brand-name {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .logout-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .logout-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin: 5px 0 0 0;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .logout-info {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            animation: fadeInUp 0.8s ease-out 0.8s both;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .logout-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            animation: fadeInUp 0.8s ease-out 0.1s both;
+        }
+
+        .logout-icon::before {
+            content: '';
+            width: 30px;
+            height: 30px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>') no-repeat center;
+            background-size: contain;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logout-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .brand-name {
+                font-size: 24px;
+            }
+            
+            .logout-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+<script>
+    function openLogin() {
+	if (window.name != 'hotspot_logout') return true;
+	open('$(link-login)', '_blank', '');
+	window.close();
+	return false;
+    }
+</script>
+</head>
+
+<body>
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap">
+                <div class="logout-container">
+                    <div class="logout-header">
+                        <div class="logout-logo">
+                            <div class="wifi-icon"></div>
+                            <div class="brand-name">mnaSpot</div>
+                        </div>
+                        
+                        <div class="logout-icon pulse"></div>
+                        
+                        <h1 class="logout-title">Vous êtes déconnecté</h1>
+                        <p class="logout-subtitle">Merci d'avoir utilisé notre service</p>
+                    </div>
+
+                    <div class="logout-info">
+                        <div class="info-row">
+                            <span class="info-label">Username</span>
+                            <span class="info-value">$(username)</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">IP Address</span>
+                            <span class="info-value">$(ip)</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">MAC Address</span>
+                            <span class="info-value">$(mac)</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Session Time</span>
+                            <span class="info-value"><span id="upt">$(uptime)</span></span>
+                        </div>
+                        
+                    $(if session-time-left)
+                        <div class="info-row">
+                            <span class="info-label">Time Left</span>
+                            <span class="info-value"><span id="stl">$(session-time-left)</span></span>
+                        </div>
+                    $(endif)
+
+                        <div class="info-row">
+                            <span class="info-label">Data Usage</span>
+                            <span class="info-value">$(bytes-in-nice) / $(bytes-out-nice)</span>
+                        </div>
+                    </div>
+
+                <form action="$(link-login)" name="login" onSubmit="return openLogin()">
+                        <button type="submit" class="login-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px; vertical-align: middle;">
+                                <path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"/>
+                            </svg>
+                            Se connecter
+                        </button>
+                </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="conf.js"></script>
+
+<script type="text/javascript">
+        // Time formatting function
+        function timeNice(b) {
+            var d = b.innerHTML;
+            var f = d.search('w');
+            var g = d.search('d');
+            var h = d.search('h');
+            var j = d.search('m');
+            var k = d.search('s');
+            
+            if (f > 0) {
+                var weak = 7 * Number(d.split('w')[0]);
+                var t_day = d.substring(f + 1, d.length);
+            } else if (f < 0) {
+                var weak = '';
+                var t_day = d.substring(0, d.length);
+            }
+            
+            if (g > 0) {
+                if (weak > 0) {
+                    var day = Number(t_day.split('d')[0]);
+                } else {
+                    var day = t_day.split('d')[0];
+                }
+                var t_hour = d.substring(g + 1, d.length);
+            } else if (g < 0) {
+                var day = '';
+                var t_hour = t_day.substring(0, t_day.length);
+            }
+            
+            if (h > 0) {
+                var hour = t_hour.split('h')[0];
+                if (hour.length == 1) hour = '0' + hour + ':';
+                else hour += ':';
+                var t_minute = d.substring(h + 1, d.length);
+            } else if (h < 0) {
+                var hour = '';
+                var t_minute = d.substring(g + 1, d.length);
+            }
+            
+            if (j > 0) {
+                var minute = t_minute.split('m')[0];
+                if (minute.length == 1) minute = '0' + minute;
+                var t_sec = d.substring(j + 1, d.length);
+            } else if (j < 0 && h < 0) {
+                var minute = '00';
+                var t_sec = d.substring(g + 1, d.length);
+            } else if (j < 0) {
+                var minute = '00';
+                var t_sec = d.substring(h + 1, d.length);
+            }
+            
+            if (k > 0) {
+                var sec = t_sec.split('s')[0];
+                if (sec.length == 1) sec = ':0' + sec;
+                else sec = ':' + sec;
+            } else if (k < 0) {
+                var sec = ':00';
+            }
+            
+            var l = Number(weak) + Number(day);
+            if (l < 1) l = '';
+            else l += 'd ';
+            
+            b.innerHTML = l + hour + minute + sec;
+        }
+
+        // Apply time formatting to elements
+        if (document.getElementById('upt')) {
+            timeNice(document.getElementById('upt'));
+        }
+        if (document.getElementById('stl')) {
+            timeNice(document.getElementById('stl'));
+        }
+</script>
+</body>
+</html>

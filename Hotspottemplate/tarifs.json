@@ -1,0 +1,52 @@
+{
+  "tarifs": [
+    {
+      "id": 1,
+      "duree": "1 Heure",
+      "prix": 100,
+      "devise": "FCFA",
+      "validite": "24 heures",
+      "icon": "clock",
+      "populaire": false,
+      "lienPaiement": "https://google.com",
+      "description": "Ideal pour une connexion rapide"
+    },
+    {
+      "id": 2,
+      "duree": "3 Heures",
+      "prix": 250,
+      "devise": "FCFA",
+      "validite": "24 heures",
+      "icon": "clock",
+      "populaire": true,
+      "lienPaiement": "https://pay.example.com/3heures",
+      "description": "Notre offre la plus populaire"
+    },
+    {
+      "id": 3,
+      "duree": "Journee",
+      "prix": 500,
+      "devise": "FCFA",
+      "validite": "24 heures",
+      "icon": "sun",
+      "populaire": false,
+      "lienPaiement": "https://pay.example.com/journee",
+      "description": "Acces illimite toute la journee"
+    },
+    {
+      "id": 4,
+      "duree": "Semaine",
+      "prix": 2500,
+      "devise": "FCFA",
+      "validite": "7 jours",
+      "icon": "calendar",
+      "populaire": false,
+      "lienPaiement": "https://pay.example.com/semaine",
+      "description": "Meilleur rapport qualite-prix"
+    }
+  ],
+  "paiement": {
+    "contact": "+228 00 00 00 00",
+    "infoModal": "Cliquez sur le bouton ci-dessous pour effectuer votre paiement via Mobile Money. Apres validation, vous recevrez votre code d'acces par SMS."
+  }
+}

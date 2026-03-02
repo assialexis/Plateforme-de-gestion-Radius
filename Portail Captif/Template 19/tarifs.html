@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tarifs WiFi - mnaSpot</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap animated fadeIn">
+                <!-- Logo WiFi + mnaSpot -->
+                <div class="brand-logo">
+                    <div class="wifi-logo">
+                        <svg viewBox="0 0 24 24" class="wifi-icon">
+                            <path d="M12,3L2,12H5V20H11V14H13V20H19V12H22L12,3M12,7.7C14.1,7.7 15.8,9.4 15.8,11.5C15.8,13.6 14.1,15.3 12,15.3C9.9,15.3 8.2,13.6 8.2,11.5C8.2,9.4 9.9,7.7 12,7.7Z" fill="#fff"/>
+                        </svg>
+                    </div>
+                    <h1 class="brand-name">mnaSpot</h1>
+                </div>
+
+                <!-- Bouton retour -->
+                <div class="back-btn" onclick="goBack()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="currentColor"/>
+                    </svg>
+                    Retour
+                </div>
+
+                <!-- Titre de la page -->
+                <div class="services-title">
+                    <h1>Nos Tarifs WiFi</h1>
+                    <p class="services-subtitle">Choisissez le plan qui vous convient le mieux</p>
+                </div>
+
+               
+                <div class="tariffs-container">
+                     <!-- card tarif un 
+                    <div class="tariff-card">
+                        <div class="tariff-header">
+                            <div class="tariff-name">5 Heures</div>
+                            <div class="tariff-price">100 Fcfa</div>
+                        </div>
+                        <ul class="tariff-features">
+                            <li>Connexion haute vitesse</li>
+                            <li>Achat via mobile money : Flooz ou Mix by Yas</li>
+                            <li>Accès illimité</li>
+                            <li>Support technique inclus</li>
+                        </ul>
+                        <a href="https://pay.mna.tg/5h" target="_blank" class="buy-btn">Acheter</a>
+                    </div>
+                    fin card tarif un -->
+
+                     <!-- card tarif deux 
+                    <div class="tariff-card">
+                        <div class="tariff-header">
+                            <div class="tariff-name">1 Jour</div>
+                            <div class="tariff-price">200 Fcfa</div>
+                        </div>
+                        <ul class="tariff-features">
+                            <li>Connexion haute vitesse</li>
+                            <li>Achat via mobile money : Flooz ou Mix by Yas</li>
+                            <li>Accès illimité 24h</li>
+                            <li>Économisez 40%</li>
+                            <li>Support technique inclus</li>
+                        </ul>
+                        <a href="https://pay.mna.tg/1j" target="_blank" class="buy-btn">Acheter</a>
+                    </div>
+                    fin card tarif deux -->
+
+                   
+                </div>
+
+                
+                <div class="info-section">
+                    <h3>Informations importantes</h3>
+                    <ul class="info-list">
+                        <!-- Informations supplémentaires ou service
+                        <li>✅ Tous nos tarifs incluent une connexion haute vitesse</li>
+                        <li>✅ Paiement sécurisé via mobile money</li>
+                        <li>✅ Support technique disponible 24/7</li>
+                        <li>✅ Pas de limite de données</li>
+                        <li>✅ Connexion simultanée sur plusieurs appareils</li>
+                        -->
+                    </ul>
+                </div>
+                
+
+                <p class="info bt">Propulsé par MNA</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar du bas -->
+    <nav class="bottom-navbar">
+        <a href="#" class="nav-item" onclick="openQR()">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M3,3h6v6h-6z M15,3h6v6h-6z M3,15h6v6h-6z M16,16h2v2h-2z M19,16h2v2h-2z M16,19h2v2h-2z M19,19h2v2h-2z M22,16h2v2h-2z M22,19h2v2h-2z"/>
+            </svg>
+            <span class="nav-text">QR Code</span>
+        </a>
+        <a href="tarifs.html" class="nav-item active">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2L11,7h2v2z"/>
+            </svg>
+            <span class="nav-text">Tarifs</span>
+        </a>
+        <a href="services.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M12,2l3.09,6.26L22,9.27l-5,4.87L18.18,22L12,18.27L5.82,22L7,14.14L2,9.27L8.91,8.26L12,2z"/>
+            </svg>
+            <span class="nav-text">Services</span>
+        </a>
+       
+    </nav>
+
+    <script>
+        // Fonction pour retourner à la page précédente
+        function goBack() {
+            if (document.referrer && document.referrer.includes('login.html')) {
+                window.history.back();
+            } else {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fonction pour ouvrir le QR code
+        function openQR() {
+            window.open('https://laksa19.github.io/myqr', '_blank');
+        }
+
+        // Initialiser quand le DOM est chargé
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('loaded');
+        });
+    </script>
+    <script src="js/audio-player.js"></script>
+
+</body>
+
+</html> 

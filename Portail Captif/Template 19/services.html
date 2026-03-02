@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Services - Hotspot WiFi</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="ie-fixMinHeight">
+        <div class="main services-page">
+            <div class="wrap animated fadeIn">
+                
+                <!-- Bouton retour -->
+                <button class="back-btn" onclick="goBack()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/>
+                    </svg>
+                    Retour
+                </button>
+
+                <!-- Logo WiFi + mnaSpot -->
+                <div class="brand-logo">
+                    <div class="wifi-logo">
+                        <svg viewBox="0 0 24 24" class="wifi-icon">
+                            <path d="M12,3L2,12H5V20H11V14H13V20H19V12H22L12,3M12,7.7C14.1,7.7 15.8,9.4 15.8,11.5C15.8,13.6 14.1,15.3 12,15.3C9.9,15.3 8.2,13.6 8.2,11.5C8.2,9.4 9.9,7.7 12,7.7Z" fill="#fff"/>
+                        </svg>
+                    </div>
+                    <h1 class="brand-name">mnaSpot</h1>
+                </div>
+
+                <!-- Titre et sous-titre -->
+                <h1 class="services-title">Nos Services WiFi</h1>
+                <p class="services-subtitle">Découvrez notre gamme complète de services pour une expérience WiFi exceptionnelle</p>
+
+                <!-- Cartes de services -->
+                <div class="services-container">
+                    
+                    <!-- Service un 
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12,3L2,12H5V20H11V14H13V20H19V12H22L12,3M12,7.7C14.1,7.7 15.8,9.4 15.8,11.5C15.8,13.6 14.1,15.3 12,15.3C9.9,15.3 8.2,13.6 8.2,11.5C8.2,9.4 9.9,7.7 12,7.7Z"/>
+                            </svg>
+                        </div>
+                        <h3 class="service-name">WiFi Haute Vitesse</h3>
+                        <p class="service-description">
+                            Profitez d'une connexion WiFi ultra-rapide avec des débits pouvant atteindre 100 Mbps. 
+                            Idéal pour le streaming, les jeux en ligne et le télétravail.
+                        </p>
+                        <ul class="service-features">
+                            <li>Débit jusqu'à 100 Mbps</li>
+                            <li>Connexion stable et fiable</li>
+                            <li>Optimisé pour tous les appareils</li>
+                            <li>Pas de limitation de bande passante</li>
+                        </ul>
+                        <button class="service-btn" onclick="selectService('wifi')">Choisir ce service</button>
+                    </div>
+                    fin service un -->
+                    <!-- Service 2
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
+                            </svg>
+                        </div>
+                        <h3 class="service-name">Support Technique 24/7</h3>
+                        <p class="service-description">
+                            Notre équipe technique est disponible 24h/24 et 7j/7 pour vous assister. 
+                            Résolution rapide de tous vos problèmes de connexion.
+                        </p>
+                        <ul class="service-features">
+                            <li>Assistance téléphonique 24/7</li>
+                            <li>Support en ligne en temps réel</li>
+                            <li>Résolution rapide des problèmes</li>
+                            <li>Équipe technique qualifiée</li>
+                        </ul>
+                        <button class="service-btn" onclick="selectService('support')">Contacter le support</button>
+                    </div>
+                    fin service deux -->
+
+                   
+
+                </div>
+
+                <!-- Section contact -->
+                <div class="info" style="margin-top: 40px;">
+                    <h3 style="color: #fff; text-align: center; margin-bottom: 15px;">Besoin d'aide ?</h3>
+                    <p style="color: rgba(255,255,255,0.8); text-align: center; margin-bottom: 20px;">
+                        Notre équipe est là pour vous accompagner dans le choix du service le plus adapté à vos besoins.
+                    </p>
+                    <button class="service-btn" onclick="contactSupport()" style="max-width: 300px; margin: 0 auto; display: block;">
+                        Contactez-nous
+                    </button>
+                </div>
+
+               
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar du bas -->
+    <nav class="bottom-navbar">
+        <a href="#" class="nav-item" onclick="contactSupport()">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
+            </svg>
+            <span class="nav-text">Contact</span>
+        </a>
+        <a href="services.html" class="nav-item active">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M12,2l3.09,6.26L22,9.27l-5,4.87L18.18,22L12,18.27L5.82,22L7,14.14L2,9.27L8.91,8.26L12,2z"/>
+            </svg>
+            <span class="nav-text">Services</span>
+        </a>
+        <a href="tarifs.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2L11,7h2v2z"/>
+            </svg>
+            <span class="nav-text">Tarifs</span>
+        </a>
+    </nav>
+
+    <!-- Modal pour les services -->
+    <div id="serviceModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,2l3.09,6.26L22,9.27l-5,4.87L18.18,22L12,18.27L5.82,22L7,14.14L2,9.27L8.91,8.26L12,2z"/>
+                    </svg>
+                    Service Sélectionné
+                </h2>
+                <button class="modal-close" onclick="closeModal('serviceModal')">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-content">
+                <p id="serviceModalContent"></p>
+                <p>Notre équipe va vous contacter dans les plus brefs délais pour finaliser votre demande.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeModal('serviceModal')">Fermer</button>
+                <button class="modal-btn primary" onclick="contactSupport()">Contacter maintenant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour le contact -->
+    <div id="contactModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
+                    </svg>
+                    Contact Support
+                </h2>
+                <button class="modal-close" onclick="closeModal('contactModal')">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-content">
+                <p>Notre équipe est disponible 24h/24 et 7j/7 pour vous assister.</p>
+                <div class="modal-contact-info">
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/>
+                        </svg>
+                        <span>+228 79 99 39 34</span>
+                    </div>
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
+                        </svg>
+                        <span>support@hotspot-wifi.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2L11,7h2v2z"/>
+                        </svg>
+                        <span>Chat en ligne disponible 24/7</span>
+                    </div>
+                </div>
+                <p>Notre équipe vous répondra dans les plus brefs délais.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeModal('contactModal')">Fermer</button>
+                <button class="modal-btn primary" onclick="window.open('tel:+228 79 99 39 34')">Appeler maintenant</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour retourner à la page précédente
+        function goBack() {
+            if (document.referrer && document.referrer.includes('login.html')) {
+                window.history.back();
+            } else {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fonction pour ouvrir une modale
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Fonction pour fermer une modale
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Fonction pour sélectionner un service
+        function selectService(service) {
+            const serviceNames = {
+                'wifi': 'WiFi Haute Vitesse',
+                'support': 'Support Technique 24/7',
+                'security': 'Connexion Sécurisée',
+                'premium': 'Service Premium',
+                'enterprise': 'Solutions Entreprise',
+                'installation': 'Installation & Configuration'
+            };
+
+            const serviceName = serviceNames[service] || 'Service';
+            document.getElementById('serviceModalContent').textContent = `Service sélectionné : ${serviceName}`;
+            openModal('serviceModal');
+        }
+
+        // Fonction pour contacter le support
+        function contactSupport() {
+            openModal('contactModal');
+        }
+
+        // Animation d'entrée
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('loaded');
+            
+            // Animation des cartes au scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observer toutes les cartes de service
+            document.querySelectorAll('.service-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+
+            // Fermer les modales en cliquant à l'extérieur
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        closeModal(overlay.id);
+                    }
+                });
+            });
+
+            // Fermer les modales avec la touche Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const openModal = document.querySelector('.modal-overlay.show');
+                    if (openModal) {
+                        closeModal(openModal.id);
+                    }
+                }
+            });
+        });
+
+        // Navigation entre sections
+        function showSection(section) {
+            // Redirection vers la page appropriée
+            switch(section) {
+                case 'qr':
+                    window.location.href = 'login.html';
+                    break;
+                case 'tariffs':
+                    window.location.href = 'tarifs.html';
+                    break;
+                default:
+                    window.location.href = 'login.html';
+            }
+        }
+    </script>
+    <script src="js/audio-player.js"></script>
+
+</body>
+
+</html> 

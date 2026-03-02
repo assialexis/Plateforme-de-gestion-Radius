@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Zone - Connexion</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="shortcut icon" href="favicon.ico">
+</head>
+<body>
+    <!-- CHAP Authentication -->
+    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username">
+        <input type="hidden" name="password">
+        <input type="hidden" name="dst" value="$(link-orig)">
+        <input type="hidden" name="popup" value="true">
+    </form>
+    <script src="md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+    </script>
+    $(endif)
+
+    <!-- Background -->
+    <div class="bg-gradient"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1 id="page-title">WiFi Zone</h1>
+                    <span>Internet Haut Debit</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Image Slider -->
+        <div id="slider-container" class="slider-container" style="display:none;">
+            <div class="slider">
+                <div class="slides">
+                    <div class="slide active">
+                        <img src="img/img1.jpg" alt="Slide 1">
+                    </div>
+                    <div class="slide">
+                        <img src="img/img2.jpg" alt="Slide 2">
+                    </div>
+                </div>
+                <div class="slider-dots">
+                    <span class="dot active" onclick="goToSlide(0)"></span>
+                    <span class="dot" onclick="goToSlide(1)"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Login Card -->
+            <div class="login-card glass-card">
+                <h2>Connexion</h2>
+                <p class="subtitle">Choisissez votre methode</p>
+
+                <!-- Tabs -->
+                <div class="tab-buttons">
+                    <button type="button" id="tab-voucher" class="tab-btn active" onclick="switchToVoucher()">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46 0-1.48-.81-2.77-2-3.46V6h16v2.54z"/>
+                        </svg>
+                        Voucher
+                    </button>
+                    <button type="button" id="tab-membre" class="tab-btn" onclick="switchToMembre()">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        Membre
+                    </button>
+                </div>
+
+                <!-- Login Form -->
+                <form name="login" action="$(link-login-only)" method="post" $(if chap-id)onsubmit="return doLogin()"$(endif)>
+                    <input type="hidden" name="dst" value="$(link-orig)">
+                    <input type="hidden" name="popup" value="true">
+
+                    <div id="info-login" class="info-login"></div>
+
+                    $(if error)
+                    <div class="error-box">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <span>$(error)</span>
+                    </div>
+                    $(endif)
+
+                    $(if trial == 'yes')
+                    <div class="trial-box">
+                        <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">Essai gratuit disponible</a>
+                    </div>
+                    $(endif)
+
+                    <div class="input-group">
+                        <div class="input-icon">
+                            <img id="icon-input" src="img/voucher.svg" alt="">
+                        </div>
+                        <input type="text" name="username" id="username" value="$(username)" placeholder="Code Voucher" autocomplete="off" required>
+                    </div>
+
+                    <div class="input-group" id="password-group" style="display:none">
+                        <div class="input-icon">
+                            <img src="img/password.svg" alt="">
+                        </div>
+                        <input type="password" name="password" id="password" placeholder="Mot de passe">
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        Connexion
+                    </button>
+                </form>
+
+                <!-- Status Info -->
+                <div class="status-info">
+                    <div class="status-item">
+                        <span class="label">IP:</span>
+                        <span class="value">$(ip)</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">MAC:</span>
+                        <span class="value">$(mac)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="pricing-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/>
+                    </svg>
+                    Nos Tarifs
+                </h2>
+                <div id="tarifs-container" class="tarifs-grid">
+                    <!-- Tarif 1 Heure -->
+                    <div class="tarif-card glass-card" onclick="openPayment(0)">
+                        <div class="tarif-info">
+                            <div class="tarif-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                            </div>
+                            <div class="tarif-details">
+                                <h3>1 Heure</h3>
+                                <span class="tarif-validite">Validite: 24 heures</span>
+                            </div>
+                        </div>
+                        <div class="tarif-action">
+                            <div class="tarif-prix">
+                                <span class="prix-value">100</span>
+                                <span class="prix-devise">FCFA</span>
+                            </div>
+                            <span class="btn-acheter">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                Acheter
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Tarif 3 Heures - Populaire -->
+                    <div class="tarif-card glass-card populaire" onclick="openPayment(1)">
+                        <span class="tarif-badge">Populaire</span>
+                        <div class="tarif-info">
+                            <div class="tarif-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                            </div>
+                            <div class="tarif-details">
+                                <h3>3 Heures</h3>
+                                <span class="tarif-validite">Validite: 24 heures</span>
+                            </div>
+                        </div>
+                        <div class="tarif-action">
+                            <div class="tarif-prix">
+                                <span class="prix-value">250</span>
+                                <span class="prix-devise">FCFA</span>
+                            </div>
+                            <span class="btn-acheter">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                Acheter
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Tarif Journee -->
+                    <div class="tarif-card glass-card" onclick="openPayment(2)">
+                        <div class="tarif-info">
+                            <div class="tarif-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>
+                            </div>
+                            <div class="tarif-details">
+                                <h3>Journee</h3>
+                                <span class="tarif-validite">Validite: 24 heures</span>
+                            </div>
+                        </div>
+                        <div class="tarif-action">
+                            <div class="tarif-prix">
+                                <span class="prix-value">500</span>
+                                <span class="prix-devise">FCFA</span>
+                            </div>
+                            <span class="btn-acheter">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                Acheter
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Tarif Semaine -->
+                    <div class="tarif-card glass-card" onclick="openPayment(3)">
+                        <div class="tarif-info">
+                            <div class="tarif-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>
+                            </div>
+                            <div class="tarif-details">
+                                <h3>Semaine</h3>
+                                <span class="tarif-validite">Validite: 7 jours</span>
+                            </div>
+                        </div>
+                        <div class="tarif-action">
+                            <div class="tarif-prix">
+                                <span class="prix-value">2500</span>
+                                <span class="prix-devise">FCFA</span>
+                            </div>
+                            <span class="btn-acheter">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                Acheter
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Payment Modal -->
+        <div id="payment-modal" class="modal">
+            <div class="modal-content glass-card">
+                <button type="button" class="modal-close" onclick="closeModal()">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+                <h3>Acheter un Ticket</h3>
+                <div id="modal-tarif-info"></div>
+                <div id="modal-description" class="modal-description"></div>
+                <div id="modal-info" class="modal-info-box"></div>
+                <a id="payment-link" href="#" target="_blank" class="btn-payer">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                        <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                    </svg>
+                    Payer maintenant
+                </a>
+                <div class="contact-info">
+                    <p>Contact: <span id="contact-number">+225 00 00 00 00</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <section class="contact-section glass-card">
+            <div class="contact-content">
+                <div class="contact-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                    </svg>
+                </div>
+                <div class="contact-details">
+                    <span class="contact-label">Besoin d'aide ?</span>
+                    <a href="tel:+22800000000" class="contact-phone" id="main-contact">+228 00 00 00 00</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>WiFi Zone &copy; 2026</p>
+        </footer>
+    </div>
+
+    <script src="conf.js"></script>
+    <script>
+        // Mode switching
+        var currentMode = 'voucher';
+        var usernameInput = document.getElementById('username');
+        var passwordGroup = document.getElementById('password-group');
+        var passwordInput = document.getElementById('password');
+        var iconInput = document.getElementById('icon-input');
+        var infoLogin = document.getElementById('info-login');
+
+        function switchToVoucher() {
+            currentMode = 'voucher';
+            document.getElementById('tab-voucher').classList.add('active');
+            document.getElementById('tab-membre').classList.remove('active');
+            usernameInput.placeholder = config.voucherPlaceholder || 'Code Voucher';
+            passwordGroup.style.display = 'none';
+            passwordInput.required = false;
+            iconInput.src = 'img/voucher.svg';
+            infoLogin.innerHTML = config.loginvc || 'Entrez votre code voucher';
+            usernameInput.oninput = function() {
+                if (config.setCase === 'lowercase') {
+                    this.value = this.value.toLowerCase();
+                } else if (config.setCase === 'uppercase') {
+                    this.value = this.value.toUpperCase();
+                }
+                passwordInput.value = this.value;
+            };
+            localStorage.setItem('loginMode', 'voucher');
+        }
+
+        function switchToMembre() {
+            currentMode = 'membre';
+            document.getElementById('tab-membre').classList.add('active');
+            document.getElementById('tab-voucher').classList.remove('active');
+            usernameInput.placeholder = 'Nom d\'utilisateur';
+            passwordGroup.style.display = 'block';
+            passwordInput.required = true;
+            iconInput.src = 'img/user.svg';
+            infoLogin.innerHTML = config.loginup || 'Entrez vos identifiants';
+            usernameInput.oninput = null;
+            localStorage.setItem('loginMode', 'membre');
+        }
+
+        // Initialize mode
+        var savedMode = localStorage.getItem('loginMode');
+        if (savedMode === 'membre' || config.defaultMode === 'member') {
+            switchToMembre();
+        } else {
+            switchToVoucher();
+        }
+
+        // Tarifs par defaut (fallback)
+        var tarifsData = {
+            tarifs: [
+                { id: 1, duree: '1 Heure', prix: 100, devise: 'FCFA', validite: '24 heures', icon: 'clock', populaire: false, lienPaiement: '#' },
+                { id: 2, duree: '3 Heures', prix: 250, devise: 'FCFA', validite: '24 heures', icon: 'clock', populaire: true, lienPaiement: '#' },
+                { id: 3, duree: 'Journee', prix: 500, devise: 'FCFA', validite: '24 heures', icon: 'sun', populaire: false, lienPaiement: '#' },
+                { id: 4, duree: 'Semaine', prix: 2500, devise: 'FCFA', validite: '7 jours', icon: 'calendar', populaire: false, lienPaiement: '#' }
+            ],
+            paiement: {
+                contact: '+225 00 00 00 00'
+            }
+        };
+
+        // Charger tarifs depuis JSON (mise a jour si disponible)
+        fetch('tarifs.json')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                tarifsData = data;
+                renderTarifs(data.tarifs);
+                document.getElementById('contact-number').textContent = data.paiement.contact;
+            })
+            .catch(function(err) {
+                console.log('Utilisation des tarifs par defaut');
+            });
+
+        function renderTarifs(tarifs) {
+            var container = document.getElementById('tarifs-container');
+            var html = '';
+            var cartIcon = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
+            for (var i = 0; i < tarifs.length; i++) {
+                var t = tarifs[i];
+                var popClass = t.populaire ? ' populaire' : '';
+                var badge = t.populaire ? '<span class="tarif-badge">Populaire</span>' : '';
+                html += '<div class="tarif-card glass-card' + popClass + '" onclick="openPayment(' + i + ')">' +
+                    badge +
+                    '<div class="tarif-info">' +
+                        '<div class="tarif-icon">' + getIcon(t.icon) + '</div>' +
+                        '<div class="tarif-details">' +
+                            '<h3>' + t.duree + '</h3>' +
+                            '<span class="tarif-validite">Validite: ' + t.validite + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="tarif-action">' +
+                        '<div class="tarif-prix">' +
+                            '<span class="prix-value">' + t.prix + '</span>' +
+                            '<span class="prix-devise">' + t.devise + '</span>' +
+                        '</div>' +
+                        '<span class="btn-acheter">' + cartIcon + ' Acheter</span>' +
+                    '</div>' +
+                '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        function getIcon(name) {
+            var icons = {
+                'clock': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>',
+                'sun': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>',
+                'calendar': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>'
+            };
+            return icons[name] || icons['clock'];
+        }
+
+        var selectedTarif = null;
+        function openPayment(index) {
+            selectedTarif = tarifsData.tarifs[index];
+            var modal = document.getElementById('payment-modal');
+            var info = document.getElementById('modal-tarif-info');
+            var description = document.getElementById('modal-description');
+            var modalInfo = document.getElementById('modal-info');
+            var paymentLink = document.getElementById('payment-link');
+
+            info.innerHTML = '<div class="modal-duree">' + selectedTarif.duree + '</div>' +
+                '<div class="modal-prix">' + selectedTarif.prix + ' ' + selectedTarif.devise + '</div>' +
+                '<div class="modal-validite">Validite: ' + selectedTarif.validite + '</div>';
+
+            // Set description
+            if (selectedTarif.description) {
+                description.innerHTML = selectedTarif.description;
+                description.style.display = 'block';
+            } else {
+                description.style.display = 'none';
+            }
+
+            // Set info box
+            if (tarifsData.paiement && tarifsData.paiement.infoModal) {
+                modalInfo.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>' +
+                    '<span>' + tarifsData.paiement.infoModal + '</span>';
+                modalInfo.style.display = 'flex';
+            } else {
+                modalInfo.style.display = 'none';
+            }
+
+            // Set payment link
+            paymentLink.href = selectedTarif.lienPaiement || '#';
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('payment-modal').classList.remove('active');
+            selectedTarif = null;
+        }
+
+        // Close modal on click outside
+        document.getElementById('payment-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Apply theme
+        if (config.theme === 'lite') {
+            document.body.classList.add('lite');
+        }
+
+        // Set contact phone
+        if (config.contactPhone) {
+            var mainContact = document.getElementById('main-contact');
+            if (mainContact) {
+                mainContact.textContent = config.contactPhone;
+                mainContact.href = 'tel:' + config.contactPhone.replace(/\s/g, '');
+            }
+        }
+
+        // Image Slider
+        var sliderContainer = document.getElementById('slider-container');
+        var currentSlide = 0;
+        var slideInterval = null;
+        var slides = document.querySelectorAll('.slide');
+        var dots = document.querySelectorAll('.dot');
+
+        function showSlide(index) {
+            if (index >= slides.length) index = 0;
+            if (index < 0) index = slides.length - 1;
+            currentSlide = index;
+
+            for (var i = 0; i < slides.length; i++) {
+                slides[i].classList.remove('active');
+                dots[i].classList.remove('active');
+            }
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+            // Reset interval when manually changing slide
+            if (slideInterval) {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(nextSlide, config.sliderInterval || 4000);
+            }
+        }
+
+        function initSlider() {
+            if (config.sliderEnabled) {
+                sliderContainer.style.display = 'block';
+                slideInterval = setInterval(nextSlide, config.sliderInterval || 4000);
+            }
+        }
+
+        // Initialize slider
+        initSlider();
+    </script>
+</body>
+</html>

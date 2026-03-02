@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    $(if refresh-timeout)
+    <meta http-equiv="refresh" content="$(refresh-timeout-secs)">
+    $(endif)
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <title>WiFi Zone - Statut</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <script>
+        $(if advert-pending == 'yes')
+        var popup = '';
+        function focusAdvert() {
+            if (window.focus) popup.focus();
+        }
+        function openAdvert() {
+            popup = open('$(link-advert)', 'hotspot_advert', '');
+            setTimeout("focusAdvert()", 1000);
+        }
+        $(endif)
+
+        function openLogout() {
+            if (window.name != 'hotspot_status') return true;
+            open('$(link-logout)', 'hotspot_logout', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=320,height=400');
+            window.close();
+            return false;
+        }
+    </script>
+    <div class="bg-gradient"></div>
+    <div class="container">
+        <div class="page-card glass-card status-page" $(if advert-pending == 'yes')onload="openAdvert()"$(endif)>
+            <div class="status-header">
+                <div class="user-avatar">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                $(if login-by == 'trial')
+                <h1>Utilisateur Essai</h1>
+                $(elif login-by != 'mac')
+                <h1>$(username)</h1>
+                $(endif)
+                <span class="status-badge online">Connecte</span>
+            </div>
+
+            <table class="info-table">
+                <tr><td>Adresse IP</td><td>$(ip)</td></tr>
+                <tr><td>Adresse MAC</td><td>$(mac)</td></tr>
+                <tr><td>Donnees</td><td>$(bytes-in-nice) / $(bytes-out-nice)</td></tr>
+                $(if remain-bytes-total)
+                <tr><td>Donnees restantes</td><td>$(remain-bytes-total-nice)</td></tr>
+                $(endif)
+                $(if session-time-left)
+                <tr><td>Connecte / Restant</td><td><span id="uptime">$(uptime)</span> / <span id="timeleft">$(session-time-left)</span></td></tr>
+                $(else)
+                <tr><td>Temps connecte</td><td><span id="uptime2">$(uptime)</span></td></tr>
+                $(endif)
+                $(if blocked == 'yes')
+                <tr><td>Statut</td><td><a href="$(link-advert)" target="hotspot_advert">Publicite requise</a></td></tr>
+                $(elif refresh-timeout)
+                <tr><td>Rafraichissement</td><td>$(refresh-timeout)</td></tr>
+                $(endif)
+            </table>
+
+            $(if login-by-mac != 'yes')
+            <form action="$(link-logout)" name="logout" onsubmit="return openLogout()">
+                <button type="submit" class="btn-submit btn-logout">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    </svg>
+                    Deconnexion
+                </button>
+            </form>
+            $(endif)
+        </div>
+    </div>
+    <script src="conf.js"></script>
+    <script>
+        if (config.theme === 'lite') document.body.classList.add('lite');
+
+        // Format time display
+        function formatTime(elem) {
+            if (!elem) return;
+            var t = elem.textContent;
+            // Simple time formatting
+            elem.textContent = t;
+        }
+        formatTime(document.getElementById('uptime'));
+        formatTime(document.getElementById('uptime2'));
+        formatTime(document.getElementById('timeleft'));
+    </script>
+</body>
+</html>

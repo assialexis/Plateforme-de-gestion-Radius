@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="pragma" content="no-cache">
+    <title>Inscription WiFi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #312e81 0%, #1e1b4b 50%, #0f172a 100%);
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(99, 102, 241, 0.25);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .logo-icon svg { width: 28px; height: 28px; fill: #a5b4fc; }
+        .logo h1 { font-size: 20px; font-weight: 700; color: #fff; }
+        .logo p { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 32px 28px;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .step-dot {
+            width: 32px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            transition: background 0.3s;
+        }
+        .step-dot.active { background: #6366f1; }
+        .step-dot.done { background: #22c55e; }
+        .step-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .step-desc {
+            text-align: center;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+        .input-group { margin-bottom: 16px; }
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .phone-input {
+            display: flex;
+            gap: 0;
+        }
+        .phone-prefix {
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-right: none;
+            border-radius: 12px 0 0 12px;
+            color: #94a3b8;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+        .phone-prefix input {
+            width: 40px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 15px;
+        }
+        input[type="tel"], input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .phone-input input[type="tel"] {
+            border-radius: 0 12px 12px 0;
+        }
+        input:focus { border-color: #6366f1; }
+        input::placeholder { color: #475569; }
+        .otp-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .otp-input {
+            width: 48px;
+            height: 56px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .otp-input:focus { border-color: #6366f1; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #7c3aed);
+            color: #fff;
+        }
+        .btn-primary:hover { background: linear-gradient(135deg, #4f46e5, #6d28d9); }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-link {
+            background: transparent;
+            color: #a5b4fc;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+        .btn-link:hover { color: #c7d2fe; }
+        .btn-link:disabled { opacity: 0.5; cursor: not-allowed; }
+        .error-box {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #fca5a5;
+            display: none;
+        }
+        .error-box.show { display: block; }
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .credentials-box {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .credentials-box .label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .credentials-box .value {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #a5b4fc;
+            letter-spacing: 2px;
+        }
+        .timer {
+            text-align: center;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 16px;
+        }
+        .timer span { color: #f59e0b; font-weight: 600; }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+        .auto-redirect {
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 12px;
+        }
+        .auto-redirect span { color: #a5b4fc; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+                </svg>
+            </div>
+            <h1>Inscription WiFi</h1>
+            <p>Creez votre compte pour vous connecter</p>
+        </div>
+
+        <div class="card">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot" id="dot-1"></div>
+                <div class="step-dot" id="dot-2"></div>
+                <div class="step-dot" id="dot-3"></div>
+            </div>
+
+            <!-- Error Box -->
+            <div class="error-box" id="error-box"></div>
+
+            <!-- Step 1: Phone + Daily Code -->
+            <div id="step-register">
+                <h2 class="step-title">Inscription</h2>
+                <p class="step-desc">Entrez votre numero et le code du jour pour recevoir un code de verification</p>
+
+                <div class="input-group">
+                    <label>Numero de telephone</label>
+                    <div class="phone-input">
+                        <div class="phone-prefix">
+                            +<input type="text" id="country-code" value="229" maxlength="4">
+                        </div>
+                        <input type="tel" id="phone-input" placeholder="96 00 00 00" autofocus>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Code du jour</label>
+                    <input type="text" id="daily-code-input" placeholder="Entrez le code du jour" autocomplete="off">
+                </div>
+
+                <button class="btn btn-primary" id="btn-register" onclick="sendRegistration()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <line x1="20" y1="8" x2="20" y2="14"/>
+                        <line x1="23" y1="11" x2="17" y2="11"/>
+                    </svg>
+                    S'inscrire
+                </button>
+            </div>
+
+            <!-- Step 2: OTP Code -->
+            <div id="step-otp" class="hidden">
+                <h2 class="step-title">Code de verification</h2>
+                <p class="step-desc">Entrez le code recu par SMS au <strong id="display-phone"></strong></p>
+
+                <div class="otp-inputs" id="otp-container"></div>
+
+                <div class="timer" id="timer-box">
+                    Code valide pendant <span id="timer-display">5:00</span>
+                </div>
+
+                <button class="btn btn-primary" id="btn-verify" onclick="verifyOtp()" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    Verifier
+                </button>
+
+                <button class="btn btn-link" id="btn-resend" onclick="sendRegistration()" disabled>
+                    Renvoyer le code
+                </button>
+            </div>
+
+            <!-- Step 3: Success -->
+            <div id="step-success" class="hidden">
+                <div class="success-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                </div>
+                <h2 class="step-title" style="color:#86efac;">Compte cree!</h2>
+                <p class="step-desc">Vos identifiants de connexion WiFi</p>
+
+                <div class="credentials-box">
+                    <div style="margin-bottom:12px;">
+                        <div class="label">Identifiant</div>
+                        <div class="value" id="cred-username"></div>
+                    </div>
+                    <div>
+                        <div class="label">Mot de passe</div>
+                        <div class="value" id="cred-password"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="btn-connect" onclick="connectNow()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
+                    </svg>
+                    Se connecter au WiFi
+                </button>
+
+                <div class="auto-redirect" id="auto-redirect">
+                    Connexion automatique dans <span id="redirect-countdown">5</span>s...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Parse URL parameters
+    var params = new URLSearchParams(window.location.search);
+    var ADMIN_ID = params.get('admin_id') || '';
+    var CLIENT_IP = params.get('ip') || '';
+    var CLIENT_MAC = params.get('mac') || '';
+    var OTP_LENGTH = 6;
+    var expiresIn = 300;
+    var timerInterval = null;
+    var currentPhone = '';
+    var redirectUrl = '';
+
+    // Determine API URL from current page location
+    var pathParts = window.location.pathname.split('/');
+    // Remove 'public' and 'registration.html' to get base path
+    pathParts.pop(); // registration.html
+    pathParts.pop(); // public
+    var API_URL = window.location.origin + pathParts.join('/') + '/api.php?route=';
+
+    // Validate required params
+    if (!ADMIN_ID) {
+        showError('Parametres manquants. Contactez l\'administrateur.');
+        document.getElementById('btn-register').disabled = true;
+    }
+
+    // Load public config
+    if (ADMIN_ID) {
+        fetch(API_URL + '/registration/public-config&admin_id=' + ADMIN_ID)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success && data.data) {
+                    if (!data.data.registration_enabled) {
+                        showError('L\'inscription n\'est pas disponible actuellement.');
+                        document.getElementById('btn-register').disabled = true;
+                        return;
+                    }
+                    if (data.data.country_code) {
+                        document.getElementById('country-code').value = data.data.country_code;
+                    }
+                    if (data.data.otp_length) {
+                        OTP_LENGTH = parseInt(data.data.otp_length);
+                    }
+                }
+            })
+            .catch(function() {});
+    }
+
+    // Update step indicators
+    function updateSteps(step) {
+        for (var i = 1; i <= 3; i++) {
+            var dot = document.getElementById('dot-' + i);
+            dot.className = 'step-dot';
+            if (i < step) dot.className = 'step-dot done';
+            if (i === step) dot.className = 'step-dot active';
+        }
+    }
+    updateSteps(1);
+
+    function showError(msg) {
+        var box = document.getElementById('error-box');
+        box.textContent = msg;
+        box.className = 'error-box show';
+    }
+
+    function hideError() {
+        document.getElementById('error-box').className = 'error-box';
+    }
+
+    function setLoading(btn, loading) {
+        if (loading) {
+            btn.disabled = true;
+            btn.dataset.originalHtml = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner"></div> Chargement...';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        }
+    }
+
+    // Create OTP input fields
+    function createOtpInputs(length) {
+        OTP_LENGTH = length;
+        var container = document.getElementById('otp-container');
+        container.innerHTML = '';
+        for (var i = 0; i < length; i++) {
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'otp-input';
+            input.maxLength = 1;
+            input.inputMode = 'numeric';
+            input.pattern = '[0-9]';
+            input.dataset.index = i;
+
+            input.addEventListener('input', function(e) {
+                var val = e.target.value.replace(/[^0-9]/g, '');
+                e.target.value = val;
+                if (val && e.target.dataset.index < length - 1) {
+                    var next = container.children[parseInt(e.target.dataset.index) + 1];
+                    if (next) next.focus();
+                }
+                checkOtpComplete();
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !e.target.value && e.target.dataset.index > 0) {
+                    var prev = container.children[parseInt(e.target.dataset.index) - 1];
+                    if (prev) { prev.focus(); prev.value = ''; }
+                }
+            });
+
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                var paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+                for (var j = 0; j < Math.min(paste.length, length); j++) {
+                    container.children[j].value = paste[j];
+                }
+                checkOtpComplete();
+                var lastIdx = Math.min(paste.length, length) - 1;
+                if (container.children[lastIdx]) container.children[lastIdx].focus();
+            });
+
+            container.appendChild(input);
+        }
+    }
+
+    function getOtpValue() {
+        var inputs = document.getElementById('otp-container').children;
+        var code = '';
+        for (var i = 0; i < inputs.length; i++) {
+            code += inputs[i].value;
+        }
+        return code;
+    }
+
+    function checkOtpComplete() {
+        var code = getOtpValue();
+        document.getElementById('btn-verify').disabled = code.length !== OTP_LENGTH;
+    }
+
+    // Timer
+    function startTimer(seconds) {
+        if (timerInterval) clearInterval(timerInterval);
+        var remaining = seconds;
+        var display = document.getElementById('timer-display');
+        var resendBtn = document.getElementById('btn-resend');
+        resendBtn.disabled = true;
+
+        timerInterval = setInterval(function() {
+            remaining--;
+            var min = Math.floor(remaining / 60);
+            var sec = remaining % 60;
+            display.textContent = min + ':' + (sec < 10 ? '0' : '') + sec;
+
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                display.textContent = '0:00';
+                resendBtn.disabled = false;
+                document.getElementById('timer-box').innerHTML = 'Code expire. <span style="color:#f59e0b;">Renvoyez un nouveau code.</span>';
+            }
+        }, 1000);
+    }
+
+    // Send registration (Step 1 -> Step 2)
+    function sendRegistration() {
+        hideError();
+        var phoneInput = document.getElementById('phone-input');
+        var countryCode = document.getElementById('country-code').value.trim();
+        var phone = phoneInput.value.trim().replace(/\s/g, '');
+        var dailyCode = document.getElementById('daily-code-input').value.trim();
+
+        if (!phone) {
+            showError('Veuillez entrer votre numero de telephone.');
+            phoneInput.focus();
+            return;
+        }
+
+        if (!dailyCode) {
+            showError('Veuillez entrer le code du jour.');
+            document.getElementById('daily-code-input').focus();
+            return;
+        }
+
+        // Format phone
+        var fullPhone = phone;
+        if (!phone.startsWith('+') && !phone.startsWith('00')) {
+            if (phone.startsWith('0')) {
+                fullPhone = '+' + countryCode + phone.substring(1);
+            } else {
+                fullPhone = '+' + countryCode + phone;
+            }
+        }
+        currentPhone = fullPhone;
+
+        var btn = document.getElementById('btn-register');
+        if (!btn) btn = document.getElementById('btn-resend');
+        setLoading(btn, true);
+
+        fetch(API_URL + '/registration/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: parseInt(ADMIN_ID),
+                phone: fullPhone,
+                daily_code: dailyCode,
+                ip: CLIENT_IP,
+                mac: CLIENT_MAC,
+            }),
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            setLoading(btn, false);
+            if (data.success) {
+                expiresIn = data.data.expires_in || 300;
+                // Show OTP step
+                document.getElementById('step-register').className = 'hidden';
+                document.getElementById('step-otp').className = '';
+                document.getElementById('display-phone').textContent = fullPhone;
+                updateSteps(2);
+                createOtpInputs(OTP_LENGTH);
+                startTimer(expiresIn);
+                setTimeout(function() {
+                    var first = document.querySelector('.otp-input');
+                    if (first) first.focus();
+                }, 100);
+            } else {
+                showError(data.message || 'Erreur lors de l\'inscription.');
+            }
+        })
+        .catch(function(err) {
+            setLoading(btn, false);
+            showError('Erreur reseau. Verifiez votre connexion.');
+        });
+    }
+
+    // Verify OTP (Step 2 -> Step 3)
+    function verifyOtp() {
+        hideError();
+        var code = getOtpValue();
+        if (code.length !== OTP_LENGTH) {
+            showError('Entrez le code complet.');
+            return;
+        }
+
+        var btn = document.getElementById('btn-verify');
+        setLoading(btn, true);
+
+        fetch(API_URL + '/registration/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: parseInt(ADMIN_ID),
+                phone: currentPhone,
+                otp_code: code,
+            }),
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            setLoading(btn, false);
+            if (data.success) {
+                if (timerInterval) clearInterval(timerInterval);
+                redirectUrl = data.data.redirect_url || '';
+
+                // Show success step
+                document.getElementById('step-otp').className = 'hidden';
+                document.getElementById('step-success').className = '';
+                updateSteps(3);
+
+                // Display credentials
+                document.getElementById('cred-username').textContent = data.data.voucher_username || '';
+                document.getElementById('cred-password').textContent = data.data.voucher_password || '';
+
+                // Auto-redirect countdown
+                if (redirectUrl) {
+                    var countdown = 5;
+                    var countdownEl = document.getElementById('redirect-countdown');
+                    var redirectInterval = setInterval(function() {
+                        countdown--;
+                        countdownEl.textContent = countdown;
+                        if (countdown <= 0) {
+                            clearInterval(redirectInterval);
+                            window.location.href = redirectUrl;
+                        }
+                    }, 1000);
+                } else {
+                    document.getElementById('auto-redirect').style.display = 'none';
+                }
+            } else {
+                showError(data.message || 'Code invalide.');
+                // Clear OTP inputs
+                var inputs = document.querySelectorAll('.otp-input');
+                for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+                if (inputs[0]) inputs[0].focus();
+                document.getElementById('btn-verify').disabled = true;
+            }
+        })
+        .catch(function(err) {
+            setLoading(btn, false);
+            showError('Erreur reseau. Verifiez votre connexion.');
+        });
+    }
+
+    // Manual connect button
+    function connectNow() {
+        if (redirectUrl) {
+            window.location.href = redirectUrl;
+        }
+    }
+
+    // Enter key handlers
+    document.getElementById('phone-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('daily-code-input').focus();
+        }
+    });
+    document.getElementById('daily-code-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendRegistration();
+    });
+    </script>
+</body>
+</html>

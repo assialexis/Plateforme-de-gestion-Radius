@@ -1,0 +1,14 @@
+# Autoriser uniquement les fichiers médias
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|mp3|wav|ogg|m4a)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Bloquer l'exécution de scripts PHP
+<FilesMatch "\.php$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Désactiver le listing des répertoires
+Options -Indexes
