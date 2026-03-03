@@ -7,11 +7,13 @@ class ZoneController
 {
     private RadiusDatabase $db;
     private AuthService $auth;
+    private ?NodePushService $pushService;
 
-    public function __construct(RadiusDatabase $db, AuthService $auth)
+    public function __construct(RadiusDatabase $db, AuthService $auth, ?NodePushService $pushService = null)
     {
         $this->db = $db;
         $this->auth = $auth;
+        $this->pushService = $pushService;
     }
 
     private function getAdminId(): ?int
@@ -76,6 +78,12 @@ class ZoneController
         try {
             $id = $this->db->createZone($data);
             $zone = $this->db->getZoneById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $zone) {
+                $this->pushService->notifyZoneChange('created', $zone);
+            }
+
             jsonSuccess($zone, __('api.zone_created'));
         }
         catch (Exception $e) {
@@ -106,6 +114,12 @@ class ZoneController
         try {
             $this->db->updateZone($id, $data);
             $zone = $this->db->getZoneById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $zone) {
+                $this->pushService->notifyZoneChange('updated', $zone);
+            }
+
             jsonSuccess($zone, __('api.zone_updated'));
         }
         catch (Exception $e) {
@@ -131,6 +145,11 @@ class ZoneController
         }
 
         try {
+            // Push temps réel vers les nœuds RADIUS (avant suppression)
+            if ($this->pushService && $zone) {
+                $this->pushService->notifyZoneChange('deleted', $zone);
+            }
+
             $this->db->deleteZone($id);
             jsonSuccess(null, __('api.zone_deleted'));
         }
@@ -207,6 +226,12 @@ class ZoneController
                 'is_active' => $zone['is_active'] ? 0 : 1
             ]);
             $zone = $this->db->getZoneById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $zone) {
+                $this->pushService->notifyZoneChange('updated', $zone);
+            }
+
             jsonSuccess($zone, $zone['is_active'] ? __('api.zone_activated') : __('api.zone_deactivated'));
         }
         catch (Exception $e) {

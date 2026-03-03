@@ -70,6 +70,7 @@ $allPages = [
     'nas' => ['admin', 'vendeur', 'technicien'],
     'nas-map' => ['admin', 'vendeur', 'technicien'],
     'router-commands' => ['admin', 'technicien'],
+    'radius-servers' => ['superadmin'],
     'bandwidth' => ['admin'],
     'monitoring' => ['admin', 'gerant', 'technicien'],
     'users' => ['admin'],

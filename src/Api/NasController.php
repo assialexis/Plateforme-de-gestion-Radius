@@ -10,12 +10,14 @@ class NasController
     private RadiusDatabase $db;
     private AuthService $auth;
     private MikroTikCommandSender $commandSender;
+    private ?NodePushService $pushService;
 
-    public function __construct(RadiusDatabase $db, AuthService $auth)
+    public function __construct(RadiusDatabase $db, AuthService $auth, ?NodePushService $pushService = null)
     {
         $this->db = $db;
         $this->auth = $auth;
         $this->commandSender = new MikroTikCommandSender($db->getPdo());
+        $this->pushService = $pushService;
     }
 
     private function getAdminId(): ?int
@@ -131,6 +133,11 @@ class NasController
                         $pdo->commit();
                         $creditDeducted = true;
 
+                        // Push temps réel vers les nœuds RADIUS
+                        if ($this->pushService && $nas) {
+                            $this->pushService->notifyNasChange('created', $nas);
+                        }
+
                         jsonSuccess(array_merge($nas, [
                             'credits_deducted' => $nasCost,
                             'new_balance' => $newBalance
@@ -155,6 +162,12 @@ class NasController
         try {
             $id = $this->db->createNas($data);
             $nas = $this->db->getNasById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $nas) {
+                $this->pushService->notifyNasChange('created', $nas);
+            }
+
             jsonSuccess($nas, __('api.nas_created'));
         } catch (Exception $e) {
             if (strpos($e->getMessage(), 'Duplicate') !== false) {
@@ -188,6 +201,12 @@ class NasController
         try {
             $this->db->updateNas($id, $data);
             $nas = $this->db->getNasById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $nas) {
+                $this->pushService->notifyNasChange('updated', $nas);
+            }
+
             jsonSuccess($nas, __('api.nas_updated'));
         } catch (Exception $e) {
             jsonError(__('api.nas_update_failed') . ': ' . $e->getMessage(), 500);
@@ -207,6 +226,11 @@ class NasController
         }
 
         try {
+            // Push temps réel vers les nœuds RADIUS (avant suppression)
+            if ($this->pushService && $nas) {
+                $this->pushService->notifyNasChange('deleted', $nas);
+            }
+
             $this->db->deleteNas($id);
             jsonSuccess(null, __('api.nas_deleted'));
         } catch (Exception $e) {

@@ -73,6 +73,8 @@ require_once __DIR__ . '/../src/Api/ClientPortalController.php';
 require_once __DIR__ . '/../src/Api/RouterSetupController.php';
 require_once __DIR__ . '/../src/Api/RouterCommandController.php';
 require_once __DIR__ . '/../src/Api/RouterSyncController.php';
+require_once __DIR__ . '/../src/Api/RadiusServerController.php';
+require_once __DIR__ . '/../src/Services/NodePushService.php';
 
 
 // Charger la configuration
@@ -90,19 +92,22 @@ catch (Exception $e) {
 // Initialiser le service d'authentification (démarre aussi la session)
 $authService = new AuthService($pdo);
 
+// Initialiser le service de push temps réel
+$nodePushService = new NodePushService($db);
+
 // Initialiser les contrôleurs
 $authController = new AuthController($authService);
 $userController = new UserController($authService, $pdo);
 $dashboardController = new DashboardController($db, $authService);
-$voucherController = new VoucherController($db, $authService);
-$nasController = new NasController($db, $authService);
+$voucherController = new VoucherController($db, $authService, $nodePushService);
+$nasController = new NasController($db, $authService, $nodePushService);
 $sessionController = new SessionController($db, $authService);
-$profileController = new ProfileController($db, $authService);
+$profileController = new ProfileController($db, $authService, $nodePushService);
 $logController = new LogController($db, $authService);
 $paymentController = new PaymentController($db, $authService);
 $libraryController = new LibraryController($db, $authService);
 $templateController = new TemplateController($db, $authService);
-$zoneController = new ZoneController($db, $authService);
+$zoneController = new ZoneController($db, $authService, $nodePushService);
 $salesController = new SalesController($db, $authService);
 $pppoeController = new PPPoEController($db, $authService);
 $loyaltyController = new LoyaltyController($db, $authService);
@@ -131,6 +136,7 @@ $clientPortalController = new ClientPortalController($db, $pdo, $config);
 $routerSetupController = new RouterSetupController($db, $authService);
 $routerCommandController = new RouterCommandController($db, $authService);
 $routerSyncController = new RouterSyncController($db, $authService);
+$radiusServerController = new RadiusServerController($db, $authService);
 
 // Middleware d'authentification
 $authMiddleware = function () {
@@ -273,6 +279,20 @@ $router->delete('/router-commands/{id}', fn($p) => $routerCommandController->des
 
 // Routes Router Sync
 $router->post('/router-sync/sync', fn($p) => $routerSyncController->sync());
+
+// Routes Serveurs RADIUS
+$router->get('/radius-servers', fn($p) => $radiusServerController->index());
+$router->post('/radius-servers', fn($p) => $radiusServerController->store());
+$router->get('/radius-servers/statuses', fn($p) => $radiusServerController->statuses());
+$router->get('/radius-servers/generate-code', fn($p) => $radiusServerController->generateCode());
+$router->get('/radius-servers/{id}', fn($p) => $radiusServerController->show($p));
+$router->put('/radius-servers/{id}', fn($p) => $radiusServerController->update($p));
+$router->delete('/radius-servers/{id}', fn($p) => $radiusServerController->destroy($p));
+$router->post('/radius-servers/{id}/regenerate-token', fn($p) => $radiusServerController->regenerateToken($p));
+$router->get('/radius-servers/{id}/status', fn($p) => $radiusServerController->status($p));
+$router->get('/radius-servers/{id}/zones', fn($p) => $radiusServerController->getZones($p));
+$router->post('/radius-servers/{id}/toggle', fn($p) => $radiusServerController->toggle($p));
+$router->get('/radius-servers/{id}/install-script', fn($p) => $radiusServerController->installScript($p));
 
 // Routes Sessions
 $router->get('/sessions', fn($p) => $sessionController->index());

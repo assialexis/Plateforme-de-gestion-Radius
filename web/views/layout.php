@@ -468,6 +468,20 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                     </span>
                 </a>
 
+                <a href="index.php?page=radius-servers"
+                    class="sidebar-link <?= ($currentPage ?? '') === 'radius-servers' ? 'active' : '' ?>"
+                    :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
+                    :title="sidebarCollapsed ? '<?= __('nav.radius_servers') ?? 'Serveurs RADIUS' ?>' : ''">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span :class="sidebarCollapsed && 'lg:hidden'">
+                        <?= __('nav.radius_servers') ?? 'Serveurs RADIUS' ?>
+                    </span>
+                </a>
+
                 <div class="sidebar-divider"></div>
                 <?php endif; ?>
 

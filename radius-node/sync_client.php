@@ -1,0 +1,366 @@
+<?php
+/**
+ * Client de synchronisation pour nœud RADIUS
+ *
+ * Ce script est appelé par cron toutes les minutes.
+ * Il effectue un cycle complet :
+ * 1. Heartbeat vers la plateforme centrale
+ * 2. Pull de la configuration (si changée)
+ * 3. Push des sessions/logs non synchronisés
+ */
+
+$configFile = __DIR__ . '/config/config.php';
+
+if (!file_exists($configFile)) {
+    echo "[ERROR] Configuration manquante\n";
+    exit(1);
+}
+
+$config = require $configFile;
+
+// Vérifier la config plateforme
+if (empty($config['platform']['url']) || empty($config['platform']['sync_token'])) {
+    echo "[ERROR] Configuration plateforme incomplète\n";
+    exit(1);
+}
+
+// Connexion DB locale
+try {
+    $dsn = sprintf(
+        'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+        $config['database']['host'],
+        $config['database']['port'],
+        $config['database']['dbname'],
+        $config['database']['charset']
+    );
+    $pdo = new PDO($dsn, $config['database']['username'], $config['database']['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    echo "[ERROR] DB locale inaccessible: " . $e->getMessage() . "\n";
+    exit(1);
+}
+
+$platformUrl = rtrim($config['platform']['url'], '/');
+$serverCode = $config['platform']['server_code'];
+$syncToken = $config['platform']['sync_token'];
+
+$timestamp = date('Y-m-d H:i:s');
+echo "[{$timestamp}] === Sync cycle start ===\n";
+
+// 1. Heartbeat
+echo "[{$timestamp}] 1. Sending heartbeat...\n";
+$currentHash = getSyncMeta($pdo, 'config_hash');
+$heartbeatResponse = apiCall('GET', "{$platformUrl}/node_sync.php?action=heartbeat&server={$serverCode}", null, $syncToken);
+
+if ($heartbeatResponse && isset($heartbeatResponse['config_hash'])) {
+    echo "[{$timestamp}]    Heartbeat OK - Remote hash: {$heartbeatResponse['config_hash']}\n";
+
+    // 2. Pull si le hash a changé
+    if ($currentHash !== $heartbeatResponse['config_hash']) {
+        echo "[{$timestamp}] 2. Config changed, pulling...\n";
+        $pullResponse = apiCall('GET', "{$platformUrl}/node_sync.php?action=pull&server={$serverCode}&hash={$currentHash}", null, $syncToken);
+
+        if ($pullResponse && isset($pullResponse['status'])) {
+            if ($pullResponse['status'] === 'no_change') {
+                echo "[{$timestamp}]    No changes detected\n";
+            } elseif ($pullResponse['status'] === 'ok' && isset($pullResponse['data'])) {
+                $data = $pullResponse['data'];
+                $stats = applyPullData($pdo, $data);
+                updateSyncMeta($pdo, 'config_hash', $data['config_hash'] ?? '');
+                updateSyncMeta($pdo, 'last_pull_at', date('Y-m-d H:i:s'));
+                incrementSyncMeta($pdo, 'pull_count');
+                echo "[{$timestamp}]    Pull OK - Zones: {$stats['zones']}, NAS: {$stats['nas']}, Vouchers: {$stats['vouchers']}, Profiles: {$stats['profiles']}, PPPoE: {$stats['pppoe_users']}\n";
+            }
+        } else {
+            echo "[{$timestamp}]    Pull FAILED\n";
+            updateSyncMeta($pdo, 'last_error', 'Pull failed at ' . date('Y-m-d H:i:s'));
+        }
+    } else {
+        echo "[{$timestamp}] 2. Config unchanged, skipping pull\n";
+    }
+} else {
+    echo "[{$timestamp}]    Heartbeat FAILED - Platform may be unreachable\n";
+    updateSyncMeta($pdo, 'last_error', 'Heartbeat failed at ' . date('Y-m-d H:i:s'));
+}
+
+// 3. Push sessions et logs non synchronisés
+echo "[{$timestamp}] 3. Pushing local data...\n";
+$pushData = collectPushData($pdo);
+
+if ($pushData['has_data']) {
+    $pushResponse = apiCall('POST', "{$platformUrl}/node_sync.php?action=push&server={$serverCode}", $pushData, $syncToken);
+
+    if ($pushResponse && isset($pushResponse['status']) && $pushResponse['status'] === 'ok') {
+        markAsSynced($pdo, $pushData);
+        updateSyncMeta($pdo, 'last_push_at', date('Y-m-d H:i:s'));
+        incrementSyncMeta($pdo, 'push_count');
+        $imported = $pushResponse['imported'] ?? [];
+        echo "[{$timestamp}]    Push OK - Sessions: " . ($imported['sessions'] ?? 0) . ", Logs: " . ($imported['auth_logs'] ?? 0) . ", Updates: " . ($imported['voucher_updates'] ?? 0) . "\n";
+    } else {
+        echo "[{$timestamp}]    Push FAILED\n";
+        updateSyncMeta($pdo, 'last_error', 'Push failed at ' . date('Y-m-d H:i:s'));
+    }
+} else {
+    echo "[{$timestamp}]    No data to push\n";
+}
+
+echo "[{$timestamp}] === Sync cycle end ===\n\n";
+
+// =====================================================
+// Fonctions utilitaires
+// =====================================================
+
+/**
+ * Appel API vers la plateforme centrale
+ */
+function apiCall(string $method, string $url, ?array $data, string $token): ?array
+{
+    $ch = curl_init($url);
+    $headers = [
+        'X-Node-Token: ' . $token,
+        'Accept: application/json',
+        'Accept-Encoding: gzip',
+    ];
+
+    if ($method === 'POST' && $data) {
+        $json = json_encode($data);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+        $headers[] = 'Content-Type: application/json';
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false, // En production, mettre true
+        CURLOPT_ENCODING => '', // Auto-décompression gzip
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error || $httpCode !== 200) {
+        echo "    API Error: HTTP {$httpCode}, Error: {$error}\n";
+        return null;
+    }
+
+    return json_decode($response, true);
+}
+
+/**
+ * Appliquer les données pull dans la DB locale
+ */
+function applyPullData(PDO $pdo, array $data): array
+{
+    $stats = ['zones' => 0, 'nas' => 0, 'vouchers' => 0, 'profiles' => 0, 'pppoe_users' => 0];
+
+    $pdo->beginTransaction();
+    try {
+        // Sync zones
+        if (!empty($data['zones'])) {
+            $pdo->exec("DELETE FROM zones");
+            $stmt = $pdo->prepare("INSERT INTO zones (id, name, code, description, color, dns_name, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            foreach ($data['zones'] as $zone) {
+                $stmt->execute([$zone['id'], $zone['name'], $zone['code'], $zone['description'] ?? null, $zone['color'] ?? '#3b82f6', $zone['dns_name'] ?? null, $zone['is_active'] ?? 1]);
+                $stats['zones']++;
+            }
+        }
+
+        // Sync NAS
+        if (!empty($data['nas'])) {
+            $pdo->exec("DELETE FROM nas");
+            $stmt = $pdo->prepare("INSERT INTO nas (id, router_id, zone_id, nasname, shortname, secret, description, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            foreach ($data['nas'] as $nas) {
+                $stmt->execute([$nas['id'], $nas['router_id'] ?? null, $nas['zone_id'] ?? null, $nas['nasname'], $nas['shortname'], $nas['secret'], $nas['description'] ?? null, $nas['type'] ?? 'mikrotik']);
+                $stats['nas']++;
+            }
+        }
+
+        // Sync profiles
+        if (!empty($data['profiles'])) {
+            $pdo->exec("DELETE FROM profiles");
+            $stmt = $pdo->prepare("INSERT INTO profiles (id, zone_id, name, description, time_limit, data_limit, upload_speed, download_speed, price, validity, validity_unit, simultaneous_use, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            foreach ($data['profiles'] as $profile) {
+                $stmt->execute([
+                    $profile['id'], $profile['zone_id'] ?? null, $profile['name'], $profile['description'] ?? null,
+                    $profile['time_limit'] ?? null, $profile['data_limit'] ?? null,
+                    $profile['upload_speed'] ?? null, $profile['download_speed'] ?? null,
+                    $profile['price'] ?? 0, $profile['validity'] ?? null, $profile['validity_unit'] ?? 'days',
+                    $profile['simultaneous_use'] ?? 1, $profile['is_active'] ?? 1
+                ]);
+                $stats['profiles']++;
+            }
+        }
+
+        // Sync vouchers (merge, don't delete active sessions)
+        if (!empty($data['vouchers'])) {
+            // Supprimer uniquement les vouchers qui ne sont plus dans la liste
+            $remoteIds = array_column($data['vouchers'], 'id');
+            if (!empty($remoteIds)) {
+                $placeholders = implode(',', array_fill(0, count($remoteIds), '?'));
+                $pdo->prepare("DELETE FROM vouchers WHERE id NOT IN ($placeholders)")->execute($remoteIds);
+            }
+
+            $stmt = $pdo->prepare("
+                INSERT INTO vouchers (id, username, password, profile_id, zone_id, time_limit, data_limit, upload_limit, download_limit, upload_speed, download_speed, status, simultaneous_use, price, valid_from, valid_until, first_use, time_used, data_used, upload_used, download_used, customer_name, customer_phone, batch_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    password = VALUES(password), profile_id = VALUES(profile_id), zone_id = VALUES(zone_id),
+                    time_limit = VALUES(time_limit), data_limit = VALUES(data_limit),
+                    upload_speed = VALUES(upload_speed), download_speed = VALUES(download_speed),
+                    status = VALUES(status), simultaneous_use = VALUES(simultaneous_use),
+                    valid_from = VALUES(valid_from), valid_until = VALUES(valid_until),
+                    time_used = VALUES(time_used), data_used = VALUES(data_used)
+            ");
+            foreach ($data['vouchers'] as $v) {
+                $stmt->execute([
+                    $v['id'], $v['username'], $v['password'], $v['profile_id'] ?? null, $v['zone_id'] ?? null,
+                    $v['time_limit'] ?? null, $v['data_limit'] ?? null, $v['upload_limit'] ?? null, $v['download_limit'] ?? null,
+                    $v['upload_speed'] ?? null, $v['download_speed'] ?? null,
+                    $v['status'] ?? 'unused', $v['simultaneous_use'] ?? 1, $v['price'] ?? 0,
+                    $v['valid_from'] ?? null, $v['valid_until'] ?? null, $v['first_use'] ?? null,
+                    $v['time_used'] ?? 0, $v['data_used'] ?? 0, $v['upload_used'] ?? 0, $v['download_used'] ?? 0,
+                    $v['customer_name'] ?? null, $v['customer_phone'] ?? null, $v['batch_id'] ?? null
+                ]);
+                $stats['vouchers']++;
+            }
+        }
+
+        // Sync PPPoE users
+        if (!empty($data['pppoe_users'])) {
+            $pdo->exec("DELETE FROM pppoe_users");
+            $stmt = $pdo->prepare("
+                INSERT INTO pppoe_users (id, username, password, profile_id, profile_name, customer_name, customer_phone, status, upload_speed, download_speed, ip_mode, static_ip, pool_ip, ip_pool_name, mikrotik_group, valid_until, burst_upload, burst_download, burst_threshold, burst_time, simultaneous_use)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            foreach ($data['pppoe_users'] as $user) {
+                $stmt->execute([
+                    $user['id'], $user['username'], $user['password'], $user['profile_id'] ?? null,
+                    $user['profile_name'] ?? null, $user['customer_name'] ?? null, $user['customer_phone'] ?? null,
+                    $user['status'] ?? 'active', $user['upload_speed'] ?? null, $user['download_speed'] ?? null,
+                    $user['ip_mode'] ?? 'router', $user['static_ip'] ?? null, $user['pool_ip'] ?? null,
+                    $user['ip_pool_name'] ?? null, $user['mikrotik_group'] ?? null,
+                    $user['valid_until'] ?? null, $user['burst_upload'] ?? null, $user['burst_download'] ?? null,
+                    $user['burst_threshold'] ?? null, $user['burst_time'] ?? null, $user['simultaneous_use'] ?? 1
+                ]);
+                $stats['pppoe_users']++;
+            }
+        }
+
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo "    Pull apply error: " . $e->getMessage() . "\n";
+    }
+
+    return $stats;
+}
+
+/**
+ * Collecter les données locales à pousser vers le central
+ */
+function collectPushData(PDO $pdo): array
+{
+    $data = ['has_data' => false];
+
+    // Sessions non synchronisées
+    $stmt = $pdo->query("SELECT * FROM sessions WHERE synced = 0 LIMIT 500");
+    $data['sessions'] = $stmt->fetchAll();
+
+    // Auth logs non synchronisés
+    $stmt = $pdo->query("SELECT * FROM auth_logs WHERE synced = 0 LIMIT 500");
+    $data['auth_logs'] = $stmt->fetchAll();
+
+    // Voucher updates (compteurs modifiés localement)
+    $stmt = $pdo->query("
+        SELECT id, username, time_used, data_used, upload_used, download_used, status, first_use
+        FROM vouchers
+        WHERE (time_used > 0 OR data_used > 0) AND status IN ('active', 'expired')
+    ");
+    $data['voucher_updates'] = $stmt->fetchAll();
+
+    $data['has_data'] = !empty($data['sessions']) || !empty($data['auth_logs']) || !empty($data['voucher_updates']);
+
+    // Aussi les sessions PPPoE
+    try {
+        $stmt = $pdo->query("SELECT * FROM pppoe_sessions WHERE synced = 0 LIMIT 500");
+        $pppoe = $stmt->fetchAll();
+        if (!empty($pppoe)) {
+            $data['pppoe_sessions'] = $pppoe;
+            $data['has_data'] = true;
+        }
+    } catch (PDOException $e) {
+        // Table peut ne pas exister
+    }
+
+    return $data;
+}
+
+/**
+ * Marquer les données comme synchronisées
+ */
+function markAsSynced(PDO $pdo, array $pushData): void
+{
+    if (!empty($pushData['sessions'])) {
+        $ids = array_column($pushData['sessions'], 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("UPDATE sessions SET synced = 1 WHERE id IN ($placeholders)")->execute($ids);
+    }
+
+    if (!empty($pushData['auth_logs'])) {
+        $ids = array_column($pushData['auth_logs'], 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("UPDATE auth_logs SET synced = 1 WHERE id IN ($placeholders)")->execute($ids);
+    }
+
+    if (!empty($pushData['pppoe_sessions'])) {
+        $ids = array_column($pushData['pppoe_sessions'], 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("UPDATE pppoe_sessions SET synced = 1 WHERE id IN ($placeholders)")->execute($ids);
+    }
+}
+
+/**
+ * Lire une valeur de sync_meta
+ */
+function getSyncMeta(PDO $pdo, string $key): ?string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT {$key} FROM sync_meta WHERE id = 1");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        return $row[$key] ?? null;
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * Mettre à jour une valeur de sync_meta
+ */
+function updateSyncMeta(PDO $pdo, string $key, string $value): void
+{
+    try {
+        $pdo->prepare("UPDATE sync_meta SET {$key} = ? WHERE id = 1")->execute([$value]);
+    } catch (PDOException $e) {
+        // Ignorer
+    }
+}
+
+/**
+ * Incrémenter un compteur de sync_meta
+ */
+function incrementSyncMeta(PDO $pdo, string $key): void
+{
+    try {
+        $pdo->exec("UPDATE sync_meta SET {$key} = {$key} + 1 WHERE id = 1");
+    } catch (PDOException $e) {
+        // Ignorer
+    }
+}

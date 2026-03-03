@@ -7,11 +7,13 @@ class ProfileController
 {
     private RadiusDatabase $db;
     private AuthService $auth;
+    private ?NodePushService $pushService;
 
-    public function __construct(RadiusDatabase $db, AuthService $auth)
+    public function __construct(RadiusDatabase $db, AuthService $auth, ?NodePushService $pushService = null)
     {
         $this->db = $db;
         $this->auth = $auth;
+        $this->pushService = $pushService;
     }
 
     private function getAdminId(): ?int
@@ -65,6 +67,12 @@ class ProfileController
         try {
             $id = $this->db->createProfile($data);
             $profile = $this->db->getProfileById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $profile) {
+                $this->pushService->notifyProfileChange('created', $profile);
+            }
+
             jsonSuccess($profile, __('api.profile_created'));
         } catch (Exception $e) {
             if (strpos($e->getMessage(), 'Duplicate') !== false) {
@@ -98,6 +106,12 @@ class ProfileController
         try {
             $this->db->updateProfile($id, $data);
             $profile = $this->db->getProfileById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $profile) {
+                $this->pushService->notifyProfileChange('updated', $profile);
+            }
+
             jsonSuccess($profile, __('api.profile_updated'));
         } catch (Exception $e) {
             jsonError(__('api.error_saving') . ': ' . $e->getMessage(), 500);
@@ -117,6 +131,11 @@ class ProfileController
         }
 
         try {
+            // Push temps réel vers les nœuds RADIUS (avant suppression)
+            if ($this->pushService && $profile) {
+                $this->pushService->notifyProfileChange('deleted', $profile);
+            }
+
             $this->db->deleteProfile($id);
             jsonSuccess(null, __('api.profile_deleted'));
         } catch (Exception $e) {

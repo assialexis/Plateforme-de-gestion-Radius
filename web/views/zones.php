@@ -287,6 +287,21 @@
                                     placeholder="<?= __('zone.form_dns_name_placeholder')?>">
                             </div>
 
+                            <!-- Serveur RADIUS -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <?= __('zone.form_radius_server') ?? 'Serveur RADIUS' ?>
+                                </label>
+                                <select x-model="form.radius_server_id"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-[#21262d] dark:text-white">
+                                    <option value=""><?= __('zone.form_radius_server_local') ?? 'Local (ce serveur)' ?></option>
+                                    <template x-for="rs in radiusServers" :key="rs.id">
+                                        <option :value="rs.id" x-text="rs.name + ' (' + rs.host + ')'"></option>
+                                    </template>
+                                </select>
+                                <p class="text-xs text-gray-400 mt-1"><?= __('zone.form_radius_server_help') ?? 'Serveur RADIUS qui gèrera les authentifications de cette zone' ?></p>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     <?= __('zone.form_color')?>
@@ -348,6 +363,7 @@
     function zonesPage() {
         return {
             zones: [],
+            radiusServers: [],
             loading: true,
             showModal: false,
             saving: false,
@@ -359,11 +375,21 @@
                 description: '',
                 dns_name: '',
                 color: '#3b82f6',
-                is_active: true
+                is_active: true,
+                radius_server_id: ''
             },
 
             async init() {
-                await this.loadZones();
+                await Promise.all([this.loadZones(), this.loadRadiusServers()]);
+            },
+
+            async loadRadiusServers() {
+                try {
+                    const response = await API.get('/radius-servers');
+                    this.radiusServers = response.data || [];
+                } catch (error) {
+                    // Ignorer si pas disponible
+                }
             },
 
             async loadZones() {
@@ -387,7 +413,8 @@
                         description: zone.description || '',
                         dns_name: zone.dns_name || '',
                         color: zone.color || '#3b82f6',
-                        is_active: zone.is_active == 1
+                        is_active: zone.is_active == 1,
+                        radius_server_id: zone.radius_server_id || ''
                     };
                 } else {
                     this.form = {
@@ -396,7 +423,8 @@
                         description: '',
                         dns_name: '',
                         color: '#3b82f6',
-                        is_active: true
+                        is_active: true,
+                        radius_server_id: ''
                     };
                 }
                 this.showModal = true;

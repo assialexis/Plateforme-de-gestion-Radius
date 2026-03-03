@@ -7,11 +7,13 @@ class VoucherController
 {
     private RadiusDatabase $db;
     private AuthService $auth;
+    private ?NodePushService $pushService;
 
-    public function __construct(RadiusDatabase $db, AuthService $auth)
+    public function __construct(RadiusDatabase $db, AuthService $auth, ?NodePushService $pushService = null)
     {
         $this->db = $db;
         $this->auth = $auth;
+        $this->pushService = $pushService;
     }
 
     private function getAdminId(): ?int
@@ -143,6 +145,11 @@ class VoucherController
         try {
             $id = $this->db->createVoucher($data);
             $voucher = $this->db->getVoucherById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('created', $voucher);
+            }
 
             // Ajouter has_password et plain_password pour le retour
             $voucher['has_password'] = $voucher['username'] !== $voucher['password'];
@@ -318,6 +325,12 @@ class VoucherController
         try {
             $this->db->updateVoucher($id, $data);
             $voucher = $this->db->getVoucherById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('updated', $voucher);
+            }
+
             jsonSuccess($voucher, __('api.voucher_updated'));
         }
         catch (Exception $e) {
@@ -338,6 +351,11 @@ class VoucherController
         }
 
         try {
+            // Push temps réel vers les nœuds RADIUS (avant suppression)
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('deleted', $voucher);
+            }
+
             $this->db->deleteVoucher($id);
             jsonSuccess(null, __('api.voucher_deleted'));
         }
@@ -361,6 +379,12 @@ class VoucherController
         try {
             $this->db->resetVoucher($id);
             $voucher = $this->db->getVoucherById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('updated', $voucher);
+            }
+
             jsonSuccess($voucher, __('api.voucher_reset'));
         }
         catch (Exception $e) {
@@ -383,6 +407,12 @@ class VoucherController
         try {
             $this->db->updateVoucherStatus($id, 'disabled');
             $voucher = $this->db->getVoucherById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('updated', $voucher);
+            }
+
             jsonSuccess($voucher, __('api.voucher_disabled'));
         }
         catch (Exception $e) {
@@ -407,6 +437,12 @@ class VoucherController
         try {
             $this->db->updateVoucherStatus($id, $newStatus);
             $voucher = $this->db->getVoucherById($id);
+
+            // Push temps réel vers les nœuds RADIUS
+            if ($this->pushService && $voucher) {
+                $this->pushService->notifyVoucherChange('updated', $voucher);
+            }
+
             jsonSuccess($voucher, __('api.voucher_enabled'));
         }
         catch (Exception $e) {
