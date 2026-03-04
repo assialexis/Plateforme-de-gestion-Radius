@@ -223,6 +223,7 @@ class ZoneController
                 'description' => $zone['description'],
                 'color' => $zone['color'],
                 'dns_name' => $zone['dns_name'] ?? null,
+                'radius_server_id' => $zone['radius_server_id'] ?? null,
                 'is_active' => $zone['is_active'] ? 0 : 1
             ]);
             $zone = $this->db->getZoneById($id);

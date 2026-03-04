@@ -4157,6 +4157,11 @@ return [
     'radius_servers.copied' => 'Copied to clipboard',
     'radius_servers.delete_confirm_title' => 'Delete this server?',
     'radius_servers.delete_confirm_desc' => 'Associated zones will be detached but not deleted.',
+    'radius_servers.default_badge' => 'Default',
+    'radius_servers.set_default' => 'Set as default',
+    'radius_servers.remove_default' => 'Remove default',
+    'radius_servers.set_default_success' => 'Server set as default',
+    'radius_servers.default_removed' => 'Default status removed',
 
     // API RADIUS Servers
     'api.radius_server_not_found' => 'RADIUS server not found',

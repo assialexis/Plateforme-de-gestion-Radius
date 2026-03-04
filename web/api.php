@@ -297,6 +297,7 @@ $router->post('/router-sync/sync', fn($p) => $routerSyncController->sync());
 $router->get('/radius-servers', fn($p) => $radiusServerController->index());
 $router->post('/radius-servers', fn($p) => $radiusServerController->store());
 $router->get('/radius-servers/statuses', fn($p) => $radiusServerController->statuses());
+$router->get('/radius-servers/active', fn($p) => $radiusServerController->active());
 $router->get('/radius-servers/generate-code', fn($p) => $radiusServerController->generateCode());
 $router->get('/radius-servers/{id}', fn($p) => $radiusServerController->show($p));
 $router->put('/radius-servers/{id}', fn($p) => $radiusServerController->update($p));
@@ -305,6 +306,7 @@ $router->post('/radius-servers/{id}/regenerate-token', fn($p) => $radiusServerCo
 $router->get('/radius-servers/{id}/status', fn($p) => $radiusServerController->status($p));
 $router->get('/radius-servers/{id}/zones', fn($p) => $radiusServerController->getZones($p));
 $router->post('/radius-servers/{id}/toggle', fn($p) => $radiusServerController->toggle($p));
+$router->post('/radius-servers/{id}/set-default', fn($p) => $radiusServerController->setDefault($p));
 $router->get('/radius-servers/{id}/install-script', fn($p) => $radiusServerController->installScript($p));
 
 // Routes Sessions

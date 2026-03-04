@@ -245,6 +245,47 @@ class RadiusServerController
     }
 
     /**
+     * GET /api/radius-servers/active
+     * Retourne tous les serveurs actifs (pour le select zone, accessible à tous les rôles)
+     */
+    public function active(): void
+    {
+        $servers = $this->db->getActiveRadiusServers();
+        jsonSuccess($servers);
+    }
+
+    /**
+     * POST /api/radius-servers/{id}/set-default
+     * Définir un serveur comme serveur par défaut (superuser uniquement)
+     */
+    public function setDefault(array $params): void
+    {
+        if (!$this->auth->getCurrentUser()->isSuperAdmin()) {
+            jsonError(__('api.forbidden'), 403);
+            return;
+        }
+
+        $id = (int)$params['id'];
+        $server = $this->db->getRadiusServerById($id);
+        if (!$server) {
+            jsonError(__('api.radius_server_not_found'), 404);
+            return;
+        }
+
+        // Si déjà default, retirer le statut
+        if (!empty($server['is_default'])) {
+            $this->db->unsetDefaultRadiusServer($id);
+            $server = $this->db->getRadiusServerById($id);
+            jsonSuccess($server, __('radius_servers.default_removed'));
+            return;
+        }
+
+        $this->db->setDefaultRadiusServer($id);
+        $server = $this->db->getRadiusServerById($id);
+        jsonSuccess($server, __('radius_servers.set_default_success'));
+    }
+
+    /**
      * GET /api/radius-servers/{id}/install-script
      * Génère le script d'installation pour un nœud RADIUS
      */

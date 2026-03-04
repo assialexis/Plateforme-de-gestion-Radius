@@ -6242,6 +6242,51 @@ class RadiusDatabase
     }
 
     /**
+     * Retourne tous les serveurs RADIUS actifs (sans filtre admin_id)
+     * Utilisé pour le select dans le formulaire de zone (accessible à tous les rôles)
+     */
+    public function getActiveRadiusServers(): array
+    {
+        $stmt = $this->pdo->query("
+            SELECT id, name, code, host, is_default
+            FROM radius_servers
+            WHERE is_active = 1
+            ORDER BY is_default DESC, name
+        ");
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Définir un serveur RADIUS comme serveur par défaut
+     * Un seul serveur peut être par défaut à la fois
+     */
+    public function setDefaultRadiusServer(int $id): bool
+    {
+        $this->pdo->exec("UPDATE radius_servers SET is_default = 0");
+        $stmt = $this->pdo->prepare("UPDATE radius_servers SET is_default = 1 WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Retirer le statut par défaut d'un serveur RADIUS
+     */
+    public function unsetDefaultRadiusServer(int $id): void
+    {
+        $stmt = $this->pdo->prepare("UPDATE radius_servers SET is_default = 0 WHERE id = ?");
+        $stmt->execute([$id]);
+    }
+
+    /**
+     * Retourne le serveur RADIUS par défaut (ou null)
+     */
+    public function getDefaultRadiusServer(): ?array
+    {
+        $stmt = $this->pdo->query("SELECT * FROM radius_servers WHERE is_default = 1 AND is_active = 1 LIMIT 1");
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
      * Obtenir un serveur RADIUS par ID
      */
     public function getRadiusServerById(int $id, ?int $adminId = null): ?array

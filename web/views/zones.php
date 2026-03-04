@@ -385,7 +385,7 @@
 
             async loadRadiusServers() {
                 try {
-                    const response = await API.get('/radius-servers');
+                    const response = await API.get('/radius-servers/active');
                     this.radiusServers = response.data || [];
                 } catch (error) {
                     // Ignorer si pas disponible
@@ -417,6 +417,8 @@
                         radius_server_id: zone.radius_server_id || ''
                     };
                 } else {
+                    // Pré-sélectionner le serveur RADIUS par défaut
+                    const defaultServer = this.radiusServers.find(s => s.is_default == 1);
                     this.form = {
                         name: '',
                         code: '',
@@ -424,7 +426,7 @@
                         dns_name: '',
                         color: '#3b82f6',
                         is_active: true,
-                        radius_server_id: ''
+                        radius_server_id: defaultServer ? defaultServer.id : ''
                     };
                 }
                 this.showModal = true;

@@ -4142,6 +4142,11 @@ return [
     'radius_servers.copied' => 'Copié dans le presse-papiers',
     'radius_servers.delete_confirm_title' => 'Supprimer ce serveur ?',
     'radius_servers.delete_confirm_desc' => 'Les zones associées seront détachées mais pas supprimées.',
+    'radius_servers.default_badge' => 'Défaut',
+    'radius_servers.set_default' => 'Définir par défaut',
+    'radius_servers.remove_default' => 'Retirer par défaut',
+    'radius_servers.set_default_success' => 'Serveur défini comme serveur par défaut',
+    'radius_servers.default_removed' => 'Statut par défaut retiré',
 
     // API Serveurs RADIUS
     'api.radius_server_not_found' => 'Serveur RADIUS introuvable',
