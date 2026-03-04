@@ -36,8 +36,8 @@ class SetupScriptGenerator
         $adminId = $nas['admin_id'];
         $pollingToken = $nas['polling_token'] ?? '';
         $pollingInterval = $nas['polling_interval'] ?? 10;
-        $fetchUrl = $this->serverUrl . '/web/fetch_cmd.php';
-        $syncUrl = $this->serverUrl . '/web/api.php?route=/router-sync/sync';
+        $fetchUrl = $this->serverUrl . '/fetch_cmd.php';
+        $syncUrl = $this->serverUrl . '/api.php?route=/router-sync/sync';
 
         $walledGardenRules = $this->getWalledGardenRules($adminId);
 

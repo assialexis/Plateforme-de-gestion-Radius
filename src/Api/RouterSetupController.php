@@ -170,16 +170,15 @@ class RouterSetupController
     }
 
     /**
-     * Déterminer l'URL du serveur
+     * Déterminer l'URL du serveur (dossier web/)
      */
     private function getServerUrl(): string
     {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-        // Déterminer le chemin de base
-        $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
-        $basePath = dirname($scriptPath); // Remonter d'un niveau (web/ -> /)
+        // Chemin du dossier web/ (même dossier que api.php)
+        $basePath = dirname($_SERVER['SCRIPT_NAME']);
 
         return $protocol . '://' . $host . $basePath;
     }
