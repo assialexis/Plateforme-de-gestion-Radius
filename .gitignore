@@ -1,11 +1,16 @@
 # Config avec credentials
 config/config.php
+.install_credentials
 
 # Fichiers temporaires
 *.log
 *.tmp
 *.swp
 .DS_Store
+
+# Stockage local
+storage/backups/
+storage/tmp/
 
 # IDE
 .idea/
