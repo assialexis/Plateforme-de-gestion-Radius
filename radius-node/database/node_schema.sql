@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_update DATETIME DEFAULT NULL,
     stop_time DATETIME DEFAULT NULL,
     terminate_cause VARCHAR(32) DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
     synced TINYINT(1) DEFAULT 0 COMMENT 'Synced to central platform',
     UNIQUE KEY (acct_session_id, nas_ip),
     INDEX idx_voucher (voucher_id),
