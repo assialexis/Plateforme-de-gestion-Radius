@@ -1082,6 +1082,41 @@ class RadiusDatabase
     }
 
     /**
+     * Obtenir tous les secrets NAS uniques (pour tentative de décodage avec IP dynamique)
+     */
+    public function getAllNasSecrets(): array
+    {
+        $stmt = $this->pdo->query("SELECT DISTINCT id, router_id, shortname, secret FROM nas");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Trouver un NAS par son router_id (NAS-Identifier)
+     */
+    public function findNasByIdentifier(string $nasIdentifier): ?array
+    {
+        // Chercher par router_id
+        $stmt = $this->pdo->prepare("SELECT id, router_id, shortname, secret, nasname FROM nas WHERE router_id = ?");
+        $stmt->execute([$nasIdentifier]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result) return $result;
+
+        // Chercher par shortname
+        $stmt = $this->pdo->prepare("SELECT id, router_id, shortname, secret, nasname FROM nas WHERE shortname = ?");
+        $stmt->execute([$nasIdentifier]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Mettre à jour l'IP d'un NAS (pour IP dynamique)
+     */
+    public function updateNasIp(int $nasId, string $newIp): void
+    {
+        $stmt = $this->pdo->prepare("UPDATE nas SET nasname = ? WHERE id = ?");
+        $stmt->execute([$newIp, $nasId]);
+    }
+
+    /**
      * Obtenir tous les NAS
      */
     public function getAllNas(?int $adminId = null): array

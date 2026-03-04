@@ -142,13 +142,41 @@ class RadiusServer
         $this->log("Received {$bytes} bytes from {$clientIp}:{$clientPort}");
 
         $secret = $this->db->getNasSecret($clientIp);
+        $packet = null;
 
-        if (!$secret) {
-            $this->log("  [ERROR] Unknown NAS: {$clientIp}");
-            return;
+        if ($secret) {
+            $packet = RadiusPacket::decode($data, $secret);
+        } else {
+            // IP inconnue (IP dynamique) — essayer tous les secrets connus
+            $this->log("  NAS IP not found, trying all known secrets (dynamic IP)...");
+            $allNas = $this->db->getAllNasSecrets();
+
+            foreach ($allNas as $nas) {
+                $tryPacket = RadiusPacket::decode($data, $nas['secret']);
+                if ($tryPacket) {
+                    // Vérifier le NAS-Identifier pour confirmer
+                    $nasIdentifier = $tryPacket->getAttribute(RadiusPacket::ATTR_NAS_IDENTIFIER);
+                    $this->log("  Decoded with secret of NAS '{$nas['shortname']}' (router_id: {$nas['router_id']})");
+
+                    if ($nasIdentifier) {
+                        $this->log("  NAS-Identifier from packet: {$nasIdentifier}");
+                    }
+
+                    $secret = $nas['secret'];
+                    $packet = $tryPacket;
+
+                    // Mettre à jour l'IP du NAS pour les prochaines requêtes
+                    $this->db->updateNasIp($nas['id'], $clientIp);
+                    $this->log("  Updated NAS IP: {$nas['nasname']} -> {$clientIp}");
+                    break;
+                }
+            }
+
+            if (!$packet) {
+                $this->log("  [ERROR] Unknown NAS: {$clientIp} (no matching secret found)");
+                return;
+            }
         }
-
-        $packet = RadiusPacket::decode($data, $secret);
 
         if (!$packet) {
             $this->log("  [ERROR] Invalid RADIUS packet");
