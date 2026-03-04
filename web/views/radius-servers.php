@@ -135,8 +135,8 @@ $currentPage = 'radius-servers'; ?>
                         <button @click="showTokens(server)" class="px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors" title="<?= __('radius_servers.tokens') ?>">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
                         </button>
-                        <button @click="downloadInstallScript(server)" class="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" title="<?= __('radius_servers.install_script') ?>">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        <button @click="showInstallCommand(server)" class="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" title="<?= __('radius_servers.install_script') ?>">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </button>
                         <button @click="toggleServer(server)" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors"
                             :class="server.is_active ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'"
@@ -283,6 +283,54 @@ $currentPage = 'radius-servers'; ?>
             </div>
         </div>
     </div>
+
+    <!-- Modal Installation (commande curl) -->
+    <div x-show="showInstallModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="showInstallModal = false">
+        <div class="bg-white dark:bg-[#161b22] rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-[#30363d]" @click.stop>
+            <div class="p-6 border-b border-gray-200 dark:border-[#30363d]">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <?= __('radius_servers.install_title') ?>
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="installServer?.name"></p>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400"><?= __('radius_servers.install_desc') ?></p>
+
+                <!-- Commande curl -->
+                <div class="relative">
+                    <div class="bg-gray-900 rounded-lg p-4 pr-12 overflow-x-auto">
+                        <code class="text-emerald-400 text-sm whitespace-nowrap" x-text="getInstallCommand()"></code>
+                    </div>
+                    <button @click="copyToClipboard(getInstallCommand())"
+                        class="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                        title="<?= __('radius_servers.copy') ?>">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                </div>
+
+                <!-- Instructions -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-sm space-y-2">
+                    <p class="font-medium text-blue-800 dark:text-blue-300"><?= __('radius_servers.install_steps') ?></p>
+                    <ol class="list-decimal list-inside text-blue-700 dark:text-blue-400 space-y-1">
+                        <li><?= __('radius_servers.install_step1') ?></li>
+                        <li><?= __('radius_servers.install_step2') ?></li>
+                        <li><?= __('radius_servers.install_step3') ?></li>
+                    </ol>
+                </div>
+
+                <!-- Bouton download alternatif -->
+                <div class="flex items-center justify-between pt-2">
+                    <button @click="downloadInstallScript(installServer)" class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline">
+                        <?= __('radius_servers.download_script') ?>
+                    </button>
+                    <button @click="showInstallModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#21262d] rounded-lg hover:bg-gray-200 dark:hover:bg-[#30363d]">
+                        <?= __('radius_servers.close') ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -295,6 +343,8 @@ function radiusServersPage() {
         showModal: false,
         showTokenModal: false,
         showDeleteModal: false,
+        showInstallModal: false,
+        installServer: null,
         editMode: false,
         editId: null,
         deleteId: null,
@@ -458,8 +508,28 @@ function radiusServersPage() {
             }
         },
 
+        async showInstallCommand(server) {
+            try {
+                const res = await fetch(`api.php?route=/radius-servers/${server.id}`);
+                const json = await res.json();
+                if (json.success) {
+                    this.installServer = json.data;
+                    this.showInstallModal = true;
+                }
+            } catch (e) {
+                this.notify('Erreur', 'error');
+            }
+        },
+
+        getInstallCommand() {
+            if (!this.installServer) return '';
+            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+            return `curl -sSL '${baseUrl}/node_install.php?code=${this.installServer.code}&token=${this.installServer.sync_token}' | sudo bash`;
+        },
+
         downloadInstallScript(server) {
-            window.open(`api.php?route=/radius-servers/${server.id}/install-script`, '_blank');
+            const s = server || this.installServer;
+            if (s) window.open(`api.php?route=/radius-servers/${s.id}/install-script`, '_blank');
         },
 
         copyToClipboard(text) {
