@@ -4,9 +4,12 @@
 # ============================================================
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/assialexis/Plateforme-de-gestion-Radius/main/deploy.sh | sudo bash
-#   ou:
-#   sudo bash deploy.sh
+#   1. Copier ce fichier sur le VPS (via scp, nano, etc.)
+#   2. Exécuter avec token GitHub (repo privé):
+#      GITHUB_TOKEN=ghp_xxxxx sudo bash deploy.sh
+#
+#   Ou sans token (repo public):
+#      sudo bash deploy.sh
 #
 # Ce script installe et configure automatiquement :
 #   - Apache 2.4 + PHP 8.1+ + MySQL/MariaDB
@@ -39,6 +42,33 @@ warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error()   { echo -e "${RED}[ERREUR]${NC} $1"; exit 1; }
 step()    { echo -e "\n${CYAN}${BOLD}==> $1${NC}"; }
 
+# Fonction read compatible curl|bash (lit depuis /dev/tty)
+ask() {
+    local prompt="$1" var="$2" default="$3" silent="$4"
+    if [ -t 0 ]; then
+        # Mode normal (exécution directe)
+        if [ "$silent" = "s" ]; then
+            read -sp "$prompt" "$var"
+        else
+            read -p "$prompt" "$var"
+        fi
+    elif [ -e /dev/tty ]; then
+        # Mode pipe (curl|bash) - lire depuis le terminal
+        if [ "$silent" = "s" ]; then
+            read -sp "$prompt" "$var" < /dev/tty
+        else
+            read -p "$prompt" "$var" < /dev/tty
+        fi
+    else
+        # Pas de terminal disponible - utiliser la valeur par défaut
+        eval "$var=''"
+    fi
+    # Appliquer la valeur par défaut si vide
+    if [ -z "${!var}" ] && [ -n "$default" ]; then
+        eval "$var='$default'"
+    fi
+}
+
 # ========================
 # Vérifications
 # ========================
@@ -60,6 +90,12 @@ DB_USER="radius_user"
 VHOST_FILE="/etc/apache2/sites-available/nas.conf"
 CRON_FILE="/etc/cron.d/radius-manager"
 
+# Support token GitHub pour repo privé (passer en argument ou variable d'environnement)
+# Usage: GITHUB_TOKEN=ghp_xxx sudo bash deploy.sh
+if [ -n "${GITHUB_TOKEN}" ]; then
+    REPO_URL="https://${GITHUB_TOKEN}@github.com/assialexis/Plateforme-de-gestion-Radius.git"
+fi
+
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}║      RADIUS Manager - Installation v1.0.0       ║${NC}"
@@ -76,19 +112,16 @@ DB_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
 echo -e "  Mot de passe MySQL pour '${DB_USER}': ${CYAN}${DB_PASS}${NC} (auto-généré)"
 
 # Mot de passe SuperAdmin
-read -sp "  Mot de passe SuperAdmin (défaut: admin123): " ADMIN_PASS
+ask "  Mot de passe SuperAdmin (défaut: admin123): " ADMIN_PASS "admin123" "s"
 echo ""
-ADMIN_PASS=${ADMIN_PASS:-admin123}
 
 # Domaine
-read -p "  Nom de domaine (laisser vide pour accès par IP): " DOMAIN
-DOMAIN=${DOMAIN:-_}
+ask "  Nom de domaine (laisser vide pour accès par IP): " DOMAIN "_"
 
 # SSL
 INSTALL_SSL="n"
 if [ "$DOMAIN" != "_" ]; then
-    read -p "  Installer SSL Let's Encrypt ? (y/N): " INSTALL_SSL
-    INSTALL_SSL=${INSTALL_SSL:-n}
+    ask "  Installer SSL Let's Encrypt ? (y/N): " INSTALL_SSL "n"
 fi
 
 echo ""
@@ -99,8 +132,7 @@ echo "  - Utilisateur DB: ${DB_USER}"
 echo "  - Domaine: $([ "$DOMAIN" = "_" ] && echo "Accès par IP" || echo "$DOMAIN")"
 echo "  - SSL: $([ "$INSTALL_SSL" = "y" ] && echo "Oui" || echo "Non")"
 echo ""
-read -p "Confirmer l'installation ? (Y/n): " CONFIRM
-CONFIRM=${CONFIRM:-Y}
+ask "Confirmer l'installation ? (Y/n): " CONFIRM "Y"
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
     echo "Installation annulée."
     exit 0
@@ -174,7 +206,7 @@ fi
 step "4/10 - Clonage du projet"
 if [ -d "${INSTALL_DIR}" ]; then
     warn "Le répertoire ${INSTALL_DIR} existe déjà"
-    read -p "  Supprimer et réinstaller ? (y/N): " OVERWRITE
+    ask "  Supprimer et réinstaller ? (y/N): " OVERWRITE "n"
     if [[ "$OVERWRITE" =~ ^[Yy]$ ]]; then
         rm -rf "${INSTALL_DIR}"
     else
