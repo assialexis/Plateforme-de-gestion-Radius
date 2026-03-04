@@ -1318,6 +1318,7 @@ class RadiusDatabase
         }
 
         if ($voucher['password'] !== $password) {
+            error_log("RADIUS Auth Debug: expected='" . $voucher['password'] . "' (" . strlen($voucher['password']) . " chars), got='" . $password . "' (" . strlen($password) . " chars), hex_got=" . bin2hex($password));
             return ['success' => false, 'reason' => 'Invalid password'];
         }
 
@@ -2546,11 +2547,15 @@ class RadiusDatabase
 
         $nasNameToSave = $nas['shortname'] ?? $nasIdentifier ?? null;
 
-        $stmt = $this->pdo->prepare("
-            INSERT INTO auth_logs (username, nas_ip, nas_name, action, reason, client_mac, client_ip, admin_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([$username, $nasIp, $nasNameToSave, $action, $reason, $clientMac, $clientIp, $adminId]);
+        try {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO auth_logs (username, nas_ip, nas_name, action, reason, client_mac, client_ip)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$username, $nasIp, $nasNameToSave, $action, $reason, $clientMac, $clientIp]);
+        } catch (PDOException $e) {
+            error_log("logAuth error: " . $e->getMessage());
+        }
     }
 
     /**
