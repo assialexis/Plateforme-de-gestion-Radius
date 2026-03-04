@@ -38,11 +38,6 @@ class RadiusDatabase
         $runner = new MigrationRunner($this->pdo, __DIR__ . '/../../database/migrations');
         $runner->ensureTrackingTable();
 
-        // Premier lancement : marquer toutes les migrations existantes comme appliquées (baseline)
-        if (empty($runner->getExecutedMigrations())) {
-            $runner->baseline();
-        }
-
         // Exécuter les migrations en attente
         $runner->runAll();
 
