@@ -1091,29 +1091,18 @@ class RadiusDatabase
     }
 
     /**
-     * Trouver un NAS par son router_id (NAS-Identifier)
+     * Trouver un NAS par son NAS-Identifier (system identity du MikroTik)
+     * Cherche dans router_id, shortname et nasname
      */
     public function findNasByIdentifier(string $nasIdentifier): ?array
     {
-        // Chercher par router_id
-        $stmt = $this->pdo->prepare("SELECT id, router_id, shortname, secret, nasname FROM nas WHERE router_id = ?");
-        $stmt->execute([$nasIdentifier]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($result) return $result;
-
-        // Chercher par shortname
-        $stmt = $this->pdo->prepare("SELECT id, router_id, shortname, secret, nasname FROM nas WHERE shortname = ?");
-        $stmt->execute([$nasIdentifier]);
+        $stmt = $this->pdo->prepare(
+            "SELECT id, router_id, shortname, secret, nasname FROM nas
+             WHERE router_id = ? OR shortname = ? OR nasname = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$nasIdentifier, $nasIdentifier, $nasIdentifier]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-    /**
-     * Mettre à jour l'IP d'un NAS (pour IP dynamique)
-     */
-    public function updateNasIp(int $nasId, string $newIp): void
-    {
-        $stmt = $this->pdo->prepare("UPDATE nas SET nasname = ? WHERE id = ?");
-        $stmt->execute([$newIp, $nasId]);
     }
 
     /**

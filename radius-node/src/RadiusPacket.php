@@ -116,6 +116,40 @@ class RadiusPacket
     public string $rawPacket;
 
     /**
+     * Extraire un attribut texte du paquet brut SANS secret
+     * Les attributs comme NAS-Identifier (32) sont en clair dans le paquet
+     */
+    public static function extractAttribute(string $data, int $targetAttr): ?string
+    {
+        if (strlen($data) < 20) {
+            return null;
+        }
+
+        $length = (ord($data[2]) << 8) | ord($data[3]);
+        if ($length > strlen($data) || $length < 20) {
+            return null;
+        }
+
+        $pos = 20;
+        while ($pos < $length) {
+            if ($pos + 2 > $length) break;
+
+            $attrType = ord($data[$pos]);
+            $attrLen = ord($data[$pos + 1]);
+
+            if ($attrLen < 2 || $pos + $attrLen > $length) break;
+
+            if ($attrType === $targetAttr) {
+                return substr($data, $pos + 2, $attrLen - 2);
+            }
+
+            $pos += $attrLen;
+        }
+
+        return null;
+    }
+
+    /**
      * Décoder un paquet RADIUS brut
      */
     public static function decode(string $data, string $secret): ?self
