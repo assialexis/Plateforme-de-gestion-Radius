@@ -128,6 +128,7 @@ class MigrationRunner
                     if (in_array($sqlState, self::IGNORABLE_SQL_ERRORS, true) ||
                         str_contains($stmtError->getMessage(), 'Duplicate column') ||
                         str_contains($stmtError->getMessage(), 'Duplicate key name') ||
+                        str_contains($stmtError->getMessage(), 'Duplicate key on write') ||
                         str_contains($stmtError->getMessage(), 'already exists') ||
                         str_contains($stmtError->getMessage(), "doesn't exist")) {
                         $warnings[] = substr($stmtError->getMessage(), 0, 120);
