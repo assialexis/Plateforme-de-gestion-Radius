@@ -92,6 +92,7 @@ class MigrationRunner
      */
     /** Codes d'erreur MySQL non-critiques (structure déjà existante ou déjà modifiée) */
     private const IGNORABLE_SQL_ERRORS = [
+        '01000', // Warning (data truncated, etc.) - non-critical in migration context
         '42S21', // Column already exists
         '42S01', // Table already exists
         '42S02', // Table or view not found (already renamed/dropped by previous run)
@@ -129,6 +130,7 @@ class MigrationRunner
                         str_contains($stmtError->getMessage(), 'Duplicate column') ||
                         str_contains($stmtError->getMessage(), 'Duplicate key name') ||
                         str_contains($stmtError->getMessage(), 'Duplicate key on write') ||
+                        str_contains($stmtError->getMessage(), 'Data truncated') ||
                         str_contains($stmtError->getMessage(), 'already exists') ||
                         str_contains($stmtError->getMessage(), "doesn't exist")) {
                         $warnings[] = substr($stmtError->getMessage(), 0, 120);
