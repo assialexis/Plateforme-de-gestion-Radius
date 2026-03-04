@@ -358,3 +358,15 @@ function getProgressColor(?float $percent): string
     if ($percent >= 70) return 'bg-yellow-500';
     return 'bg-green-500';
 }
+
+/**
+ * Retourne la version de l'application
+ */
+function getAppVersion(): string
+{
+    $versionFile = __DIR__ . '/../../VERSION';
+    if (file_exists($versionFile)) {
+        return trim(file_get_contents($versionFile));
+    }
+    return '1.0.0';
+}

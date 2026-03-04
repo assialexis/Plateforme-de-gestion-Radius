@@ -57,6 +57,7 @@ $page = $_GET['page'] ?? 'dashboard';
 
 // Pages accessibles selon le rôle
 $allPages = [
+    'profile' => ['admin', 'superadmin', 'vendeur', 'gerant', 'technicien'],
     'dashboard' => ['admin', 'vendeur', 'gerant', 'technicien'],
     'vouchers' => ['admin', 'vendeur', 'gerant', 'technicien'],
     'pppoe' => ['admin', 'gerant', 'technicien'],
@@ -100,11 +101,13 @@ $allPages = [
     'superadmin-settings' => ['superadmin'],
     'superadmin-module-pricing' => ['superadmin'],
     'superadmin-sms-config' => ['superadmin'],
+    'superadmin-smtp-config' => ['superadmin'],
     'superadmin-paygate-config' => ['superadmin'],
     'superadmin-recharge-gateways' => ['superadmin'],
     'superadmin-transactions' => ['superadmin'],
     'superadmin-notifications' => ['superadmin'],
     'superadmin-withdrawals' => ['superadmin'],
+    'superadmin-updates' => ['superadmin'],
 ];
 
 // Vérifier si la page existe et si l'utilisateur a accès
@@ -154,6 +157,25 @@ if (isset($modulePages[$page]) && !$currentUser->isSuperAdmin()) {
         exit;
     }
 }
+
+// Charger l'état des modules (utilisé par les vues et le layout)
+$activeModules = [];
+try {
+    $layoutAdminId = $auth->getAdminId();
+    if ($layoutAdminId !== null) {
+        $stmtMod = $pdo->prepare("SELECT module_code, is_active FROM modules WHERE admin_id = ?");
+        $stmtMod->execute([$layoutAdminId]);
+    } else {
+        $stmtMod = $pdo->query("SELECT module_code, is_active FROM modules");
+    }
+    while ($rowMod = $stmtMod->fetch()) {
+        $activeModules[$rowMod['module_code']] = (bool)$rowMod['is_active'];
+    }
+} catch (Exception $e) {}
+
+$isModuleActive = function(string $code) use ($activeModules): bool {
+    return $activeModules[$code] ?? false;
+};
 
 // Capturer le contenu de la vue
 ob_start();

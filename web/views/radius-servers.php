@@ -96,6 +96,11 @@ $currentPage = 'radius-servers'; ?>
                         </span>
                     </div>
 
+                    <!-- Description -->
+                    <template x-if="server.description">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2" x-text="server.description"></p>
+                    </template>
+
                     <!-- Info grid -->
                     <div class="grid grid-cols-2 gap-3 my-4 p-3 rounded-xl bg-gray-50/50 dark:bg-[#0d1117] border border-gray-100 dark:border-[#30363d]">
                         <div>
@@ -169,6 +174,14 @@ $currentPage = 'radius-servers'; ?>
                     <input type="text" x-model="form.host" required
                         class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-[#30363d] bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="<?= __('radius_servers.host_placeholder') ?>">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('radius_servers.description') ?></label>
+                    <textarea x-model="form.description" rows="2"
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-[#30363d] bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="<?= __('radius_servers.description_placeholder') ?>"></textarea>
                 </div>
 
                 <!-- Webhook Port & Path -->
@@ -289,6 +302,7 @@ function radiusServersPage() {
         form: {
             name: '',
             host: '',
+            description: '',
             webhook_port: 443,
             sync_interval: 60,
         },
@@ -333,7 +347,7 @@ function radiusServersPage() {
         },
 
         resetForm() {
-            this.form = { name: '', host: '', webhook_port: 443, sync_interval: 60 };
+            this.form = { name: '', host: '', description: '', webhook_port: 443, sync_interval: 60 };
             this.editId = null;
         },
 
@@ -343,6 +357,7 @@ function radiusServersPage() {
             this.form = {
                 name: server.name,
                 host: server.host,
+                description: server.description || '',
                 webhook_port: server.webhook_port || 443,
                 sync_interval: server.sync_interval || 60,
             };

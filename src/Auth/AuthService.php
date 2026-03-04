@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/User.php';
+require_once __DIR__ . '/TwoFactorAuth.php';
 
 class AuthService
 {
@@ -195,6 +196,22 @@ class AuthService
             return ['success' => false, 'message' => __('auth.account_disabled')];
         }
 
+        // Check email verification (only for admin/superadmin with verification enabled)
+        if (in_array($user['role'], ['admin', 'superadmin']) && empty($user['email_verified'])) {
+            // Check if verification is enabled
+            $stmt = $this->pdo->prepare("SELECT setting_value FROM global_settings WHERE setting_key = 'email_verification_enabled'");
+            $stmt->execute();
+            $verificationEnabled = $stmt->fetchColumn();
+            if ($verificationEnabled === '1') {
+                return [
+                    'success' => false,
+                    'message' => __('email.not_verified'),
+                    'needs_verification' => true,
+                    'email' => $user['email'] ?? ''
+                ];
+            }
+        }
+
         if (!password_verify($password, $user['password'])) {
             $attempts = $user['login_attempts'] + 1;
             $lockedUntil = null;
@@ -213,7 +230,44 @@ class AuthService
             return ['success' => false, 'message' => __('auth.login_locked')];
         }
 
-        // Connexion réussie
+        // Check if 2FA is enabled for this user
+        if (!empty($user['totp_enabled']) && !empty($user['totp_secret'])) {
+            // Generate temporary token for 2FA verification
+            $tempToken = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', time() + 300); // 5 minutes
+
+            // Clean old tokens for this user
+            $stmt = $this->pdo->prepare("DELETE FROM two_factor_tokens WHERE user_id = ? OR expires_at < NOW()");
+            $stmt->execute([$user['id']]);
+
+            // Store temp token
+            $stmt = $this->pdo->prepare("
+                INSERT INTO two_factor_tokens (user_id, token, ip_address, expires_at)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([$user['id'], $tempToken, $_SERVER['REMOTE_ADDR'] ?? '', $expiresAt]);
+
+            // Reset login attempts on correct password
+            $stmt = $this->pdo->prepare("UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = ?");
+            $stmt->execute([$user['id']]);
+
+            return [
+                'success' => true,
+                'requires_2fa' => true,
+                'temp_token' => $tempToken,
+                'message' => __('auth.2fa_required')
+            ];
+        }
+
+        // Connexion réussie (sans 2FA)
+        return $this->completeLogin($user);
+    }
+
+    /**
+     * Complete the login process (create session, set language, etc.)
+     */
+    private function completeLogin(array $user): array
+    {
         $sessionId = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', time() + $this->sessionLifetime);
 
@@ -275,19 +329,39 @@ class AuthService
             return ['success' => false, 'message' => __('auth.username_exists')];
         }
 
+        // Check if email verification is enabled
+        $requiresVerification = false;
+        $stmt = $this->pdo->prepare("SELECT setting_value FROM global_settings WHERE setting_key = 'email_verification_enabled'");
+        $stmt->execute();
+        $verificationEnabled = $stmt->fetchColumn();
+        if ($verificationEnabled === '1' && !empty($data['email'])) {
+            require_once __DIR__ . '/../Services/EmailService.php';
+            $emailService = new EmailService($this->pdo);
+            if ($emailService->isConfigured()) {
+                $requiresVerification = true;
+            }
+        }
+
         $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
 
         $this->pdo->beginTransaction();
         try {
+            $emailVerified = $requiresVerification ? 0 : 1;
+            $verificationToken = $requiresVerification ? bin2hex(random_bytes(32)) : null;
+            $tokenExpires = $requiresVerification ? date('Y-m-d H:i:s', time() + 86400) : null;
+
             // Créer l'utilisateur admin
             $stmt = $this->pdo->prepare("
-                INSERT INTO users (username, password, email, phone, full_name, role, parent_id, is_active)
-                VALUES (?, ?, ?, ?, ?, 'admin', NULL, 1)
+                INSERT INTO users (username, password, email, email_verified, email_verification_token, email_token_expires_at, phone, full_name, role, parent_id, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'admin', NULL, 1)
             ");
             $stmt->execute([
                 $data['username'],
                 $hashedPassword,
                 $data['email'] ?? null,
+                $emailVerified,
+                $verificationToken,
+                $tokenExpires,
                 $data['phone'] ?? null,
                 $data['full_name'] ?? null,
             ]);
@@ -308,15 +382,184 @@ class AuthService
 
             $this->pdo->commit();
 
+            // Send verification email if required
+            if ($requiresVerification && $verificationToken) {
+                $emailService->sendVerificationEmail($data['email'], $verificationToken, $data['username']);
+            }
+
             return [
                 'success' => true,
-                'message' => __('auth.registration_success'),
+                'message' => $requiresVerification ? __('email.check_email') : __('auth.registration_success'),
                 'user_id' => $adminId,
+                'requires_verification' => $requiresVerification,
             ];
         } catch (Exception $e) {
             $this->pdo->rollBack();
             return ['success' => false, 'message' => __('auth.registration_error') . ': ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Vérifier un email via token
+     */
+    public function verifyEmail(string $token): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT id, username, email_verified FROM users
+            WHERE email_verification_token = ? AND email_token_expires_at > NOW()
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return ['success' => false, 'message' => __('email.invalid_token')];
+        }
+
+        if ($user['email_verified']) {
+            return ['success' => true, 'message' => __('email.already_verified')];
+        }
+
+        $stmt = $this->pdo->prepare("
+            UPDATE users SET email_verified = 1, email_verification_token = NULL, email_token_expires_at = NULL
+            WHERE id = ?
+        ");
+        $stmt->execute([$user['id']]);
+
+        $this->logActivity($user['id'], 'email_verified');
+
+        return ['success' => true, 'message' => __('email.verified_success')];
+    }
+
+    /**
+     * Renvoyer l'email de vérification
+     */
+    public function resendVerificationEmail(string $email): array
+    {
+        $stmt = $this->pdo->prepare("SELECT id, username, email, email_verified FROM users WHERE email = ? AND role IN ('admin', 'superadmin')");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            // Ne pas révéler si l'email existe ou non
+            return ['success' => true, 'message' => __('email.resend_success')];
+        }
+
+        if ($user['email_verified']) {
+            return ['success' => true, 'message' => __('email.already_verified')];
+        }
+
+        // Rate limit: check last token creation
+        $stmt = $this->pdo->prepare("SELECT email_token_expires_at FROM users WHERE id = ?");
+        $stmt->execute([$user['id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row['email_token_expires_at']) {
+            // Token expire dans 24h, donc il a été créé à (expires - 24h)
+            $createdAt = strtotime($row['email_token_expires_at']) - 86400;
+            if (time() - $createdAt < 300) {
+                // Moins de 5 minutes depuis le dernier envoi
+                return ['success' => false, 'message' => __('email.resend_too_soon')];
+            }
+        }
+
+        require_once __DIR__ . '/../Services/EmailService.php';
+        $emailService = new EmailService($this->pdo);
+
+        if (!$emailService->isConfigured()) {
+            return ['success' => false, 'message' => __('email.smtp_not_configured')];
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->pdo->prepare("UPDATE users SET email_verification_token = ?, email_token_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE id = ?");
+        $stmt->execute([$token, $user['id']]);
+
+        $result = $emailService->sendVerificationEmail($user['email'], $token, $user['username']);
+
+        if ($result['success']) {
+            return ['success' => true, 'message' => __('email.resend_success')];
+        }
+
+        return ['success' => false, 'message' => $result['message']];
+    }
+
+    /**
+     * Demander une réinitialisation de mot de passe
+     */
+    public function requestPasswordReset(string $email): array
+    {
+        $genericMsg = __('email.reset_sent');
+
+        $stmt = $this->pdo->prepare("SELECT id, username, email, is_active FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user || !$user['is_active']) {
+            return ['success' => true, 'message' => $genericMsg];
+        }
+
+        // Get expiry hours from settings
+        $stmtExpiry = $this->pdo->prepare("SELECT setting_value FROM global_settings WHERE setting_key = 'password_reset_expiry_hours'");
+        $stmtExpiry->execute();
+        $expiryHours = (int)($stmtExpiry->fetchColumn() ?: 1);
+        $expirySeconds = $expiryHours * 3600;
+
+        // Rate limit: check last token creation
+        $stmt = $this->pdo->prepare("SELECT password_reset_expires_at FROM users WHERE id = ?");
+        $stmt->execute([$user['id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!empty($row['password_reset_expires_at'])) {
+            $createdAt = strtotime($row['password_reset_expires_at']) - $expirySeconds;
+            if (time() - $createdAt < 300) {
+                return ['success' => false, 'message' => __('email.reset_too_soon')];
+            }
+        }
+
+        require_once __DIR__ . '/../Services/EmailService.php';
+        $emailService = new EmailService($this->pdo);
+
+        if (!$emailService->isConfigured()) {
+            return ['success' => false, 'message' => __('email.smtp_not_configured')];
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->pdo->prepare(
+            "UPDATE users SET password_reset_token = ?, password_reset_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR) WHERE id = ?"
+        );
+        $stmt->execute([$token, $expiryHours, $user['id']]);
+
+        $emailService->sendPasswordResetEmail($user['email'], $token, $user['username']);
+
+        $this->logActivity($user['id'], 'password_reset_requested', null, null, ['ip' => $_SERVER['REMOTE_ADDR'] ?? '']);
+
+        return ['success' => true, 'message' => $genericMsg];
+    }
+
+    /**
+     * Réinitialiser le mot de passe avec un token
+     */
+    public function resetPassword(string $token, string $newPassword): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT id, username FROM users
+            WHERE password_reset_token = ? AND password_reset_expires_at > NOW()
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return ['success' => false, 'message' => __('email.reset_invalid_token')];
+        }
+
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $stmt = $this->pdo->prepare("
+            UPDATE users SET password = ?, password_reset_token = NULL, password_reset_expires_at = NULL,
+            login_attempts = 0, locked_until = NULL WHERE id = ?
+        ");
+        $stmt->execute([$hashedPassword, $user['id']]);
+
+        $this->logActivity($user['id'], 'password_reset_completed');
+
+        return ['success' => true, 'message' => __('email.reset_success')];
     }
 
     public function logout(): void
@@ -725,10 +968,155 @@ class AuthService
         return $users;
     }
 
+    /**
+     * Verify 2FA code during login
+     */
+    public function verify2fa(string $tempToken, string $code): array
+    {
+        // Find the temp token
+        $stmt = $this->pdo->prepare("
+            SELECT t.*, u.*
+            FROM two_factor_tokens t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.token = ? AND t.expires_at > NOW()
+        ");
+        $stmt->execute([$tempToken]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$data) {
+            return ['success' => false, 'message' => __('auth.2fa_token_expired')];
+        }
+
+        // Verify the TOTP code
+        if (!TwoFactorAuth::verifyCode($data['totp_secret'], $code)) {
+            return ['success' => false, 'message' => __('auth.2fa_invalid_code')];
+        }
+
+        // Clean up the temp token
+        $stmt = $this->pdo->prepare("DELETE FROM two_factor_tokens WHERE user_id = ?");
+        $stmt->execute([$data['user_id']]);
+
+        // Complete the login
+        return $this->completeLogin($data);
+    }
+
+    /**
+     * Generate a new 2FA secret for setup
+     */
+    public function setup2fa(): array
+    {
+        if (!$this->currentUser) {
+            return ['success' => false, 'message' => __('auth.not_authenticated')];
+        }
+
+        $secret = TwoFactorAuth::generateSecret();
+        $accountName = $this->currentUser->getUsername();
+        $uri = TwoFactorAuth::getOtpAuthUri($secret, $accountName);
+
+        // Store the secret temporarily (not enabled yet)
+        $stmt = $this->pdo->prepare("UPDATE users SET totp_secret = ? WHERE id = ?");
+        $stmt->execute([$secret, $this->currentUser->getId()]);
+
+        return [
+            'success' => true,
+            'secret' => $secret,
+            'otpauth_uri' => $uri,
+            'account' => $accountName
+        ];
+    }
+
+    /**
+     * Enable 2FA after verifying the code
+     */
+    public function enable2fa(string $code): array
+    {
+        if (!$this->currentUser) {
+            return ['success' => false, 'message' => __('auth.not_authenticated')];
+        }
+
+        // Get the current secret
+        $stmt = $this->pdo->prepare("SELECT totp_secret FROM users WHERE id = ?");
+        $stmt->execute([$this->currentUser->getId()]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (empty($row['totp_secret'])) {
+            return ['success' => false, 'message' => __('auth.2fa_no_secret')];
+        }
+
+        // Verify the code to confirm setup
+        if (!TwoFactorAuth::verifyCode($row['totp_secret'], $code)) {
+            return ['success' => false, 'message' => __('auth.2fa_invalid_code')];
+        }
+
+        // Enable 2FA
+        $stmt = $this->pdo->prepare("UPDATE users SET totp_enabled = 1 WHERE id = ?");
+        $stmt->execute([$this->currentUser->getId()]);
+
+        $this->logActivity($this->currentUser->getId(), '2fa_enabled');
+
+        return ['success' => true, 'message' => __('auth.2fa_enabled')];
+    }
+
+    /**
+     * Disable 2FA
+     */
+    public function disable2fa(string $password): array
+    {
+        if (!$this->currentUser) {
+            return ['success' => false, 'message' => __('auth.not_authenticated')];
+        }
+
+        // Verify password before disabling
+        $stmt = $this->pdo->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt->execute([$this->currentUser->getId()]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!password_verify($password, $row['password'])) {
+            return ['success' => false, 'message' => __('auth.password_incorrect', ['remaining' => ''])];
+        }
+
+        // Disable 2FA and clear secret
+        $stmt = $this->pdo->prepare("UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?");
+        $stmt->execute([$this->currentUser->getId()]);
+
+        $this->logActivity($this->currentUser->getId(), '2fa_disabled');
+
+        return ['success' => true, 'message' => __('auth.2fa_disabled')];
+    }
+
+    /**
+     * Get 2FA status for current user
+     */
+    public function get2faStatus(): array
+    {
+        if (!$this->currentUser) {
+            return ['enabled' => false];
+        }
+
+        $stmt = $this->pdo->prepare("SELECT totp_enabled FROM users WHERE id = ?");
+        $stmt->execute([$this->currentUser->getId()]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return ['enabled' => (bool)($row['totp_enabled'] ?? false)];
+    }
+
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
     public function cleanExpiredSessions(): int
     {
         $stmt = $this->pdo->prepare("DELETE FROM user_sessions WHERE expires_at < NOW()");
         $stmt->execute();
-        return $stmt->rowCount();
+        $count = $stmt->rowCount();
+
+        // Also clean expired 2FA tokens
+        $this->pdo->exec("DELETE FROM two_factor_tokens WHERE expires_at < NOW()");
+
+        // Clean expired password reset tokens
+        $this->pdo->exec("UPDATE users SET password_reset_token = NULL, password_reset_expires_at = NULL WHERE password_reset_expires_at < NOW()");
+
+        return $count;
     }
 }

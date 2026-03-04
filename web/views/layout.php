@@ -1,25 +1,5 @@
 <?php
-// Charger l'état des modules pour le menu (scopé par admin)
-$activeModules = [];
-try {
-    if (isset($db)) {
-        $pdo = $db->getPdo();
-        $layoutAdminId = isset($auth) ? $auth->getAdminId() : null;
-        if ($layoutAdminId !== null) {
-            $stmt = $pdo->prepare("SELECT module_code, is_active FROM modules WHERE admin_id = ?");
-            $stmt->execute([$layoutAdminId]);
-        } else {
-            $stmt = $pdo->query("SELECT module_code, is_active FROM modules");
-        }
-        while ($row = $stmt->fetch()) {
-            $activeModules[$row['module_code']] = (bool)$row['is_active'];
-        }
-    }
-} catch (Exception $e) {}
-
-$isModuleActive = function($code) use ($activeModules) {
-    return $activeModules[$code] ?? false;
-};
+// $activeModules et $isModuleActive sont déjà définis dans index.php
 
 // Helper pour vérifier si l'utilisateur a accès à une page
 $canAccess = function(string $page) use ($allPages, $currentUser): bool {
@@ -339,7 +319,7 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                 </a>
 
                 <!-- Sub-menu: Configuration -->
-                <?php $configPages = ['superadmin-settings', 'superadmin-module-pricing', 'superadmin-sms-config']; ?>
+                <?php $configPages = ['superadmin-settings', 'superadmin-module-pricing', 'superadmin-sms-config', 'superadmin-smtp-config']; ?>
                 <div x-data="{ open: <?= in_array($currentPage ?? '', $configPages) ? 'true' : 'false' ?> }">
                     <button @click="if(sidebarCollapsed) { sidebarCollapsed = false; open = true; } else { open = !open; }"
                         class="sidebar-link w-full justify-between <?= in_array($currentPage ?? '', $configPages) ? 'active' : '' ?>"
@@ -386,6 +366,14 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                                     d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                             </svg>
                             <?= __('nav.superadmin_sms_config') ?? 'Config SMS (CSMS)' ?>
+                        </a>
+                        <a href="index.php?page=superadmin-smtp-config"
+                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'superadmin-smtp-config' ? 'active' : '' ?>">
+                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                            <?= __('nav.superadmin_smtp_config') ?? 'Config Email (SMTP)' ?>
                         </a>
                     </div>
                 </div>
@@ -479,6 +467,20 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                     </svg>
                     <span :class="sidebarCollapsed && 'lg:hidden'">
                         <?= __('nav.radius_servers') ?? 'Serveurs RADIUS' ?>
+                    </span>
+                </a>
+
+                <a href="index.php?page=superadmin-updates"
+                    class="sidebar-link <?= ($currentPage ?? '') === 'superadmin-updates' ? 'active' : '' ?>"
+                    :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
+                    :title="sidebarCollapsed ? '<?= __('nav.superadmin_updates') ?? 'Mises à jour' ?>' : ''">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span :class="sidebarCollapsed && 'lg:hidden'">
+                        <?= __('nav.superadmin_updates') ?? 'Mises à jour' ?>
                     </span>
                 </a>
 
@@ -1010,6 +1012,20 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                     </span>
                 </a>
                 <?php endif; ?>
+
+                <a href="index.php?page=profile"
+                    class="sidebar-link <?= ($currentPage ?? '') === 'profile' ? 'active' : '' ?>"
+                    :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
+                    :title="sidebarCollapsed ? '<?= __('nav.my_account') ?>' : ''">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span :class="sidebarCollapsed && 'lg:hidden'">
+                        <?= __('nav.my_account') ?>
+                    </span>
+                </a>
 
                 <?php if ($canAccess('settings')): ?>
                 <a href="index.php?page=settings"
@@ -1741,7 +1757,7 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                             </div>
                             <!-- Menu items -->
                             <div class="py-1">
-                                <a href="index.php?page=settings"
+                                <a href="index.php?page=profile"
                                    class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#21262d] transition-colors">
                                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"

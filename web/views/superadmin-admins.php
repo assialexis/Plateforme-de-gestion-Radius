@@ -62,17 +62,17 @@ $currentPage = 'superadmin-admins'; ?>
                 </div>
             </div>
         </div>
-        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-amber-600 rounded-lg">
+                <div class="p-2 bg-purple-600 rounded-lg">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-amber-700 dark:text-amber-300" x-text="stats.recent_admins || 0"></p>
-                    <p class="text-xs text-amber-600 dark:text-amber-400"><?= __('superadmin.recent_admins') ?? 'Récents (30j)' ?></p>
+                    <p class="text-2xl font-bold text-purple-700 dark:text-purple-300" x-text="stats.total_superadmins || 0"></p>
+                    <p class="text-xs text-purple-600 dark:text-purple-400"><?= __('superadmin.total_superadmins') ?? 'Super Admins' ?></p>
                 </div>
             </div>
         </div>
@@ -88,6 +88,12 @@ $currentPage = 'superadmin-admins'; ?>
                 placeholder="<?= __('superadmin.search_admin') ?? 'Rechercher un admin...' ?>"
                 class="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent">
         </div>
+        <select x-model="roleFilter" @change="filterAdmins()"
+            class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100">
+            <option value=""><?= __('superadmin.all_roles') ?? 'Tous les rôles' ?></option>
+            <option value="superadmin"><?= __('superadmin.role_superadmin') ?? 'Super Admin' ?></option>
+            <option value="admin"><?= __('superadmin.role_admin') ?? 'Admin' ?></option>
+        </select>
         <select x-model="statusFilter" @change="filterAdmins()"
             class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100">
             <option value=""><?= __('superadmin.all_status') ?? 'Tous les statuts' ?></option>
@@ -103,6 +109,7 @@ $currentPage = 'superadmin-admins'; ?>
                 <thead class="bg-gray-50 dark:bg-[#161b22] border-b border-gray-200 dark:border-[#30363d]">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"><?= __('superadmin.col_admin') ?? 'Admin' ?></th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"><?= __('superadmin.col_role') ?? 'Rôle' ?></th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"><?= __('superadmin.col_email') ?? 'Email' ?></th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"><?= __('superadmin.col_status') ?? 'Statut' ?></th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"><?= __('superadmin.col_users') ?? 'Utilisateurs' ?></th>
@@ -119,7 +126,8 @@ $currentPage = 'superadmin-admins'; ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-[#1c2128] transition-colors">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-semibold"
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold"
+                                        :class="admin.role === 'superadmin' ? 'bg-red-600' : 'bg-blue-600'"
                                         x-text="admin.username.charAt(0).toUpperCase()"></div>
                                     <div>
                                         <p class="font-medium text-gray-900 dark:text-gray-100" x-text="admin.full_name || admin.username"></p>
@@ -127,11 +135,26 @@ $currentPage = 'superadmin-admins'; ?>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="admin.email"></td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-1 text-xs font-medium rounded-full"
-                                    :class="admin.is_active == 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
-                                    x-text="admin.is_active == 1 ? '<?= __('superadmin.active') ?? 'Actif' ?>' : '<?= __('superadmin.inactive') ?? 'Inactif' ?>'"></span>
+                                    :class="admin.role === 'superadmin' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'"
+                                    x-text="admin.role === 'superadmin' ? 'Super Admin' : 'Admin'"></span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="admin.email"></td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                        :class="admin.is_active == 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
+                                        x-text="admin.is_active == 1 ? '<?= __js('superadmin.active') ?? 'Actif' ?>' : '<?= __js('superadmin.inactive') ?? 'Inactif' ?>'"></span>
+                                    <span x-show="admin.totp_enabled == 1" class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" title="2FA activé">2FA</span>
+                                    <span x-show="admin.email_verified == 0"
+                                        class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                        title="<?= __js('email.not_verified_badge') ?? 'Email non vérifié' ?>">
+                                        <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </span>
+                                </div>
                             </td>
                             <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="admin.sub_users || 0"></td>
                             <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="admin.total_vouchers || 0"></td>
@@ -153,7 +176,7 @@ $currentPage = 'superadmin-admins'; ?>
                                 <div class="flex items-center justify-end gap-1">
                                     <button @click="editAdmin(admin)"
                                         class="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                        :title="'<?= __('common.edit') ?? 'Modifier' ?>'">
+                                        :title="'<?= __js('common.edit') ?? 'Modifier' ?>'">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
@@ -161,14 +184,35 @@ $currentPage = 'superadmin-admins'; ?>
                                     <button @click="toggleAdmin(admin)"
                                         class="p-1.5 rounded-lg transition-colors"
                                         :class="admin.is_active == 1 ? 'text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'"
-                                        :title="admin.is_active == 1 ? '<?= __('superadmin.deactivate') ?? 'Désactiver' ?>' : '<?= __('superadmin.activate') ?? 'Activer' ?>'">
+                                        :title="admin.is_active == 1 ? '<?= __js('superadmin.deactivate') ?? 'Désactiver' ?>' : '<?= __js('superadmin.activate') ?? 'Activer' ?>'">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                         </svg>
                                     </button>
+                                    <button x-show="admin.email_verified == 0" @click="verifyEmail(admin)"
+                                        class="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                        title="<?= __js('email.verify_manually') ?? 'Vérifier manuellement' ?>">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                    <button x-show="admin.email_verified == 0 && admin.email" @click="resendVerification(admin)"
+                                        class="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                        title="<?= __js('email.resend_verification') ?? 'Renvoyer email de vérification' ?>">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                    <button x-show="admin.totp_enabled == 1" @click="reset2fa(admin)"
+                                        class="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                        title="<?= __js('superadmin.reset_2fa') ?? 'Réinitialiser 2FA' ?>">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                    </button>
                                     <button @click="deleteAdmin(admin)"
                                         class="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                        :title="'<?= __('common.delete') ?? 'Supprimer' ?>'">
+                                        :title="'<?= __js('common.delete') ?? 'Supprimer' ?>'">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
@@ -178,7 +222,7 @@ $currentPage = 'superadmin-admins'; ?>
                         </tr>
                     </template>
                     <tr x-show="filteredAdmins.length === 0">
-                        <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                             <?= __('superadmin.no_admins') ?? 'Aucun admin trouvé' ?>
                         </td>
                     </tr>
@@ -194,7 +238,7 @@ $currentPage = 'superadmin-admins'; ?>
             @click.away="showModal = false">
             <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-[#30363d]">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100"
-                    x-text="editMode ? '<?= __('superadmin.edit_admin') ?? 'Modifier l\'admin' ?>' : '<?= __('superadmin.add_admin') ?? 'Nouvel Admin' ?>'"></h3>
+                    x-text="editMode ? '<?= __js('superadmin.edit_admin') ?? 'Modifier l\\\'admin' ?>' : '<?= __js('superadmin.add_admin') ?? 'Nouvel Admin' ?>'"></h3>
                 <button @click="showModal = false" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -227,6 +271,17 @@ $currentPage = 'superadmin-admins'; ?>
                     </div>
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('superadmin.select_role') ?? 'Rôle' ?></label>
+                    <select x-model="form.role"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                        <option value="admin"><?= __('superadmin.role_admin') ?? 'Admin' ?></option>
+                        <option value="superadmin"><?= __('superadmin.role_superadmin') ?? 'Super Admin' ?></option>
+                    </select>
+                    <p x-show="form.role === 'superadmin'" class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                        <?= __('superadmin.superadmin_warning') ?? 'Un Super Admin a un accès complet à toute la plateforme' ?>
+                    </p>
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         <?= __('user.password') ?? 'Mot de passe' ?>
                         <span x-show="editMode" class="text-xs text-gray-400">(<?= __('superadmin.leave_empty') ?? 'laisser vide pour ne pas modifier' ?>)</span>
@@ -247,7 +302,7 @@ $currentPage = 'superadmin-admins'; ?>
                 </button>
                 <button @click="saveAdmin()" :disabled="saving"
                     class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
-                    <span x-show="!saving" x-text="editMode ? '<?= __('common.save') ?? 'Enregistrer' ?>' : '<?= __('superadmin.create') ?? 'Créer' ?>'"></span>
+                    <span x-show="!saving" x-text="editMode ? '<?= __js('common.save') ?? 'Enregistrer' ?>' : '<?= __js('superadmin.create') ?? 'Créer' ?>'"></span>
                     <span x-show="saving"><?= __('common.loading') ?? 'Chargement...' ?></span>
                 </button>
             </div>
@@ -265,7 +320,7 @@ $currentPage = 'superadmin-admins'; ?>
                         x-text="creditType === 'crt' ? 'C' : 'S'"></div>
                     <div>
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100"
-                            x-text="creditType === 'crt' ? '<?= __('superadmin.adjust_crt') ?? 'Ajuster CRT' ?>' : '<?= __('superadmin.adjust_csms') ?? 'Ajuster CSMS' ?>'"></h3>
+                            x-text="creditType === 'crt' ? '<?= __js('superadmin.adjust_crt') ?? 'Ajuster CRT' ?>' : '<?= __js('superadmin.adjust_csms') ?? 'Ajuster CSMS' ?>'"></h3>
                         <p class="text-[11px] text-gray-500" x-text="creditTarget?.full_name || creditTarget?.username"></p>
                     </div>
                 </div>
@@ -303,7 +358,7 @@ $currentPage = 'superadmin-admins'; ?>
                 <div class="grid grid-cols-2 gap-3">
                     <!-- Nombre de crédits -->
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" x-text="creditType === 'crt' ? '<?= __('superadmin.nb_credits') ?? 'Nb crédits (CRT)' ?>' : '<?= __('superadmin.nb_csms') ?? 'Nb crédits (CSMS)' ?>'"></label>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" x-text="creditType === 'crt' ? '<?= __js('superadmin.nb_credits') ?? 'Nb crédits (CRT)' ?>' : '<?= __js('superadmin.nb_csms') ?? 'Nb crédits (CSMS)' ?>'"></label>
                         <input type="number" x-model.number="creditAmount" min="0" :step="creditType === 'crt' ? '0.01' : '1'" placeholder="0"
                             @input="creditMoneyAmount = creditType === 'crt' ? Math.round(creditAmount * crtRate) : Math.round(creditAmount * csmsRate)"
                             class="w-full px-3 py-2 text-base font-bold text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 focus:ring-2"
@@ -365,7 +420,7 @@ $currentPage = 'superadmin-admins'; ?>
                 <button @click="submitCreditAdjustment()" :disabled="!creditAmount || creditAmount <= 0 || savingCredit"
                     class="px-4 py-1.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50"
                     :class="creditAction === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'">
-                    <span x-show="!savingCredit" x-text="creditAction === 'add' ? '<?= __('superadmin.credit_add') ?? 'Ajouter' ?>' : '<?= __('superadmin.credit_remove') ?? 'Retirer' ?>'"></span>
+                    <span x-show="!savingCredit" x-text="creditAction === 'add' ? '<?= __js('superadmin.credit_add') ?? 'Ajouter' ?>' : '<?= __js('superadmin.credit_remove') ?? 'Retirer' ?>'"></span>
                     <span x-show="savingCredit"><?= __('common.loading') ?? '...' ?></span>
                 </button>
             </div>
@@ -380,12 +435,13 @@ function superadminAdmins() {
         filteredAdmins: [],
         stats: {},
         search: '',
+        roleFilter: '',
         statusFilter: '',
         showModal: false,
         editMode: false,
         editId: null,
         saving: false,
-        form: { username: '', full_name: '', email: '', phone: '', password: '', is_active: true },
+        form: { username: '', full_name: '', email: '', phone: '', password: '', role: 'admin', is_active: true },
 
         // Credit adjustment
         showCreditModal: false,
@@ -433,13 +489,14 @@ function superadminAdmins() {
                     (a.email || '').toLowerCase().includes(s)
                 );
             }
+            if (this.roleFilter) result = result.filter(a => a.role === this.roleFilter);
             if (this.statusFilter === 'active') result = result.filter(a => a.is_active == 1);
             if (this.statusFilter === 'inactive') result = result.filter(a => a.is_active == 0);
             this.filteredAdmins = result;
         },
 
         resetForm() {
-            this.form = { username: '', full_name: '', email: '', phone: '', password: '', is_active: true };
+            this.form = { username: '', full_name: '', email: '', phone: '', password: '', role: 'admin', is_active: true };
             this.editId = null;
         },
 
@@ -452,6 +509,7 @@ function superadminAdmins() {
                 email: admin.email || '',
                 phone: admin.phone || '',
                 password: '',
+                role: admin.role || 'admin',
                 is_active: admin.is_active == 1
             };
             this.showModal = true;
@@ -465,7 +523,7 @@ function superadminAdmins() {
                     : 'api.php?route=/superadmin/admins';
                 const method = this.editMode ? 'PUT' : 'POST';
 
-                const body = { ...this.form, is_active: this.form.is_active ? 1 : 0 };
+                const body = { ...this.form, is_active: this.form.is_active ? 1 : 0, role: this.form.role };
                 if (this.editMode && !body.password) delete body.password;
 
                 const res = await fetch(url, {
@@ -487,8 +545,8 @@ function superadminAdmins() {
 
         async toggleAdmin(admin) {
             if (!confirm(admin.is_active == 1
-                ? '<?= __('superadmin.confirm_deactivate') ?? 'Désactiver cet admin ?' ?>'
-                : '<?= __('superadmin.confirm_activate') ?? 'Activer cet admin ?' ?>')) return;
+                ? '<?= __js('superadmin.confirm_deactivate') ?? 'Désactiver cet admin ?' ?>'
+                : '<?= __js('superadmin.confirm_activate') ?? 'Activer cet admin ?' ?>')) return;
             try {
                 const res = await fetch(`api.php?route=/superadmin/admins/${admin.id}/toggle`, {
                     method: 'POST',
@@ -503,7 +561,7 @@ function superadminAdmins() {
         },
 
         async deleteAdmin(admin) {
-            if (!confirm('<?= __('superadmin.confirm_delete_admin') ?? 'Supprimer cet admin et tous ses sous-utilisateurs ?' ?>')) return;
+            if (!confirm('<?= __js('superadmin.confirm_delete_admin') ?? 'Supprimer cet admin et tous ses sous-utilisateurs ?' ?>')) return;
             try {
                 const res = await fetch(`api.php?route=/superadmin/admins/${admin.id}`, {
                     method: 'DELETE',
@@ -513,6 +571,49 @@ function superadminAdmins() {
                 if (data.success) {
                     showToast(data.message, 'success');
                     await this.init();
+                } else showToast(data.message, 'error');
+            } catch (e) { showToast('Erreur', 'error'); }
+        },
+
+        async reset2fa(admin) {
+            if (!confirm('<?= __js('superadmin.confirm_reset_2fa') ?? 'Réinitialiser la 2FA pour cet utilisateur ? Il devra la reconfigurer.' ?>')) return;
+            try {
+                const res = await fetch(`api.php?route=/superadmin/admins/${admin.id}/reset-2fa`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    await this.init();
+                } else showToast(data.message, 'error');
+            } catch (e) { showToast('Erreur', 'error'); }
+        },
+
+        async verifyEmail(admin) {
+            if (!confirm('<?= __js('email.confirm_verify_manually') ?? "Vérifier manuellement l\'email de cet admin ?" ?>')) return;
+            try {
+                const res = await fetch(`api.php?route=/superadmin/admins/${admin.id}/verify-email`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    await this.loadAdmins();
+                } else showToast(data.message, 'error');
+            } catch (e) { showToast('Erreur', 'error'); }
+        },
+
+        async resendVerification(admin) {
+            try {
+                const res = await fetch(`api.php?route=/superadmin/admins/${admin.id}/resend-verification`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
                 } else showToast(data.message, 'error');
             } catch (e) { showToast('Erreur', 'error'); }
         },

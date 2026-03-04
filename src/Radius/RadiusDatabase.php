@@ -29,118 +29,44 @@ class RadiusDatabase
     }
 
     /**
-     * Exécuter les migrations automatiques
+     * Exécuter les migrations automatiques via MigrationRunner
      */
     private function runMigrations(): void
     {
-        // Migration: Ajouter colonne router_id à la table nas
+        require_once __DIR__ . '/../Update/MigrationRunner.php';
+
+        $runner = new MigrationRunner($this->pdo, __DIR__ . '/../../database/migrations');
+        $runner->ensureTrackingTable();
+
+        // Premier lancement : marquer toutes les migrations existantes comme appliquées (baseline)
+        if (empty($runner->getExecutedMigrations())) {
+            $runner->baseline();
+        }
+
+        // Exécuter les migrations en attente
+        $runner->runAll();
+
+        // Corrections de données runtime (doivent s'exécuter à chaque démarrage)
+        $this->runRuntimeDataFixes();
+    }
+
+    /**
+     * Corrections de données qui doivent s'exécuter à chaque démarrage
+     */
+    private function runRuntimeDataFixes(): void
+    {
+        // Générer router_id pour les NAS qui n'en ont pas
         try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM nas LIKE 'router_id'");
-            if ($stmt->rowCount() === 0) {
-                // Ajouter la colonne router_id
-                $this->pdo->exec("ALTER TABLE nas ADD COLUMN router_id VARCHAR(64) NULL AFTER id");
-
-                // Ajouter l'index unique
-                try {
-                    $this->pdo->exec("ALTER TABLE nas ADD UNIQUE KEY unique_router_id (router_id)");
-                }
-                catch (PDOException $e) {
-                // Index existe déjà
-                }
-
-                // Supprimer l'unicité sur nasname si elle existe
-                try {
-                    $this->pdo->exec("ALTER TABLE nas DROP INDEX nasname");
-                }
-                catch (PDOException $e) {
-                // Index n'existe pas, ignorer
-                }
-            }
-
-            // Toujours vérifier et générer les router_id manquants
             $stmt = $this->pdo->query("SELECT id FROM nas WHERE router_id IS NULL OR router_id = ''");
             while ($row = $stmt->fetch()) {
-                $routerId = 'NAS-' . strtoupper(bin2hex(random_bytes(8)));
-                $routerId = substr($routerId, 0, 4) . substr($routerId, 4, 8) . '-' . substr($routerId, 12, 4);
+                $randomPart = strtoupper(bin2hex(random_bytes(8)));
+                $routerId = 'NAS-' . substr($randomPart, 0, 8) . '-' . substr($randomPart, 8, 4);
                 $update = $this->pdo->prepare("UPDATE nas SET router_id = ? WHERE id = ?");
                 $update->execute([$routerId, $row['id']]);
             }
-        }
-        catch (PDOException $e) {
-        // Ignorer les erreurs de migration
-        }
+        } catch (PDOException $e) {}
 
-        // Migration: Ajouter colonne config à la table hotspot_templates
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM hotspot_templates LIKE 'config'");
-            if ($stmt->rowCount() === 0) {
-                // Ajouter la colonne config
-                $this->pdo->exec("ALTER TABLE hotspot_templates ADD COLUMN config JSON DEFAULT NULL COMMENT 'Configuration dynamique (sliders, services, profils, etc)' AFTER is_active");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer l'erreur
-        }
-
-        // Migration: Mettre à jour les router_id au nouveau format sécurisé (NAS-XXXXXXXX-XXXX)
-        try {
-            // Identifier les anciens formats (8 caractères hex seulement, sans tiret au milieu)
-            $stmt = $this->pdo->query("SELECT id, router_id FROM nas WHERE router_id LIKE 'NAS-%' AND LENGTH(router_id) = 12 AND router_id NOT LIKE 'NAS-________-____'");
-            while ($row = $stmt->fetch()) {
-                // Générer un nouveau router_id au format sécurisé
-                $randomPart = strtoupper(bin2hex(random_bytes(8)));
-                $newRouterId = 'NAS-' . substr($randomPart, 0, 8) . '-' . substr($randomPart, 8, 4);
-
-                // Vérifier unicité
-                $check = $this->pdo->prepare("SELECT id FROM nas WHERE router_id = ?");
-                $check->execute([$newRouterId]);
-                if (!$check->fetch()) {
-                    $update = $this->pdo->prepare("UPDATE nas SET router_id = ? WHERE id = ?");
-                    $update->execute([$newRouterId, $row['id']]);
-                    error_log("Migration NAS ID: {$row['router_id']} -> {$newRouterId}");
-                }
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Mettre à jour les codes de zone au nouveau format sécurisé (ZONE-XXXXXXXXXXXX)
-        try {
-            // Identifier les zones avec ancien format (pas ZONE-XXXXXXXXXXXX)
-            $stmt = $this->pdo->query("SELECT id, code FROM zones WHERE code NOT LIKE 'ZONE-%' OR LENGTH(code) < 17");
-            while ($row = $stmt->fetch()) {
-                // Générer un nouveau code au format sécurisé
-                $randomPart = strtoupper(bin2hex(random_bytes(6)));
-                $newCode = 'ZONE-' . $randomPart;
-
-                // Vérifier unicité
-                $check = $this->pdo->prepare("SELECT id FROM zones WHERE code = ?");
-                $check->execute([$newCode]);
-                if (!$check->fetch()) {
-                    $update = $this->pdo->prepare("UPDATE zones SET code = ? WHERE id = ?");
-                    $update->execute([$newCode, $row['id']]);
-                    error_log("Migration Zone code: {$row['code']} -> {$newCode}");
-                }
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Changer nas_port en BIGINT
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM sessions LIKE 'nas_port'");
-            $column = $stmt->fetch();
-            if ($column && stripos($column['Type'], 'bigint') === false) {
-                $this->pdo->exec("ALTER TABLE sessions MODIFY nas_port BIGINT NULL");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Calculer valid_until pour les vouchers actifs qui n'en ont pas
+        // Calculer valid_until pour les vouchers actifs qui n'en ont pas
         try {
             $this->pdo->exec("
                 UPDATE vouchers
@@ -150,640 +76,10 @@ class RadiusDatabase
                   AND time_limit IS NOT NULL
                   AND valid_until IS NULL
             ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
+        } catch (PDOException $e) {}
 
-        // Migration: Mettre à jour le statut des vouchers expirés
+        // Mettre à jour le statut des vouchers expirés
         $this->updateExpiredVouchers();
-
-        // Migration: Créer la table payment_gateways si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS payment_gateways (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    gateway_code VARCHAR(50) NOT NULL UNIQUE,
-                    name VARCHAR(100) NOT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    logo_url VARCHAR(500) DEFAULT NULL,
-                    is_active TINYINT(1) DEFAULT 0,
-                    is_sandbox TINYINT(1) DEFAULT 1,
-                    config JSON DEFAULT NULL,
-                    display_order INT DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer les passerelles par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM payment_gateways")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO payment_gateways (gateway_code, name, description, logo_url, is_active, is_sandbox, config, display_order) VALUES
-                    ('fedapay', 'FedaPay', 'Paiement mobile money et cartes en Afrique', NULL, 0, 1, '{\"account_name\": \"\", \"public_key\": \"\", \"secret_key\": \"\"}', 1),
-                    ('cinetpay', 'CinetPay', 'Solution de paiement mobile money', NULL, 0, 1, '{\"site_id\": \"\", \"api_key\": \"\", \"secret_key\": \"\"}', 2),
-                    ('orange_money', 'Orange Money', 'Paiement Orange Money', NULL, 0, 1, '{\"merchant_key\": \"\", \"username\": \"\", \"password\": \"\", \"auth_header\": \"\"}', 3),
-                    ('mtn_momo', 'MTN Mobile Money', 'Paiement MTN MoMo', NULL, 0, 1, '{\"subscription_key\": \"\", \"api_user\": \"\", \"api_key\": \"\", \"environment\": \"sandbox\"}', 4),
-                    ('paypal', 'PayPal', 'Paiement international PayPal', NULL, 0, 1, '{\"client_id\": \"\", \"client_secret\": \"\"}', 5),
-                    ('stripe', 'Stripe', 'Paiement par carte bancaire', NULL, 0, 1, '{\"publishable_key\": \"\", \"secret_key\": \"\", \"webhook_secret\": \"\"}', 6)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table media_library si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS media_library (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    media_type VARCHAR(50) NOT NULL,
-                    media_key VARCHAR(50) NOT NULL UNIQUE,
-                    original_name VARCHAR(255) DEFAULT NULL,
-                    file_path VARCHAR(500) DEFAULT NULL,
-                    file_size INT DEFAULT NULL,
-                    mime_type VARCHAR(100) DEFAULT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer les entrées par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM media_library")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO media_library (media_type, media_key, description) VALUES
-                    ('logo', 'company_logo', 'Logo de l''entreprise'),
-                    ('image', 'hotspot_image_1', 'Image hotspot 1'),
-                    ('image', 'hotspot_image_2', 'Image hotspot 2'),
-                    ('image', 'hotspot_image_3', 'Image hotspot 3'),
-                    ('image', 'hotspot_image_4', 'Image hotspot 4'),
-                    ('audio', 'welcome_audio', 'Audio de bienvenue (max 800KB)')
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table voucher_templates si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS voucher_templates (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    template_type ENUM('simple', 'detailed') DEFAULT 'simple',
-                    paper_size VARCHAR(20) DEFAULT 'A4',
-                    orientation ENUM('portrait', 'landscape') DEFAULT 'portrait',
-                    columns_count INT DEFAULT 2,
-                    rows_count INT DEFAULT 5,
-                    show_logo TINYINT(1) DEFAULT 1,
-                    show_qr_code TINYINT(1) DEFAULT 0,
-                    show_password TINYINT(1) DEFAULT 1,
-                    show_validity TINYINT(1) DEFAULT 1,
-                    show_speed TINYINT(1) DEFAULT 0,
-                    show_price TINYINT(1) DEFAULT 1,
-                    header_text VARCHAR(255) DEFAULT NULL,
-                    footer_text VARCHAR(255) DEFAULT NULL,
-                    background_color VARCHAR(7) DEFAULT '#ffffff',
-                    border_color VARCHAR(7) DEFAULT '#e5e7eb',
-                    primary_color VARCHAR(7) DEFAULT '#3b82f6',
-                    text_color VARCHAR(7) DEFAULT '#1f2937',
-                    custom_css TEXT DEFAULT NULL,
-                    is_default TINYINT(1) DEFAULT 0,
-                    is_active TINYINT(1) DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer les templates par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM voucher_templates")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO voucher_templates (name, description, template_type, columns_count, rows_count, show_logo, show_qr_code, show_password, show_validity, show_speed, show_price, header_text, footer_text, is_default) VALUES
-                    ('Ticket Simple', 'Template simple avec code et mot de passe', 'simple', 2, 5, 1, 0, 1, 1, 0, 1, 'WiFi Hotspot', 'Merci de votre visite!', 1),
-                    ('Ticket Détaillé', 'Template complet avec QR code et toutes les infos', 'detailed', 2, 4, 1, 1, 1, 1, 1, 1, 'WiFi Hotspot Premium', 'Support: support@example.com', 0)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table hotspot_templates si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS hotspot_templates (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    template_code VARCHAR(50) NOT NULL UNIQUE,
-                    logo_position ENUM('top', 'left', 'center') DEFAULT 'center',
-                    background_type ENUM('color', 'gradient', 'image') DEFAULT 'gradient',
-                    background_color VARCHAR(7) DEFAULT '#1e3a5f',
-                    background_gradient_start VARCHAR(7) DEFAULT '#1e3a5f',
-                    background_gradient_end VARCHAR(7) DEFAULT '#0d1b2a',
-                    background_image VARCHAR(500) DEFAULT NULL,
-                    primary_color VARCHAR(7) DEFAULT '#3b82f6',
-                    secondary_color VARCHAR(7) DEFAULT '#10b981',
-                    text_color VARCHAR(7) DEFAULT '#ffffff',
-                    card_bg_color VARCHAR(7) DEFAULT '#ffffff',
-                    card_text_color VARCHAR(7) DEFAULT '#1f2937',
-                    title_text VARCHAR(255) DEFAULT 'Bienvenue sur notre WiFi',
-                    subtitle_text VARCHAR(255) DEFAULT 'Connectez-vous pour accéder à Internet',
-                    login_button_text VARCHAR(50) DEFAULT 'Se connecter',
-                    username_placeholder VARCHAR(50) DEFAULT 'Code voucher',
-                    password_placeholder VARCHAR(50) DEFAULT 'Mot de passe',
-                    footer_text VARCHAR(255) DEFAULT 'Powered by RADIUS Manager',
-                    show_logo TINYINT(1) DEFAULT 1,
-                    show_password_field TINYINT(1) DEFAULT 1,
-                    show_remember_me TINYINT(1) DEFAULT 0,
-                    show_footer TINYINT(1) DEFAULT 1,
-                    show_social_login TINYINT(1) DEFAULT 0,
-                    show_terms_link TINYINT(1) DEFAULT 0,
-                    terms_url VARCHAR(500) DEFAULT NULL,
-                    html_content LONGTEXT DEFAULT NULL,
-                    css_content LONGTEXT DEFAULT NULL,
-                    js_content LONGTEXT DEFAULT NULL,
-                    preview_image VARCHAR(500) DEFAULT NULL,
-                    is_default TINYINT(1) DEFAULT 0,
-                    is_active TINYINT(1) DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer les templates par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM hotspot_templates")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO hotspot_templates (name, description, template_code, background_type, background_gradient_start, background_gradient_end, primary_color, title_text, subtitle_text, is_default) VALUES
-                    ('MikroTik Modern', 'Template moderne et responsive pour portail captif MikroTik', 'mikrotik_modern', 'gradient', '#1e3a5f', '#0d1b2a', '#3b82f6', 'Bienvenue sur notre WiFi', 'Entrez votre code pour vous connecter', 1),
-                    ('MikroTik Minimal', 'Template minimaliste et épuré', 'mikrotik_minimal', 'color', '#ffffff', '#ffffff', '#000000', 'WiFi Hotspot', 'Connexion requise', 0)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter les nouvelles colonnes à hotspot_templates si elles n'existent pas
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM hotspot_templates LIKE 'logo_position'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    ALTER TABLE hotspot_templates
-                    ADD COLUMN logo_position ENUM('top', 'left', 'center') DEFAULT 'center' AFTER template_code,
-                    ADD COLUMN background_type ENUM('color', 'gradient', 'image') DEFAULT 'gradient' AFTER logo_position,
-                    ADD COLUMN background_color VARCHAR(7) DEFAULT '#1e3a5f' AFTER background_type,
-                    ADD COLUMN background_gradient_start VARCHAR(7) DEFAULT '#1e3a5f' AFTER background_color,
-                    ADD COLUMN background_gradient_end VARCHAR(7) DEFAULT '#0d1b2a' AFTER background_gradient_start,
-                    ADD COLUMN background_image VARCHAR(500) DEFAULT NULL AFTER background_gradient_end,
-                    ADD COLUMN primary_color VARCHAR(7) DEFAULT '#3b82f6' AFTER background_image,
-                    ADD COLUMN secondary_color VARCHAR(7) DEFAULT '#10b981' AFTER primary_color,
-                    ADD COLUMN text_color VARCHAR(7) DEFAULT '#ffffff' AFTER secondary_color,
-                    ADD COLUMN card_bg_color VARCHAR(7) DEFAULT '#ffffff' AFTER text_color,
-                    ADD COLUMN card_text_color VARCHAR(7) DEFAULT '#1f2937' AFTER card_bg_color,
-                    ADD COLUMN title_text VARCHAR(255) DEFAULT 'Bienvenue sur notre WiFi' AFTER card_text_color,
-                    ADD COLUMN subtitle_text VARCHAR(255) DEFAULT 'Connectez-vous pour accéder à Internet' AFTER title_text,
-                    ADD COLUMN login_button_text VARCHAR(50) DEFAULT 'Se connecter' AFTER subtitle_text,
-                    ADD COLUMN username_placeholder VARCHAR(50) DEFAULT 'Code voucher' AFTER login_button_text,
-                    ADD COLUMN password_placeholder VARCHAR(50) DEFAULT 'Mot de passe' AFTER username_placeholder,
-                    ADD COLUMN footer_text VARCHAR(255) DEFAULT 'Powered by RADIUS Manager' AFTER password_placeholder,
-                    ADD COLUMN show_logo TINYINT(1) DEFAULT 1 AFTER footer_text,
-                    ADD COLUMN show_password_field TINYINT(1) DEFAULT 1 AFTER show_logo,
-                    ADD COLUMN show_remember_me TINYINT(1) DEFAULT 0 AFTER show_password_field,
-                    ADD COLUMN show_footer TINYINT(1) DEFAULT 1 AFTER show_remember_me,
-                    ADD COLUMN show_social_login TINYINT(1) DEFAULT 0 AFTER show_footer,
-                    ADD COLUMN show_terms_link TINYINT(1) DEFAULT 0 AFTER show_social_login,
-                    ADD COLUMN terms_url VARCHAR(500) DEFAULT NULL AFTER show_terms_link
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer - colonnes existent déjà
-        }
-
-        // Migration: Ajouter les colonnes chat support à hotspot_templates
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM hotspot_templates LIKE 'show_chat_support'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    ALTER TABLE hotspot_templates
-                    ADD COLUMN show_chat_support TINYINT(1) DEFAULT 0 AFTER show_terms_link,
-                    ADD COLUMN chat_support_type ENUM('whatsapp', 'live_chat') DEFAULT 'whatsapp' AFTER show_chat_support,
-                    ADD COLUMN chat_whatsapp_phone VARCHAR(20) DEFAULT NULL AFTER chat_support_type,
-                    ADD COLUMN chat_welcome_message VARCHAR(500) DEFAULT 'Bonjour ! Comment puis-je vous aider ?' AFTER chat_whatsapp_phone
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer - colonnes existent déjà
-        }
-
-        // Migration: Créer la table payment_transactions si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS payment_transactions (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    transaction_id VARCHAR(100) NOT NULL UNIQUE,
-                    gateway_code VARCHAR(50) NOT NULL,
-                    profile_id INT NOT NULL,
-                    amount DECIMAL(10,2) NOT NULL,
-                    currency VARCHAR(10) DEFAULT 'XAF',
-                    status ENUM('pending', 'completed', 'failed', 'cancelled', 'refunded') DEFAULT 'pending',
-                    customer_phone VARCHAR(50) DEFAULT NULL,
-                    customer_email VARCHAR(100) DEFAULT NULL,
-                    customer_name VARCHAR(100) DEFAULT NULL,
-                    gateway_transaction_id VARCHAR(100) DEFAULT NULL,
-                    operator_reference VARCHAR(100) DEFAULT NULL COMMENT 'Référence opérateur (FedaPay reference, etc.)',
-                    gateway_response JSON DEFAULT NULL,
-                    voucher_id INT DEFAULT NULL,
-                    voucher_code VARCHAR(64) DEFAULT NULL,
-                    paid_at TIMESTAMP NULL DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_status (status),
-                    INDEX idx_gateway (gateway_code),
-                    INDEX idx_profile (profile_id),
-                    INDEX idx_voucher (voucher_id),
-                    INDEX idx_operator_ref (operator_reference),
-                    INDEX idx_customer_phone (customer_phone)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter la colonne operator_reference si elle n'existe pas
-        try {
-            $this->pdo->exec("ALTER TABLE payment_transactions ADD COLUMN operator_reference VARCHAR(100) DEFAULT NULL COMMENT 'Référence opérateur' AFTER gateway_transaction_id");
-            $this->pdo->exec("ALTER TABLE payment_transactions ADD INDEX idx_operator_ref (operator_reference)");
-            $this->pdo->exec("ALTER TABLE payment_transactions ADD INDEX idx_customer_phone (customer_phone)");
-        }
-        catch (PDOException $e) {
-        // Ignorer si existe déjà
-        }
-
-        // Migration: Augmenter la taille de gateway_transaction_id pour CinetPay (payment_token est long)
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM payment_transactions LIKE 'gateway_transaction_id'");
-            $column = $stmt->fetch();
-            if ($column && stripos($column['Type'], 'varchar(100)') !== false) {
-                $this->pdo->exec("ALTER TABLE payment_transactions MODIFY COLUMN gateway_transaction_id VARCHAR(500) DEFAULT NULL");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter FeexPay si elle n'existe pas
-        try {
-            $stmt = $this->pdo->query("SELECT id FROM payment_gateways WHERE gateway_code = 'feexpay'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    INSERT INTO payment_gateways (gateway_code, name, description, logo_url, is_active, is_sandbox, config, display_order)
-                    VALUES ('feexpay', 'FeexPay', 'Paiement mobile money Afrique de l''Ouest', 'https://feexpay.me/assets/logo.png', 0, 1, '{\"account_name\": \"\", \"api_key\": \"\", \"shop_id\": \"\"}', 3)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter Kkiapay si elle n'existe pas
-        try {
-            $stmt = $this->pdo->query("SELECT id FROM payment_gateways WHERE gateway_code = 'kkiapay'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    INSERT INTO payment_gateways (gateway_code, name, description, logo_url, is_active, is_sandbox, config, display_order)
-                    VALUES ('kkiapay', 'Kkiapay', 'Paiement mobile money et cartes (Bénin, Togo, CI, Sénégal)', 'https://kkiapay.me/favicon.ico', 0, 1, '{\"public_key\": \"\", \"private_key\": \"\", \"secret\": \"\"}', 8)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table zones si elle n'existe pas
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS zones (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    code VARCHAR(50) NOT NULL UNIQUE,
-                    description VARCHAR(255) DEFAULT NULL,
-                    color VARCHAR(7) DEFAULT '#3b82f6',
-                    is_active TINYINT(1) DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer la zone par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM zones")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO zones (name, code, description, color, is_active) VALUES
-                    ('Zone Principale', 'main', 'Zone principale par défaut', '#3b82f6', 1)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter zone_id à la table nas
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM nas LIKE 'zone_id'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("ALTER TABLE nas ADD COLUMN zone_id INT DEFAULT NULL AFTER router_id");
-                $this->pdo->exec("ALTER TABLE nas ADD INDEX idx_nas_zone (zone_id)");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter zone_id à la table profiles
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM profiles LIKE 'zone_id'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("ALTER TABLE profiles ADD COLUMN zone_id INT DEFAULT NULL AFTER id");
-                $this->pdo->exec("ALTER TABLE profiles ADD INDEX idx_profiles_zone (zone_id)");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter zone_id à la table vouchers
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM vouchers LIKE 'zone_id'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("ALTER TABLE vouchers ADD COLUMN zone_id INT DEFAULT NULL AFTER profile_id");
-                $this->pdo->exec("ALTER TABLE vouchers ADD INDEX idx_vouchers_zone (zone_id)");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter customer_name et customer_phone à la table vouchers
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM vouchers LIKE 'customer_name'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("ALTER TABLE vouchers ADD COLUMN customer_name VARCHAR(100) DEFAULT NULL AFTER download_used");
-                $this->pdo->exec("ALTER TABLE vouchers ADD COLUMN customer_phone VARCHAR(50) DEFAULT NULL AFTER customer_name");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Système de fidélité
-        $this->runLoyaltyMigration();
-
-        // Migration: Serveurs RADIUS distribués
-        $this->runRadiusServersMigration();
-
-    }
-
-    /**
-     * Migration du système de fidélité
-     */
-    private function runLoyaltyMigration(): void
-    {
-        // Créer la table loyalty_customers
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS loyalty_customers (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    phone VARCHAR(20) NOT NULL,
-                    customer_name VARCHAR(100) DEFAULT NULL,
-                    total_purchases INT DEFAULT 0,
-                    total_spent DECIMAL(12,2) DEFAULT 0.00,
-                    points_earned INT DEFAULT 0,
-                    points_used INT DEFAULT 0,
-                    points_balance INT DEFAULT 0,
-                    rewards_earned INT DEFAULT 0,
-                    last_reward_at DATETIME DEFAULT NULL,
-                    first_purchase_at DATETIME DEFAULT NULL,
-                    last_purchase_at DATETIME DEFAULT NULL,
-                    admin_id INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE INDEX idx_phone_admin (phone, admin_id),
-                    INDEX idx_points (points_balance),
-                    INDEX idx_purchases (total_purchases)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Créer la table loyalty_rules
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS loyalty_rules (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    rule_type ENUM('purchase_count', 'amount_spent', 'points') DEFAULT 'purchase_count',
-                    threshold_value INT NOT NULL,
-                    reward_type ENUM('free_voucher', 'discount_percent', 'bonus_time', 'bonus_data') DEFAULT 'free_voucher',
-                    reward_profile_id INT DEFAULT NULL,
-                    reward_value INT DEFAULT NULL,
-                    points_per_purchase INT DEFAULT 1,
-                    points_per_amount INT DEFAULT 0,
-                    points_amount_unit INT DEFAULT 100,
-                    is_active TINYINT(1) DEFAULT 1,
-                    is_cumulative TINYINT(1) DEFAULT 0,
-                    max_rewards_per_customer INT DEFAULT NULL,
-                    valid_from DATETIME DEFAULT NULL,
-                    valid_until DATETIME DEFAULT NULL,
-                    admin_id INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_type (rule_type),
-                    INDEX idx_active (is_active)
-                ) ENGINE=InnoDB
-            ");
-
-            // Insérer la règle par défaut si la table est vide
-            $count = $this->pdo->query("SELECT COUNT(*) FROM loyalty_rules")->fetchColumn();
-            if ($count == 0) {
-                $this->pdo->exec("
-                    INSERT INTO loyalty_rules (name, description, rule_type, threshold_value, reward_type, points_per_purchase, is_active) VALUES
-                    ('5 achats = 1 gratuit', 'Après 5 achats, recevez un voucher gratuit du même profil que votre dernier achat', 'purchase_count', 5, 'free_voucher', 1, 1)
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Créer la table loyalty_purchases
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS loyalty_purchases (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    customer_id INT NOT NULL,
-                    transaction_id VARCHAR(100) NOT NULL,
-                    amount DECIMAL(10,2) NOT NULL,
-                    profile_id INT DEFAULT NULL,
-                    profile_name VARCHAR(100) DEFAULT NULL,
-                    points_earned INT DEFAULT 0,
-                    admin_id INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_customer (customer_id),
-                    INDEX idx_transaction (transaction_id)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Créer la table loyalty_rewards
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS loyalty_rewards (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    customer_id INT NOT NULL,
-                    rule_id INT DEFAULT NULL,
-                    reward_type ENUM('free_voucher', 'discount_percent', 'bonus_time', 'bonus_data') NOT NULL,
-                    reward_value INT DEFAULT NULL,
-                    voucher_id INT DEFAULT NULL,
-                    voucher_code VARCHAR(64) DEFAULT NULL,
-                    profile_name VARCHAR(100) DEFAULT NULL,
-                    points_used INT DEFAULT 0,
-                    status ENUM('pending', 'claimed', 'expired', 'cancelled') DEFAULT 'pending',
-                    claimed_at DATETIME DEFAULT NULL,
-                    expires_at DATETIME DEFAULT NULL,
-                    sms_sent TINYINT(1) DEFAULT 0,
-                    sms_sent_at DATETIME DEFAULT NULL,
-                    admin_id INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_customer (customer_id),
-                    INDEX idx_status (status),
-                    INDEX idx_rule (rule_id)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter admin_id aux tables loyalty existantes
-        foreach (['loyalty_customers', 'loyalty_rules', 'loyalty_purchases', 'loyalty_rewards'] as $table) {
-            try {
-                $this->pdo->exec("ALTER TABLE $table ADD COLUMN admin_id INT DEFAULT NULL");
-            }
-            catch (PDOException $e) {
-            // Colonne existe déjà
-            }
-        }
-
-        // Migration: Changer UNIQUE phone en (phone, admin_id)
-        try {
-            $this->pdo->exec("ALTER TABLE loyalty_customers DROP INDEX phone");
-            $this->pdo->exec("ALTER TABLE loyalty_customers ADD UNIQUE INDEX idx_phone_admin (phone, admin_id)");
-        }
-        catch (PDOException $e) {
-        // Index déjà modifié
-        }
-
-        // Migration: Créer la table des modules
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS modules (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    module_code VARCHAR(50) NOT NULL,
-                    name VARCHAR(100) NOT NULL,
-                    description VARCHAR(255) DEFAULT NULL,
-                    icon VARCHAR(50) DEFAULT 'cube',
-                    is_active TINYINT(1) DEFAULT 0,
-                    config JSON DEFAULT NULL,
-                    display_order INT DEFAULT 0,
-                    admin_id INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE KEY idx_modules_code_admin (module_code, admin_id),
-                    INDEX idx_modules_admin_id (admin_id)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table des conversations de chat
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS chat_conversations (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    phone VARCHAR(50) NOT NULL,
-                    customer_name VARCHAR(100) DEFAULT NULL,
-                    status ENUM('active', 'closed', 'archived') DEFAULT 'active',
-                    unread_count INT DEFAULT 0,
-                    last_message_at TIMESTAMP NULL DEFAULT NULL,
-                    closed_at TIMESTAMP NULL DEFAULT NULL,
-                    closed_by INT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE KEY idx_phone (phone),
-                    INDEX idx_status (status),
-                    INDEX idx_last_message (last_message_at)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Créer la table des messages de chat
-        try {
-            $this->pdo->exec("
-                CREATE TABLE IF NOT EXISTS chat_messages (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    conversation_id INT NOT NULL,
-                    sender_type ENUM('customer', 'admin') NOT NULL,
-                    admin_id INT DEFAULT NULL,
-                    message TEXT NOT NULL,
-                    is_read TINYINT(1) DEFAULT 0,
-                    read_at TIMESTAMP NULL DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_conversation (conversation_id),
-                    INDEX idx_created (created_at),
-                    INDEX idx_unread (is_read, sender_type)
-                ) ENGINE=InnoDB
-            ");
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
-
-        // Migration: Ajouter message_type à chat_messages pour WebRTC signaling
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM chat_messages LIKE 'message_type'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    ALTER TABLE chat_messages
-                    ADD COLUMN message_type ENUM('text', 'webrtc') DEFAULT 'text' AFTER message
-                ");
-            }
-        }
-        catch (PDOException $e) {
-        // Ignorer
-        }
     }
 
     /**
@@ -2842,7 +2138,7 @@ class RadiusDatabase
         ";
         $params = [$days];
         if ($adminId !== null) {
-            $sql .= " AND (admin_id = ? OR admin_id IS NULL)";
+            $sql .= " AND admin_id = ?";
             $params[] = $adminId;
         }
         $sql .= " GROUP BY DATE(created_at) ORDER BY date";
@@ -2882,7 +2178,7 @@ class RadiusDatabase
         $sql = "SELECT * FROM auth_logs";
         $params = [];
         if ($adminId !== null) {
-            $sql .= " WHERE (admin_id = ? OR admin_id IS NULL)";
+            $sql .= " WHERE admin_id = ?";
             $params[] = $adminId;
         }
         $sql .= " ORDER BY created_at DESC LIMIT ?";
@@ -5432,26 +4728,55 @@ class RadiusDatabase
         $stmt->execute($params);
         $stats = $stmt->fetch();
 
-        // Revenus du mois
+        // Revenus PPPoE du mois
         $stmt = $this->pdo->prepare("
-            SELECT SUM(amount) as monthly_revenue
+            SELECT SUM(amount) as revenue
             FROM pppoe_payments
             WHERE MONTH(payment_date) = MONTH(CURRENT_DATE())
             AND YEAR(payment_date) = YEAR(CURRENT_DATE()){$adminFilterPayments}
         ");
         $stmt->execute($paramsPayments);
-        $monthly = $stmt->fetch();
-        $stats['monthly_revenue'] = $monthly['monthly_revenue'] ?? 0;
+        $pppoeMonthly = (float)($stmt->fetch()['revenue'] ?? 0);
 
-        // Revenus du jour
+        // Revenus PPPoE du jour
         $stmt = $this->pdo->prepare("
-            SELECT SUM(amount) as daily_revenue
+            SELECT SUM(amount) as revenue
             FROM pppoe_payments
             WHERE DATE(payment_date) = CURRENT_DATE(){$adminFilterPayments}
         ");
         $stmt->execute($paramsPayments);
-        $daily = $stmt->fetch();
-        $stats['daily_revenue'] = $daily['daily_revenue'] ?? 0;
+        $pppoeDaily = (float)($stmt->fetch()['revenue'] ?? 0);
+
+        // Revenus Hotspot (payment_transactions) du mois
+        $hotspotFilter = $adminId !== null ? ' AND admin_id = ?' : '';
+        $hotspotParams = $adminId !== null ? [$adminId] : [];
+
+        $stmt = $this->pdo->prepare("
+            SELECT SUM(amount) as revenue
+            FROM payment_transactions
+            WHERE status = 'completed'
+            AND MONTH(paid_at) = MONTH(CURRENT_DATE())
+            AND YEAR(paid_at) = YEAR(CURRENT_DATE()){$hotspotFilter}
+        ");
+        $stmt->execute($hotspotParams);
+        $hotspotMonthly = (float)($stmt->fetch()['revenue'] ?? 0);
+
+        // Revenus Hotspot du jour
+        $stmt = $this->pdo->prepare("
+            SELECT SUM(amount) as revenue
+            FROM payment_transactions
+            WHERE status = 'completed'
+            AND DATE(paid_at) = CURRENT_DATE(){$hotspotFilter}
+        ");
+        $stmt->execute($hotspotParams);
+        $hotspotDaily = (float)($stmt->fetch()['revenue'] ?? 0);
+
+        $stats['daily_revenue'] = $pppoeDaily + $hotspotDaily;
+        $stats['monthly_revenue'] = $pppoeMonthly + $hotspotMonthly;
+        $stats['pppoe_daily_revenue'] = $pppoeDaily;
+        $stats['pppoe_monthly_revenue'] = $pppoeMonthly;
+        $stats['hotspot_daily_revenue'] = $hotspotDaily;
+        $stats['hotspot_monthly_revenue'] = $hotspotMonthly;
 
         return $stats;
     }
@@ -6902,62 +6227,6 @@ class RadiusDatabase
     // =====================================================
 
     /**
-     * Migration pour les serveurs RADIUS distribués
-     */
-    private function runRadiusServersMigration(): void
-    {
-        // Créer la table radius_servers si elle n'existe pas
-        try {
-            $stmt = $this->pdo->query("SHOW TABLES LIKE 'radius_servers'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("
-                    CREATE TABLE radius_servers (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(100) NOT NULL COMMENT 'Nom du serveur',
-                        code VARCHAR(50) NOT NULL UNIQUE COMMENT 'Code unique',
-                        host VARCHAR(255) NOT NULL COMMENT 'IP ou hostname du VPS',
-                        webhook_port INT DEFAULT 443 COMMENT 'Port HTTPS pour webhooks',
-                        webhook_path VARCHAR(255) DEFAULT '/webhook.php' COMMENT 'Chemin endpoint webhook',
-                        sync_token VARCHAR(128) NOT NULL COMMENT 'Token auth sync (noeud vers plateforme)',
-                        platform_token VARCHAR(128) NOT NULL COMMENT 'Token auth webhooks (plateforme vers noeud)',
-                        status ENUM('online', 'offline', 'setup') DEFAULT 'setup',
-                        last_sync_at TIMESTAMP NULL DEFAULT NULL,
-                        last_heartbeat_at TIMESTAMP NULL DEFAULT NULL,
-                        sync_interval INT DEFAULT 60 COMMENT 'Intervalle sync pull en secondes',
-                        config JSON DEFAULT NULL COMMENT 'Config spécifique au noeud',
-                        admin_id INT DEFAULT NULL,
-                        is_active TINYINT(1) DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        INDEX idx_code (code),
-                        INDEX idx_status (status),
-                        INDEX idx_admin (admin_id),
-                        FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
-                    ) ENGINE=InnoDB
-                ");
-            }
-        } catch (PDOException $e) {
-            // Ignorer
-        }
-
-        // Ajouter radius_server_id à la table zones
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM zones LIKE 'radius_server_id'");
-            if ($stmt->rowCount() === 0) {
-                $this->pdo->exec("ALTER TABLE zones ADD COLUMN radius_server_id INT DEFAULT NULL COMMENT 'Serveur RADIUS hébergeant cette zone' AFTER code");
-                $this->pdo->exec("ALTER TABLE zones ADD INDEX idx_radius_server (radius_server_id)");
-                try {
-                    $this->pdo->exec("ALTER TABLE zones ADD CONSTRAINT fk_zones_radius_server FOREIGN KEY (radius_server_id) REFERENCES radius_servers(id) ON DELETE SET NULL");
-                } catch (PDOException $e) {
-                    // FK peut échouer si la table n'existe pas encore
-                }
-            }
-        } catch (PDOException $e) {
-            // Ignorer
-        }
-    }
-
-    /**
      * Obtenir tous les serveurs RADIUS
      */
     public function getAllRadiusServers(?int $adminId = null): array
@@ -7039,11 +6308,12 @@ class RadiusDatabase
         $platformToken = bin2hex(random_bytes(64));
 
         $stmt = $this->pdo->prepare("
-            INSERT INTO radius_servers (name, code, host, webhook_port, webhook_path, sync_token, platform_token, sync_interval, config, admin_id, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO radius_servers (name, description, code, host, webhook_port, webhook_path, sync_token, platform_token, sync_interval, config, admin_id, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $data['name'],
+            $data['description'] ?? null,
             $code,
             $data['host'],
             $data['webhook_port'] ?? 443,
@@ -7066,6 +6336,7 @@ class RadiusDatabase
         $stmt = $this->pdo->prepare("
             UPDATE radius_servers SET
                 name = ?,
+                description = ?,
                 host = ?,
                 webhook_port = ?,
                 webhook_path = ?,
@@ -7076,6 +6347,7 @@ class RadiusDatabase
         ");
         return $stmt->execute([
             $data['name'],
+            $data['description'] ?? null,
             $data['host'],
             $data['webhook_port'] ?? 443,
             $data['webhook_path'] ?? '/webhook.php',

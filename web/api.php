@@ -28,6 +28,7 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 require_once __DIR__ . '/../src/Utils/helpers.php';
 require_once __DIR__ . '/../src/Radius/RadiusDatabase.php';
 require_once __DIR__ . '/../src/Auth/User.php';
+require_once __DIR__ . '/../src/Auth/TwoFactorAuth.php';
 require_once __DIR__ . '/../src/Auth/AuthService.php';
 require_once __DIR__ . '/../src/Api/Router.php';
 require_once __DIR__ . '/../src/Api/AuthController.php';
@@ -74,6 +75,7 @@ require_once __DIR__ . '/../src/Api/RouterSetupController.php';
 require_once __DIR__ . '/../src/Api/RouterCommandController.php';
 require_once __DIR__ . '/../src/Api/RouterSyncController.php';
 require_once __DIR__ . '/../src/Api/RadiusServerController.php';
+require_once __DIR__ . '/../src/Api/UpdateController.php';
 require_once __DIR__ . '/../src/Services/NodePushService.php';
 
 
@@ -136,6 +138,7 @@ $clientPortalController = new ClientPortalController($db, $pdo, $config);
 $routerSetupController = new RouterSetupController($db, $authService);
 $routerCommandController = new RouterCommandController($db, $authService);
 $routerSyncController = new RouterSyncController($db, $authService);
+$updateController = new UpdateController($db, $authService);
 $radiusServerController = new RadiusServerController($db, $authService);
 
 // Middleware d'authentification
@@ -197,10 +200,20 @@ $router->middleware($authMiddleware);
 
 // Routes Auth (pas besoin d'être authentifié pour login)
 $router->post('/auth/login', fn($p) => $authController->login());
+$router->post('/auth/verify-2fa', fn($p) => $authController->verify2fa());
 $router->post('/auth/register', fn($p) => $authController->register());
+$router->post('/auth/resend-verification', fn($p) => $authController->resendVerification());
+$router->post('/auth/forgot-password', fn($p) => $authController->forgotPassword());
+$router->post('/auth/reset-password', fn($p) => $authController->resetPassword());
 $router->post('/auth/logout', fn($p) => $authController->logout());
 $router->get('/auth/check', fn($p) => $authController->check());
 $router->post('/auth/refresh', fn($p) => $authController->refresh());
+
+// Routes 2FA (authentifié)
+$router->get('/auth/2fa/status', fn($p) => $authController->get2faStatus());
+$router->post('/auth/2fa/setup', fn($p) => $authController->setup2fa());
+$router->post('/auth/2fa/enable', fn($p) => $authController->enable2fa());
+$router->post('/auth/2fa/disable', fn($p) => $authController->disable2fa());
 
 // Routes Users
 $router->get('/users', fn($p) => $userController->index());
@@ -706,6 +719,19 @@ $router->get('/superadmin/admins/{id}', fn($p) => $superAdminController->showAdm
 $router->put('/superadmin/admins/{id}', fn($p) => $superAdminController->updateAdmin($p));
 $router->delete('/superadmin/admins/{id}', fn($p) => $superAdminController->deleteAdmin($p));
 $router->post('/superadmin/admins/{id}/toggle', fn($p) => $superAdminController->toggleAdmin($p));
+$router->post('/superadmin/admins/{id}/reset-2fa', fn($p) => $superAdminController->reset2fa($p));
+$router->post('/superadmin/admins/{id}/verify-email', fn($p) => $superAdminController->verifyAdminEmail($p));
+$router->post('/superadmin/admins/{id}/resend-verification', fn($p) => $superAdminController->resendVerification($p));
+
+// Routes SMTP Config (SuperAdmin)
+$router->get('/superadmin/smtp-config', fn($p) => $superAdminController->getSmtpConfig());
+$router->post('/superadmin/smtp-config', fn($p) => $superAdminController->saveSmtpConfig());
+$router->post('/superadmin/smtp-config/test', fn($p) => $superAdminController->testSmtp());
+$router->get('/superadmin/email-templates', fn($p) => $superAdminController->getEmailTemplates());
+$router->post('/superadmin/email-templates', fn($p) => $superAdminController->saveEmailTemplates());
+$router->get('/superadmin/email-logs', fn($p) => $superAdminController->getEmailLogs());
+$router->get('/superadmin/email-logs/stats', fn($p) => $superAdminController->getEmailLogStats());
+$router->delete('/superadmin/email-logs', fn($p) => $superAdminController->deleteEmailLogs());
 $router->get('/superadmin/permissions', fn($p) => $superAdminController->listPermissions());
 $router->get('/superadmin/roles/{role}/permissions', fn($p) => $superAdminController->getRolePermissions($p));
 $router->put('/superadmin/roles/{role}/permissions', fn($p) => $superAdminController->updateRolePermissions($p));
@@ -756,6 +782,18 @@ $router->delete('/superadmin/notifications/{id}', fn($p) => $notificationControl
 $router->get('/notifications', fn($p) => $notificationController->getUserNotifications());
 $router->post('/notifications/{id}/read', fn($p) => $notificationController->markAsRead($p));
 $router->post('/notifications/read-all', fn($p) => $notificationController->markAllAsRead());
+
+// Routes Updates (SuperAdmin)
+$router->get('/superadmin/updates/status', fn($p) => $updateController->getStatus());
+$router->get('/superadmin/updates/check', fn($p) => $updateController->checkUpdates());
+$router->get('/superadmin/updates/preflight', fn($p) => $updateController->preflight());
+$router->get('/superadmin/updates/migrations', fn($p) => $updateController->getMigrations());
+$router->get('/superadmin/updates/backups', fn($p) => $updateController->listBackups());
+$router->get('/superadmin/updates/history', fn($p) => $updateController->getHistory());
+$router->post('/superadmin/updates/migrate', fn($p) => $updateController->runMigrations());
+$router->post('/superadmin/updates/backup', fn($p) => $updateController->createBackup());
+$router->post('/superadmin/updates/restore', fn($p) => $updateController->restoreBackup());
+$router->post('/superadmin/updates/upload', fn($p) => $updateController->uploadAndApply());
 
 // Dispatcher la requête
 $router->dispatch();

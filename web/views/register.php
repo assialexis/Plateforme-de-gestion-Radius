@@ -169,9 +169,11 @@
 
                         if (data.success) {
                             this.success = data.message || __('auth.registration_success_redirect');
-                            setTimeout(() => {
-                                window.location.href = 'login.php';
-                            }, 2000);
+                            if (!data.data?.requires_verification) {
+                                setTimeout(() => {
+                                    window.location.href = 'login.php';
+                                }, 2000);
+                            }
                         } else {
                             this.error = data.message || __('auth.registration_error');
                         }

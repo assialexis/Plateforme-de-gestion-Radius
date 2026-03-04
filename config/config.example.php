@@ -27,6 +27,7 @@ return [
         'language' => 'fr',
         'debug' => false,
         'session_lifetime' => 3600,
+        'update_url' => '', // URL du serveur de mises à jour (ex: https://updates.example.com)
     ],
 
     'currency' => 'XOF',

@@ -74,7 +74,8 @@
             </button>
         </div>
 
-        <!-- Informations système -->
+        <?php if (isset($currentUser) && $currentUser->isSuperAdmin()): ?>
+        <!-- Informations système (superadmin uniquement) -->
         <div class="space-y-6">
             <!-- Statut serveur RADIUS -->
             <div class="bg-white dark:bg-[#161b22] rounded-xl shadow-sm dark:shadow-none border border-gray-200/60 dark:border-[#30363d] p-6">
@@ -123,63 +124,8 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Compte admin -->
-            <div class="bg-white dark:bg-[#161b22] rounded-xl shadow-sm dark:shadow-none border border-gray-200/60 dark:border-[#30363d] p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4"><?= __('settings.my_account') ?></h3>
-                <div class="space-y-3 text-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-600 dark:text-gray-400"><?= __('settings.user') ?></span>
-                        <span class="text-gray-900 dark:text-white"><?= e($_SESSION['admin_username'] ?? '') ?></span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-600 dark:text-gray-400"><?= __('settings.role') ?></span>
-                        <span class="text-gray-900 dark:text-white capitalize"><?= e($_SESSION['admin_role'] ?? '') ?></span>
-                    </div>
-                </div>
-                <button @click="showPasswordModal = true" class="mt-4 w-full py-2 px-4 border border-gray-300 dark:border-[#30363d] rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#30363d] text-sm">
-                    <?= __('settings.change_password') ?>
-                </button>
-            </div>
         </div>
-    </div>
-
-    <!-- Modal mot de passe -->
-    <div x-show="showPasswordModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black/50" @click="showPasswordModal = false"></div>
-            <div class="relative bg-white dark:bg-[#161b22] rounded-xl shadow-xl max-w-md w-full p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4"><?= __('settings.change_password') ?></h3>
-                <form @submit.prevent="changePassword()">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('settings.current_password') ?></label>
-                            <input type="password" x-model="passwordForm.current" required
-                                   class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('settings.new_password') ?></label>
-                            <input type="password" x-model="passwordForm.new" required minlength="6"
-                                   class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('settings.confirm_password') ?></label>
-                            <input type="password" x-model="passwordForm.confirm" required
-                                   class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                        </div>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" @click="showPasswordModal = false"
-                                class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg text-gray-700 dark:text-gray-300">
-                            <?= __('common.cancel') ?>
-                        </button>
-                        <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                            <?= __('common.change') ?>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -187,8 +133,6 @@
 function settingsPage() {
     return {
         settings: {},
-        showPasswordModal: false,
-        passwordForm: { current: '', new: '', confirm: '' },
         initialLanguage: null,
 
         async init() {
@@ -249,33 +193,6 @@ function settingsPage() {
                 }
             } catch (e) {
                 showToast(__('settings.msg_save_error'), 'error');
-            }
-        },
-
-        async changePassword() {
-            if (this.passwordForm.new !== this.passwordForm.confirm) {
-                showToast(__('settings.msg_password_mismatch'), 'error');
-                return;
-            }
-            try {
-                const response = await fetch('api.php?route=/settings/password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        current_password: this.passwordForm.current,
-                        new_password: this.passwordForm.new
-                    })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    showToast(data.message || __('settings.msg_password_changed'));
-                    this.showPasswordModal = false;
-                    this.passwordForm = { current: '', new: '', confirm: '' };
-                } else {
-                    showToast(data.message || __('settings.msg_password_error'), 'error');
-                }
-            } catch (e) {
-                showToast(__('settings.msg_password_error'), 'error');
             }
         }
     }
