@@ -225,7 +225,8 @@ systemctl start mariadb 2>/dev/null || true
 systemctl enable mariadb 2>/dev/null || true
 
 mysql -e "CREATE DATABASE IF NOT EXISTS radius_node CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -e "CREATE USER IF NOT EXISTS 'radius_node'@'localhost' IDENTIFIED BY '\$DB_PASSWORD';"
+mysql -e "DROP USER IF EXISTS 'radius_node'@'localhost';"
+mysql -e "CREATE USER 'radius_node'@'localhost' IDENTIFIED BY '\$DB_PASSWORD';"
 mysql -e "GRANT ALL PRIVILEGES ON radius_node.* TO 'radius_node'@'localhost';"
 mysql -e "FLUSH PRIVILEGES;"
 
