@@ -6581,6 +6581,12 @@ class RadiusDatabase
     public function importNodeSyncData(array $data): array
     {
         $imported = ['sessions' => 0, 'auth_logs' => 0, 'voucher_updates' => 0];
+        $debugLog = '/tmp/radius_sync_debug.log';
+
+        $logMsg = date('Y-m-d H:i:s') . " importNodeSyncData called - sessions: " . count($data['sessions'] ?? [])
+            . ", auth_logs: " . count($data['auth_logs'] ?? [])
+            . ", voucher_updates: " . count($data['voucher_updates'] ?? []) . "\n";
+        file_put_contents($debugLog, $logMsg, FILE_APPEND);
 
         // Importer les sessions depuis le nœud
         if (!empty($data['sessions'])) {
@@ -6589,52 +6595,120 @@ class RadiusDatabase
                     $acctSessionId = $session['acct_session_id'] ?? $session['session_id'] ?? '';
                     $username = $session['username'] ?? '';
 
-                    // Trouver le voucher_id
+                    if (empty($acctSessionId) || empty($username)) {
+                        file_put_contents($debugLog, "  SKIP session: empty acct_session_id or username\n", FILE_APPEND);
+                        continue;
+                    }
+
+                    // Trouver le voucher_id dans la base centrale
                     $stmt = $this->pdo->prepare("SELECT id, admin_id FROM vouchers WHERE username = ?");
                     $stmt->execute([$username]);
                     $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$voucher) {
+                        // Aussi chercher dans pppoe_users
+                        $stmt = $this->pdo->prepare("SELECT id FROM pppoe_users WHERE username = ?");
+                        $stmt->execute([$username]);
+                        $pppoeUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$pppoeUser) {
+                            file_put_contents($debugLog, "  SKIP session for '{$username}': voucher not found in central DB\n", FILE_APPEND);
+                            continue;
+                        }
+                    }
+
                     $voucherId = $voucher ? $voucher['id'] : 0;
                     $adminId = $voucher ? ($voucher['admin_id'] ?? null) : ($session['admin_id'] ?? null);
 
-                    $stmt = $this->pdo->prepare("
-                        INSERT INTO sessions (
-                            voucher_id, acct_session_id, nas_ip, nas_port,
-                            username, client_ip, client_mac,
-                            session_time, input_octets, output_octets,
-                            input_packets, output_packets,
-                            start_time, last_update, stop_time, terminate_cause, admin_id
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE
-                            session_time = VALUES(session_time),
-                            input_octets = VALUES(input_octets),
-                            output_octets = VALUES(output_octets),
-                            input_packets = VALUES(input_packets),
-                            output_packets = VALUES(output_packets),
-                            last_update = VALUES(last_update),
-                            stop_time = VALUES(stop_time),
-                            terminate_cause = VALUES(terminate_cause)
-                    ");
-                    $stmt->execute([
-                        $voucherId,
-                        $acctSessionId,
-                        $session['nas_ip'] ?? '',
-                        $session['nas_port'] ?? null,
-                        $username,
-                        $session['client_ip'] ?? null,
-                        $session['client_mac'] ?? null,
-                        $session['session_time'] ?? 0,
-                        $session['input_octets'] ?? 0,
-                        $session['output_octets'] ?? 0,
-                        $session['input_packets'] ?? 0,
-                        $session['output_packets'] ?? 0,
-                        $session['start_time'] ?? date('Y-m-d H:i:s'),
-                        $session['last_update'] ?? null,
-                        $session['stop_time'] ?? null,
-                        $session['terminate_cause'] ?? null,
-                        $adminId,
-                    ]);
+                    // Vérifier si la colonne admin_id existe dans sessions
+                    $hasAdminId = true;
+                    try {
+                        $this->pdo->query("SELECT admin_id FROM sessions LIMIT 0");
+                    } catch (PDOException $e) {
+                        $hasAdminId = false;
+                    }
+
+                    if ($hasAdminId) {
+                        $stmt = $this->pdo->prepare("
+                            INSERT INTO sessions (
+                                voucher_id, acct_session_id, nas_ip, nas_port,
+                                username, client_ip, client_mac,
+                                session_time, input_octets, output_octets,
+                                input_packets, output_packets,
+                                start_time, last_update, stop_time, terminate_cause, admin_id
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                session_time = VALUES(session_time),
+                                input_octets = VALUES(input_octets),
+                                output_octets = VALUES(output_octets),
+                                input_packets = VALUES(input_packets),
+                                output_packets = VALUES(output_packets),
+                                last_update = VALUES(last_update),
+                                stop_time = VALUES(stop_time),
+                                terminate_cause = VALUES(terminate_cause)
+                        ");
+                        $stmt->execute([
+                            $voucherId,
+                            $acctSessionId,
+                            $session['nas_ip'] ?? '',
+                            $session['nas_port'] ?? null,
+                            $username,
+                            $session['client_ip'] ?? null,
+                            $session['client_mac'] ?? null,
+                            $session['session_time'] ?? 0,
+                            $session['input_octets'] ?? 0,
+                            $session['output_octets'] ?? 0,
+                            $session['input_packets'] ?? 0,
+                            $session['output_packets'] ?? 0,
+                            $session['start_time'] ?? date('Y-m-d H:i:s'),
+                            $session['last_update'] ?? null,
+                            $session['stop_time'] ?? null,
+                            $session['terminate_cause'] ?? null,
+                            $adminId,
+                        ]);
+                    } else {
+                        $stmt = $this->pdo->prepare("
+                            INSERT INTO sessions (
+                                voucher_id, acct_session_id, nas_ip, nas_port,
+                                username, client_ip, client_mac,
+                                session_time, input_octets, output_octets,
+                                input_packets, output_packets,
+                                start_time, last_update, stop_time, terminate_cause
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                session_time = VALUES(session_time),
+                                input_octets = VALUES(input_octets),
+                                output_octets = VALUES(output_octets),
+                                input_packets = VALUES(input_packets),
+                                output_packets = VALUES(output_packets),
+                                last_update = VALUES(last_update),
+                                stop_time = VALUES(stop_time),
+                                terminate_cause = VALUES(terminate_cause)
+                        ");
+                        $stmt->execute([
+                            $voucherId,
+                            $acctSessionId,
+                            $session['nas_ip'] ?? '',
+                            $session['nas_port'] ?? null,
+                            $username,
+                            $session['client_ip'] ?? null,
+                            $session['client_mac'] ?? null,
+                            $session['session_time'] ?? 0,
+                            $session['input_octets'] ?? 0,
+                            $session['output_octets'] ?? 0,
+                            $session['input_packets'] ?? 0,
+                            $session['output_packets'] ?? 0,
+                            $session['start_time'] ?? date('Y-m-d H:i:s'),
+                            $session['last_update'] ?? null,
+                            $session['stop_time'] ?? null,
+                            $session['terminate_cause'] ?? null,
+                        ]);
+                    }
+
                     $imported['sessions']++;
+                    file_put_contents($debugLog, "  OK session '{$acctSessionId}' for '{$username}' (voucher_id={$voucherId})\n", FILE_APPEND);
                 } catch (PDOException $e) {
+                    file_put_contents($debugLog, "  ERROR session: " . $e->getMessage() . " | data: " . json_encode($session) . "\n", FILE_APPEND);
                     error_log("importNodeSyncData session error: " . $e->getMessage());
                 }
             }
@@ -6655,7 +6729,7 @@ class RadiusDatabase
                     );
                     $imported['auth_logs']++;
                 } catch (PDOException $e) {
-                    // Ignorer
+                    file_put_contents($debugLog, "  ERROR auth_log: " . $e->getMessage() . "\n", FILE_APPEND);
                 }
             }
         }
@@ -6667,10 +6741,12 @@ class RadiusDatabase
                     $this->updateVoucherCounters($update);
                     $imported['voucher_updates']++;
                 } catch (PDOException $e) {
-                    // Ignorer
+                    file_put_contents($debugLog, "  ERROR voucher_update: " . $e->getMessage() . "\n", FILE_APPEND);
                 }
             }
         }
+
+        file_put_contents($debugLog, date('Y-m-d H:i:s') . " importNodeSyncData done - imported: " . json_encode($imported) . "\n\n", FILE_APPEND);
 
         return $imported;
     }

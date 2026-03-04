@@ -165,10 +165,15 @@ function handlePull(RadiusDatabase $db, array $server): void
  */
 function handlePush(RadiusDatabase $db, array $server): void
 {
+    $debugLog = '/tmp/radius_sync_debug.log';
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
 
+    file_put_contents($debugLog, date('Y-m-d H:i:s') . " handlePush received from server '{$server['code']}' - raw length: " . strlen($input) . "\n", FILE_APPEND);
+    file_put_contents($debugLog, "  has_data: " . ($data['has_data'] ?? 'N/A') . ", sessions: " . count($data['sessions'] ?? []) . ", auth_logs: " . count($data['auth_logs'] ?? []) . ", voucher_updates: " . count($data['voucher_updates'] ?? []) . "\n", FILE_APPEND);
+
     if (!$data) {
+        file_put_contents($debugLog, "  ERROR: INVALID_JSON - raw input: " . substr($input, 0, 500) . "\n", FILE_APPEND);
         http_response_code(400);
         echo json_encode(['error' => 'INVALID_JSON']);
         return;
@@ -178,11 +183,14 @@ function handlePush(RadiusDatabase $db, array $server): void
         $imported = $db->importNodeSyncData($data);
         $db->updateRadiusServerLastSync($server['code']);
 
+        file_put_contents($debugLog, "  Push response: " . json_encode($imported) . "\n", FILE_APPEND);
+
         echo json_encode([
             'status' => 'ok',
             'imported' => $imported,
         ]);
     } catch (Exception $e) {
+        file_put_contents($debugLog, "  Push EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
         http_response_code(500);
         echo json_encode([
             'error' => 'IMPORT_FAILED',
