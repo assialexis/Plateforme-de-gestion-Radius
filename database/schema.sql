@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     voucher_id INT NOT NULL,
     acct_session_id VARCHAR(64) NOT NULL COMMENT 'ID session RADIUS',
     nas_ip VARCHAR(45) NOT NULL,
-    nas_port INT DEFAULT NULL,
+    nas_port BIGINT DEFAULT NULL,
 
     -- Info client
     username VARCHAR(64) NOT NULL,
