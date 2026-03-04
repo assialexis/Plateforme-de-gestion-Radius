@@ -394,8 +394,8 @@ fi
 # ========================
 step "Exécution des migrations"
 cd "${INSTALL_DIR}"
-php update.php baseline 2>/dev/null || true
-success "Migrations initialisées"
+php update.php migrate 2>&1 || warn "Certaines migrations ont échoué - vérifiez les logs"
+success "Migrations exécutées"
 
 # ========================
 # Résumé
