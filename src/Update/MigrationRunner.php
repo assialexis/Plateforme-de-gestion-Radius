@@ -90,10 +90,12 @@ class MigrationRunner
      * Exécute une migration unique
      * @return array ['success' => bool, 'time_ms' => int, 'error' => string|null]
      */
-    /** Codes d'erreur MySQL non-critiques (structure déjà existante) */
+    /** Codes d'erreur MySQL non-critiques (structure déjà existante ou déjà modifiée) */
     private const IGNORABLE_SQL_ERRORS = [
         '42S21', // Column already exists
         '42S01', // Table already exists
+        '42S02', // Table or view not found (already renamed/dropped by previous run)
+        '42S22', // Column not found (already renamed/dropped by previous run)
         '42000', // Duplicate key name / syntax (often duplicate index)
         '23000', // Duplicate entry (ON DUPLICATE KEY should handle, but just in case)
     ];
@@ -126,7 +128,8 @@ class MigrationRunner
                     if (in_array($sqlState, self::IGNORABLE_SQL_ERRORS, true) ||
                         str_contains($stmtError->getMessage(), 'Duplicate column') ||
                         str_contains($stmtError->getMessage(), 'Duplicate key name') ||
-                        str_contains($stmtError->getMessage(), 'already exists')) {
+                        str_contains($stmtError->getMessage(), 'already exists') ||
+                        str_contains($stmtError->getMessage(), "doesn't exist")) {
                         $warnings[] = substr($stmtError->getMessage(), 0, 120);
                         continue;
                     }
