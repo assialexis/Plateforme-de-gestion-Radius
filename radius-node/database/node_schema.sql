@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS nas (
     id INT PRIMARY KEY,
     router_id VARCHAR(64) DEFAULT NULL,
     zone_id INT DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
     nasname VARCHAR(128) NOT NULL DEFAULT '0.0.0.0/0',
     shortname VARCHAR(32) NOT NULL,
     secret VARCHAR(60) NOT NULL,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS nas (
 CREATE TABLE IF NOT EXISTS profiles (
     id INT PRIMARY KEY,
     zone_id INT DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
     name VARCHAR(50) NOT NULL,
     description VARCHAR(200) DEFAULT NULL,
     time_limit INT DEFAULT NULL,
@@ -83,6 +85,20 @@ CREATE TABLE IF NOT EXISTS vouchers (
     customer_name VARCHAR(100) DEFAULT NULL,
     customer_phone VARCHAR(50) DEFAULT NULL,
     batch_id VARCHAR(36) DEFAULT NULL,
+    created_by INT DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
+    vendeur_id INT DEFAULT NULL,
+    gerant_id INT DEFAULT NULL,
+    sold_by INT DEFAULT NULL,
+    sold_at DATETIME DEFAULT NULL,
+    sold_on_nas_id INT DEFAULT NULL,
+    payment_method VARCHAR(30) DEFAULT NULL,
+    sale_amount DECIMAL(10,2) DEFAULT NULL,
+    commission_vendeur DECIMAL(10,2) DEFAULT 0,
+    commission_gerant DECIMAL(10,2) DEFAULT 0,
+    commission_admin DECIMAL(10,2) DEFAULT 0,
+    commission_paid TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY (username),
@@ -126,10 +142,35 @@ CREATE TABLE IF NOT EXISTS auth_logs (
     reason VARCHAR(200) DEFAULT NULL,
     client_mac VARCHAR(17) DEFAULT NULL,
     client_ip VARCHAR(45) DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     synced TINYINT(1) DEFAULT 0 COMMENT 'Synced to central platform',
     INDEX idx_username (username),
     INDEX idx_synced (synced)
+) ENGINE=InnoDB;
+
+-- PPPoE Profiles (synced from central)
+CREATE TABLE IF NOT EXISTS pppoe_profiles (
+    id INT PRIMARY KEY,
+    zone_id INT DEFAULT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    download_speed BIGINT NOT NULL DEFAULT 1048576,
+    upload_speed BIGINT NOT NULL DEFAULT 524288,
+    data_limit BIGINT DEFAULT 0,
+    validity_days INT NOT NULL DEFAULT 30,
+    price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    ip_pool_name VARCHAR(100) DEFAULT NULL,
+    local_address VARCHAR(45) DEFAULT NULL,
+    simultaneous_use INT DEFAULT 1,
+    burst_download BIGINT DEFAULT 0,
+    burst_upload BIGINT DEFAULT 0,
+    burst_threshold BIGINT DEFAULT 0,
+    burst_time INT DEFAULT 0,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_zone (zone_id)
 ) ENGINE=InnoDB;
 
 -- PPPoE Users (synced from central)
