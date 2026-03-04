@@ -214,9 +214,14 @@ function applyPullData(PDO $pdo, array $data): array
                     password = VALUES(password), profile_id = VALUES(profile_id), zone_id = VALUES(zone_id),
                     time_limit = VALUES(time_limit), data_limit = VALUES(data_limit),
                     upload_speed = VALUES(upload_speed), download_speed = VALUES(download_speed),
-                    status = VALUES(status), simultaneous_use = VALUES(simultaneous_use),
+                    simultaneous_use = VALUES(simultaneous_use),
                     valid_from = VALUES(valid_from), valid_until = VALUES(valid_until),
-                    time_used = VALUES(time_used), data_used = VALUES(data_used)
+                    time_used = GREATEST(time_used, VALUES(time_used)),
+                    data_used = GREATEST(data_used, VALUES(data_used)),
+                    upload_used = GREATEST(upload_used, VALUES(upload_used)),
+                    download_used = GREATEST(download_used, VALUES(download_used)),
+                    status = IF(time_used >= VALUES(time_limit) AND VALUES(time_limit) IS NOT NULL, 'expired',
+                             IF(VALUES(status) = 'disabled', 'disabled', status))
             ");
             foreach ($data['vouchers'] as $v) {
                 $stmt->execute([

@@ -6734,12 +6734,38 @@ class RadiusDatabase
             }
         }
 
-        // Mettre à jour les compteurs de vouchers
+        // Mettre à jour les compteurs de vouchers (données directes du nœud)
         if (!empty($data['voucher_updates'])) {
             foreach ($data['voucher_updates'] as $update) {
                 try {
-                    $this->updateVoucherCounters($update);
-                    $imported['voucher_updates']++;
+                    $username = $update['username'] ?? '';
+                    if (empty($username)) continue;
+
+                    // Mettre à jour les compteurs avec GREATEST pour ne jamais réduire
+                    $stmt = $this->pdo->prepare("
+                        UPDATE vouchers SET
+                            time_used = GREATEST(time_used, ?),
+                            data_used = GREATEST(data_used, ?),
+                            upload_used = GREATEST(upload_used, ?),
+                            download_used = GREATEST(download_used, ?),
+                            first_use = COALESCE(first_use, ?),
+                            status = IF(? = 'expired', 'expired', status)
+                        WHERE username = ?
+                    ");
+                    $stmt->execute([
+                        $update['time_used'] ?? 0,
+                        $update['data_used'] ?? 0,
+                        $update['upload_used'] ?? 0,
+                        $update['download_used'] ?? 0,
+                        $update['first_use'] ?? null,
+                        $update['status'] ?? 'active',
+                        $username,
+                    ]);
+
+                    if ($stmt->rowCount() > 0) {
+                        $imported['voucher_updates']++;
+                        file_put_contents($debugLog, "  OK voucher_update for '{$username}': time_used={$update['time_used']}, data_used={$update['data_used']}\n", FILE_APPEND);
+                    }
                 } catch (PDOException $e) {
                     file_put_contents($debugLog, "  ERROR voucher_update: " . $e->getMessage() . "\n", FILE_APPEND);
                 }
