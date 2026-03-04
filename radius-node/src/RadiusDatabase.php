@@ -1318,7 +1318,6 @@ class RadiusDatabase
         }
 
         if ($voucher['password'] !== $password) {
-            error_log("RADIUS Auth Debug: expected='" . $voucher['password'] . "' (" . strlen($voucher['password']) . " chars), got='" . $password . "' (" . strlen($password) . " chars), hex_got=" . bin2hex($password));
             return ['success' => false, 'reason' => 'Invalid password'];
         }
 
