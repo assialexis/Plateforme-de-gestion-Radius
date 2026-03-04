@@ -170,14 +170,13 @@ curl -s -H "X-Node-Token: \$SYNC_TOKEN" \\
     "\$PLATFORM_URL/node_sync.php?action=download&server=\$SERVER_CODE" \\
     -o /tmp/radius-node.tar.gz
 
-if [ -f /tmp/radius-node.tar.gz ] && file /tmp/radius-node.tar.gz | grep -q "gzip"; then
+if [ -f /tmp/radius-node.tar.gz ] && tar -tzf /tmp/radius-node.tar.gz &>/dev/null; then
     tar -xzf /tmp/radius-node.tar.gz -C \$INSTALL_DIR
     rm /tmp/radius-node.tar.gz
     success "Package téléchargé et extrait"
 else
-    echo -e "\${RED}  Le téléchargement du package a échoué.\${NC}"
-    echo "  Vous devrez copier manuellement les fichiers du nœud RADIUS."
-    echo "  Voir: https://github.com/assialexis/Plateforme-de-gestion-Radius"
+    rm -f /tmp/radius-node.tar.gz 2>/dev/null
+    echo -e "\${CYAN}  Le package sera téléchargé lors de la première synchronisation.\${NC}"
 fi
 
 # ========================
