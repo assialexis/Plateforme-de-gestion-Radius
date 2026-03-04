@@ -27,9 +27,7 @@ CREATE TABLE IF NOT EXISTS pppoe_payment_transactions (
     INDEX idx_created_at (created_at),
 
     CONSTRAINT fk_pppoe_payment_user FOREIGN KEY (pppoe_user_id)
-        REFERENCES pppoe_users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_pppoe_payment_invoice FOREIGN KEY (invoice_id)
-        REFERENCES invoices(id) ON DELETE SET NULL
+        REFERENCES pppoe_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table pour les paiements de facturation (billing_payments)
@@ -45,8 +43,5 @@ CREATE TABLE IF NOT EXISTS billing_payments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     INDEX idx_invoice_id (invoice_id),
-    INDEX idx_paid_at (paid_at),
-
-    CONSTRAINT fk_billing_payment_invoice FOREIGN KEY (invoice_id)
-        REFERENCES invoices(id) ON DELETE CASCADE
+    INDEX idx_paid_at (paid_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

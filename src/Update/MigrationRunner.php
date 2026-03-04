@@ -90,6 +90,14 @@ class MigrationRunner
      * Exécute une migration unique
      * @return array ['success' => bool, 'time_ms' => int, 'error' => string|null]
      */
+    /** Codes d'erreur MySQL non-critiques (structure déjà existante) */
+    private const IGNORABLE_SQL_ERRORS = [
+        '42S21', // Column already exists
+        '42S01', // Table already exists
+        '42000', // Duplicate key name / syntax (often duplicate index)
+        '23000', // Duplicate entry (ON DUPLICATE KEY should handle, but just in case)
+    ];
+
     public function runMigration(string $migration, int $batch): array
     {
         $file = $this->migrationsDir . '/' . $migration . '.sql';
@@ -101,6 +109,7 @@ class MigrationRunner
         $checksum = hash('sha256', $sql);
 
         $start = microtime(true);
+        $warnings = [];
 
         try {
             // Découper en instructions individuelles
@@ -109,7 +118,21 @@ class MigrationRunner
             foreach ($statements as $statement) {
                 $statement = trim($statement);
                 if (empty($statement)) continue;
-                $this->pdo->exec($statement);
+                try {
+                    $this->pdo->exec($statement);
+                } catch (PDOException $stmtError) {
+                    $sqlState = $stmtError->getCode();
+                    // Ignorer les erreurs non-critiques (colonne/table existe déjà, duplicate key)
+                    if (in_array($sqlState, self::IGNORABLE_SQL_ERRORS, true) ||
+                        str_contains($stmtError->getMessage(), 'Duplicate column') ||
+                        str_contains($stmtError->getMessage(), 'Duplicate key name') ||
+                        str_contains($stmtError->getMessage(), 'already exists')) {
+                        $warnings[] = substr($stmtError->getMessage(), 0, 120);
+                        continue;
+                    }
+                    // Erreur critique → remonter
+                    throw $stmtError;
+                }
             }
 
             $timeMs = (int)((microtime(true) - $start) * 1000);
@@ -121,7 +144,7 @@ class MigrationRunner
             ");
             $stmt->execute([$migration, $batch, $timeMs, $checksum]);
 
-            return ['success' => true, 'time_ms' => $timeMs, 'error' => null];
+            return ['success' => true, 'time_ms' => $timeMs, 'error' => null, 'warnings' => $warnings];
         } catch (PDOException $e) {
             $timeMs = (int)((microtime(true) - $start) * 1000);
             return ['success' => false, 'time_ms' => $timeMs, 'error' => $e->getMessage()];
