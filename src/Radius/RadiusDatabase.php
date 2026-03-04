@@ -6582,22 +6582,60 @@ class RadiusDatabase
     {
         $imported = ['sessions' => 0, 'auth_logs' => 0, 'voucher_updates' => 0];
 
-        // Importer les sessions
+        // Importer les sessions depuis le nœud
         if (!empty($data['sessions'])) {
             foreach ($data['sessions'] as $session) {
                 try {
-                    // Vérifier si la session existe déjà
-                    $existing = $this->getSessionByAcctId($session['acct_session_id'] ?? $session['session_id'], $session['nas_ip']);
-                    if ($existing) {
-                        // Mettre à jour
-                        $this->updateSession($session);
-                    } else {
-                        // Créer
-                        $this->startSession($session);
-                    }
+                    $acctSessionId = $session['acct_session_id'] ?? $session['session_id'] ?? '';
+                    $username = $session['username'] ?? '';
+
+                    // Trouver le voucher_id
+                    $stmt = $this->pdo->prepare("SELECT id, admin_id FROM vouchers WHERE username = ?");
+                    $stmt->execute([$username]);
+                    $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $voucherId = $voucher ? $voucher['id'] : 0;
+                    $adminId = $voucher ? ($voucher['admin_id'] ?? null) : ($session['admin_id'] ?? null);
+
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO sessions (
+                            voucher_id, acct_session_id, nas_ip, nas_port,
+                            username, client_ip, client_mac,
+                            session_time, input_octets, output_octets,
+                            input_packets, output_packets,
+                            start_time, last_update, stop_time, terminate_cause, admin_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            session_time = VALUES(session_time),
+                            input_octets = VALUES(input_octets),
+                            output_octets = VALUES(output_octets),
+                            input_packets = VALUES(input_packets),
+                            output_packets = VALUES(output_packets),
+                            last_update = VALUES(last_update),
+                            stop_time = VALUES(stop_time),
+                            terminate_cause = VALUES(terminate_cause)
+                    ");
+                    $stmt->execute([
+                        $voucherId,
+                        $acctSessionId,
+                        $session['nas_ip'] ?? '',
+                        $session['nas_port'] ?? null,
+                        $username,
+                        $session['client_ip'] ?? null,
+                        $session['client_mac'] ?? null,
+                        $session['session_time'] ?? 0,
+                        $session['input_octets'] ?? 0,
+                        $session['output_octets'] ?? 0,
+                        $session['input_packets'] ?? 0,
+                        $session['output_packets'] ?? 0,
+                        $session['start_time'] ?? date('Y-m-d H:i:s'),
+                        $session['last_update'] ?? null,
+                        $session['stop_time'] ?? null,
+                        $session['terminate_cause'] ?? null,
+                        $adminId,
+                    ]);
                     $imported['sessions']++;
                 } catch (PDOException $e) {
-                    // Ignorer les doublons
+                    error_log("importNodeSyncData session error: " . $e->getMessage());
                 }
             }
         }
