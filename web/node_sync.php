@@ -94,6 +94,10 @@ switch ($action) {
         handlePush($db, $server);
         break;
 
+    case 'download':
+        handleDownload($server);
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'INVALID_ACTION']);
@@ -185,4 +189,42 @@ function handlePush(RadiusDatabase $db, array $server): void
             'message' => $e->getMessage(),
         ]);
     }
+}
+
+/**
+ * Download - Le nœud télécharge le package d'installation (tar.gz)
+ */
+function handleDownload(array $server): void
+{
+    $nodeDir = realpath(__DIR__ . '/../radius-node');
+
+    if (!$nodeDir || !is_dir($nodeDir)) {
+        http_response_code(404);
+        echo json_encode(['error' => 'NODE_PACKAGE_NOT_FOUND']);
+        return;
+    }
+
+    $tmpFile = tempnam(sys_get_temp_dir(), 'radius-node-') . '.tar.gz';
+
+    $cmd = sprintf(
+        'tar -czf %s -C %s --exclude=logs --exclude=config/config.php .',
+        escapeshellarg($tmpFile),
+        escapeshellarg($nodeDir)
+    );
+    exec($cmd, $output, $exitCode);
+
+    if ($exitCode !== 0 || !file_exists($tmpFile)) {
+        @unlink($tmpFile);
+        http_response_code(500);
+        echo json_encode(['error' => 'PACKAGE_BUILD_FAILED']);
+        return;
+    }
+
+    // Remplacer le Content-Type JSON par gzip
+    header('Content-Type: application/gzip');
+    header('Content-Length: ' . filesize($tmpFile));
+    header('Content-Disposition: attachment; filename="radius-node.tar.gz"');
+
+    readfile($tmpFile);
+    unlink($tmpFile);
 }
