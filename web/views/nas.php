@@ -851,26 +851,95 @@ $currentPage = 'nas'; ?>
                             x-text="setupStatus?.has_token ? 'Token actif' : 'Pas de token'"></span>
                     </div>
 
-                    <!-- Instructions -->
-                    <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30">
-                        <p class="text-xs text-blue-700 dark:text-blue-300">
-                            <strong>Instructions :</strong> Copiez le script ci-dessous et collez-le dans le Terminal MikroTik (Winbox ou SSH).
-                            Le routeur commencera à communiquer automatiquement avec le serveur.
-                        </p>
+                    <!-- Tabs: Script / Lien -->
+                    <div class="flex border-b border-gray-200 dark:border-[#30363d]">
+                        <button @click="setupTab = 'script'"
+                            :class="setupTab === 'script' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                            Script complet
+                        </button>
+                        <button @click="setupTab = 'link'"
+                            :class="setupTab === 'link' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            Installer par lien
+                        </button>
                     </div>
 
-                    <!-- Script -->
-                    <div x-show="loadingSetup" class="text-center py-8 text-gray-400">
-                        <svg class="w-6 h-6 mx-auto animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                        <p class="mt-2 text-sm">Génération du script...</p>
+                    <!-- Tab: Script complet -->
+                    <div x-show="setupTab === 'script'">
+                        <!-- Instructions -->
+                        <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30">
+                            <p class="text-xs text-blue-700 dark:text-blue-300">
+                                <strong>Instructions :</strong> Copiez le script ci-dessous et collez-le dans le Terminal MikroTik (Winbox ou SSH).
+                                Le routeur commencera à communiquer automatiquement avec le serveur.
+                            </p>
+                        </div>
+
+                        <!-- Script -->
+                        <div x-show="loadingSetup" class="text-center py-8 text-gray-400">
+                            <svg class="w-6 h-6 mx-auto animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <p class="mt-2 text-sm">Génération du script...</p>
+                        </div>
+                        <div x-show="!loadingSetup">
+                            <div class="relative">
+                                <pre class="p-4 rounded-lg bg-gray-900 text-gray-100 text-xs font-mono overflow-x-auto max-h-80 whitespace-pre-wrap border border-gray-700"><code x-text="setupScript"></code></pre>
+                                <button @click="copySetupScript()"
+                                    class="absolute top-2 right-2 px-3 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors">
+                                    <span x-text="setupCopied ? 'Copié !' : 'Copier'"></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div x-show="!loadingSetup">
-                        <div class="relative">
-                            <pre class="p-4 rounded-lg bg-gray-900 text-gray-100 text-xs font-mono overflow-x-auto max-h-80 whitespace-pre-wrap border border-gray-700"><code x-text="setupScript"></code></pre>
-                            <button @click="copySetupScript()"
-                                class="absolute top-2 right-2 px-3 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors">
-                                <span x-text="setupCopied ? 'Copié !' : 'Copier'"></span>
-                            </button>
+
+                    <!-- Tab: Installer par lien -->
+                    <div x-show="setupTab === 'link'">
+                        <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30">
+                            <p class="text-xs text-blue-700 dark:text-blue-300">
+                                <strong>Instructions :</strong> Collez la commande ci-dessous dans le Terminal MikroTik.
+                                Le routeur va télécharger et exécuter le script automatiquement.
+                            </p>
+                        </div>
+
+                        <div x-show="loadingSetup" class="text-center py-8 text-gray-400">
+                            <svg class="w-6 h-6 mx-auto animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <p class="mt-2 text-sm">Génération du lien...</p>
+                        </div>
+                        <div x-show="!loadingSetup" class="space-y-4">
+                            <!-- One-liner command -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Commande MikroTik (Terminal)</label>
+                                <div class="relative">
+                                    <pre class="p-4 rounded-lg bg-gray-900 text-gray-100 text-xs font-mono overflow-x-auto whitespace-pre-wrap border border-gray-700"><code x-text="getSetupFetchCommand()"></code></pre>
+                                    <button @click="copySetupLink()"
+                                        class="absolute top-2 right-2 px-3 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors">
+                                        <span x-text="setupLinkCopied ? 'Copié !' : 'Copier'"></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- URL directe -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">URL du script (pour téléchargement manuel)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" readonly :value="getSetupScriptUrl()"
+                                        class="flex-1 px-3 py-2 text-xs font-mono bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-[#30363d] rounded-lg text-gray-700 dark:text-gray-300"
+                                        @click="$event.target.select()">
+                                    <button @click="copySetupLink(getSetupScriptUrl())"
+                                        class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-[#30363d] text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-[#30363d] transition-colors whitespace-nowrap">
+                                        Copier l'URL
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
+                                <p class="text-xs text-amber-700 dark:text-amber-300">
+                                    <strong>Note :</strong> Le lien contient le token d'authentification. Ne le partagez pas publiquement.
+                                    Si le token est régénéré, le lien changera.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -928,6 +997,9 @@ $currentPage = 'nas'; ?>
             setupStatus: null,
             loadingSetup: false,
             setupCopied: false,
+            setupLinkCopied: false,
+            setupTab: 'script', // 'script' or 'link'
+            setupPollingToken: '',
             regeneratingToken: false,
             routerStatuses: {},
 
@@ -1425,6 +1497,8 @@ $currentPage = 'nas'; ?>
                 this.setupScript = '';
                 this.setupStatus = null;
                 this.setupCopied = false;
+                this.setupLinkCopied = false;
+                this.setupTab = 'script';
                 this.loadingSetup = true;
 
                 try {
@@ -1433,6 +1507,7 @@ $currentPage = 'nas'; ?>
                         API.get(`/router-setup/${nas.router_id}/status`),
                     ]);
                     this.setupScript = scriptRes.data?.script || '# Erreur de génération';
+                    this.setupPollingToken = scriptRes.data?.polling_token || '';
                     this.setupStatus = statusRes.data || {};
                 } catch (e) {
                     this.setupScript = '# Erreur: ' + (e.message || 'Impossible de générer le script');
@@ -1468,6 +1543,38 @@ $currentPage = 'nas'; ?>
                 a.download = `setup-${this.setupTarget?.router_id || 'nas'}.rsc`;
                 a.click();
                 URL.revokeObjectURL(url);
+            },
+
+            getSetupScriptUrl() {
+                if (!this.setupTarget || !this.setupPollingToken) return '';
+                const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+                return `${base}/setup_script.php?router=${this.setupTarget.router_id}&token=${this.setupPollingToken}`;
+            },
+
+            getSetupFetchCommand() {
+                const url = this.getSetupScriptUrl();
+                if (!url) return '# Erreur: token manquant';
+                const isHttps = url.startsWith('https');
+                const mode = isHttps ? 'https' : 'http';
+                const certOpt = isHttps ? ' check-certificate=no' : '';
+                return `/tool fetch url="${url}" dst-path="nas-setup.rsc" mode=${mode}${certOpt}\n:delay 2s\n/import file-name="nas-setup.rsc"\n:delay 1s\n/file remove nas-setup.rsc`;
+            },
+
+            async copySetupLink(text) {
+                const content = text || this.getSetupFetchCommand();
+                try {
+                    await navigator.clipboard.writeText(content);
+                } catch (e) {
+                    const ta = document.createElement('textarea');
+                    ta.value = content;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                this.setupLinkCopied = true;
+                showToast('Copié dans le presse-papiers', 'success');
+                setTimeout(() => this.setupLinkCopied = false, 3000);
             },
 
             async regenerateToken() {
