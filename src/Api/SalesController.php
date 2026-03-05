@@ -197,7 +197,7 @@ class SalesController
     }
 
     /**
-     * GET /sales/stats - Statistiques globales des ventes
+     * GET /sales/stats - Statistiques globales des ventes (vouchers + paiements en ligne)
      */
     public function stats(): void
     {
@@ -209,8 +209,13 @@ class SalesController
         if ($adminId !== null) {
             $baseParams[] = $adminId;
         }
+        // Params pour payment_transactions (utilise paid_at)
+        $ptBaseParams = [$dateFrom, $dateTo];
+        if ($adminId !== null) {
+            $ptBaseParams[] = $adminId;
+        }
 
-        // Stats globales
+        // --- Stats globales vouchers ---
         $stmt = $this->pdo->prepare("
             SELECT
                 COUNT(*) as total_sales,
@@ -226,7 +231,24 @@ class SalesController
         $stmt->execute($baseParams);
         $global = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Stats par méthode de paiement
+        // --- Stats globales payment_transactions (completed) ---
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_sales,
+                COALESCE(SUM(amount), 0) as total_revenue
+            FROM payment_transactions
+            WHERE status = 'completed'
+            AND DATE(paid_at) BETWEEN ? AND ?
+            $adminFilter
+        ");
+        $stmt->execute($ptBaseParams);
+        $ptGlobal = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Fusionner les stats globales
+        $global['total_sales'] = (int)$global['total_sales'] + (int)$ptGlobal['total_sales'];
+        $global['total_revenue'] = (float)$global['total_revenue'] + (float)$ptGlobal['total_revenue'];
+
+        // --- Stats par méthode de paiement (vouchers) ---
         $stmt = $this->pdo->prepare("
             SELECT
                 payment_method,
@@ -241,62 +263,108 @@ class SalesController
         $stmt->execute($baseParams);
         $byPaymentMethod = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Stats par jour (7 derniers jours)
+        // --- Stats par passerelle (payment_transactions completed) ---
         $stmt = $this->pdo->prepare("
             SELECT
-                DATE(sold_at) as date,
+                gateway_code as payment_method,
                 COUNT(*) as count,
-                COALESCE(SUM(sale_amount), 0) as total
-            FROM vouchers
-            WHERE sold_at IS NOT NULL
-            AND DATE(sold_at) BETWEEN ? AND ?
+                COALESCE(SUM(amount), 0) as total
+            FROM payment_transactions
+            WHERE status = 'completed'
+            AND DATE(paid_at) BETWEEN ? AND ?
             $adminFilter
-            GROUP BY DATE(sold_at)
+            GROUP BY gateway_code
+        ");
+        $stmt->execute($ptBaseParams);
+        $ptByGateway = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fusionner les méthodes de paiement
+        $byPaymentMethod = array_merge($byPaymentMethod, $ptByGateway);
+
+        // --- Stats par jour (vouchers + payment_transactions) ---
+        $stmt = $this->pdo->prepare("
+            SELECT date, SUM(count) as count, SUM(total) as total FROM (
+                SELECT DATE(sold_at) as date, COUNT(*) as count, COALESCE(SUM(sale_amount), 0) as total
+                FROM vouchers
+                WHERE sold_at IS NOT NULL AND DATE(sold_at) BETWEEN ? AND ? $adminFilter
+                GROUP BY DATE(sold_at)
+                UNION ALL
+                SELECT DATE(paid_at) as date, COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+                FROM payment_transactions
+                WHERE status = 'completed' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
+                GROUP BY DATE(paid_at)
+            ) combined
+            GROUP BY date
             ORDER BY date DESC
             LIMIT 30
         ");
-        $stmt->execute($baseParams);
+        $dayParams = array_merge($baseParams, $ptBaseParams);
+        $stmt->execute($dayParams);
         $byDay = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Stats par mois (12 derniers mois)
+        // --- Stats par mois (vouchers + payment_transactions) ---
         $stmt = $this->pdo->prepare("
-            SELECT
-                DATE_FORMAT(sold_at, '%Y-%m') as month,
-                COUNT(*) as count,
-                COALESCE(SUM(sale_amount), 0) as total
-            FROM vouchers
-            WHERE sold_at IS NOT NULL
-            AND DATE(sold_at) BETWEEN ? AND ?
-            $adminFilter
-            GROUP BY DATE_FORMAT(sold_at, '%Y-%m')
+            SELECT month, SUM(count) as count, SUM(total) as total FROM (
+                SELECT DATE_FORMAT(sold_at, '%Y-%m') as month, COUNT(*) as count, COALESCE(SUM(sale_amount), 0) as total
+                FROM vouchers
+                WHERE sold_at IS NOT NULL AND DATE(sold_at) BETWEEN ? AND ? $adminFilter
+                GROUP BY DATE_FORMAT(sold_at, '%Y-%m')
+                UNION ALL
+                SELECT DATE_FORMAT(paid_at, '%Y-%m') as month, COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+                FROM payment_transactions
+                WHERE status = 'completed' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
+                GROUP BY DATE_FORMAT(paid_at, '%Y-%m')
+            ) combined
+            GROUP BY month
             ORDER BY month DESC
             LIMIT 12
         ");
-        $stmt->execute($baseParams);
-        $stmt->execute($baseParams);
+        $monthParams = array_merge($baseParams, $ptBaseParams);
+        $stmt->execute($monthParams);
         $byMonth = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Résumé global (Aujourd'hui, Ce mois-ci, Cette année) ignorant les filtres de date mais gardant le multi-tenant
+        // --- Résumé global (Aujourd'hui, Ce mois-ci, Cette année) ---
+        $paramSummary = [];
+        if ($adminId !== null) {
+            $paramSummary[] = $adminId;
+        }
+        $paramSummary2 = $paramSummary; // same for payment_transactions
+
         $stmt = $this->pdo->prepare("
             SELECT
                 SUM(CASE WHEN DATE(sold_at) = CURDATE() THEN 1 ELSE 0 END) as tickets_today,
                 COALESCE(SUM(CASE WHEN DATE(sold_at) = CURDATE() THEN sale_amount ELSE 0 END), 0) as revenue_today,
-                
                 SUM(CASE WHEN YEAR(sold_at) = YEAR(CURDATE()) AND MONTH(sold_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as tickets_month,
                 COALESCE(SUM(CASE WHEN YEAR(sold_at) = YEAR(CURDATE()) AND MONTH(sold_at) = MONTH(CURDATE()) THEN sale_amount ELSE 0 END), 0) as revenue_month,
-                
                 SUM(CASE WHEN YEAR(sold_at) = YEAR(CURDATE()) THEN 1 ELSE 0 END) as tickets_year,
                 COALESCE(SUM(CASE WHEN YEAR(sold_at) = YEAR(CURDATE()) THEN sale_amount ELSE 0 END), 0) as revenue_year
             FROM vouchers
             WHERE sold_at IS NOT NULL
             $adminFilter
         ");
-        $paramSummary = [];
-        if ($adminId !== null) {
-            $paramSummary[] = $adminId;
-        }
         $stmt->execute($paramSummary);
         $summary = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Ajouter les paiements en ligne au résumé
+        $stmt = $this->pdo->prepare("
+            SELECT
+                SUM(CASE WHEN DATE(paid_at) = CURDATE() THEN 1 ELSE 0 END) as tickets_today,
+                COALESCE(SUM(CASE WHEN DATE(paid_at) = CURDATE() THEN amount ELSE 0 END), 0) as revenue_today,
+                SUM(CASE WHEN YEAR(paid_at) = YEAR(CURDATE()) AND MONTH(paid_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as tickets_month,
+                COALESCE(SUM(CASE WHEN YEAR(paid_at) = YEAR(CURDATE()) AND MONTH(paid_at) = MONTH(CURDATE()) THEN amount ELSE 0 END), 0) as revenue_month,
+                SUM(CASE WHEN YEAR(paid_at) = YEAR(CURDATE()) THEN 1 ELSE 0 END) as tickets_year,
+                COALESCE(SUM(CASE WHEN YEAR(paid_at) = YEAR(CURDATE()) THEN amount ELSE 0 END), 0) as revenue_year
+            FROM payment_transactions
+            WHERE status = 'completed'
+            $adminFilter
+        ");
+        $stmt->execute($paramSummary2);
+        $ptSummary = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Fusionner le résumé
+        foreach (['tickets_today', 'revenue_today', 'tickets_month', 'revenue_month', 'tickets_year', 'revenue_year'] as $key) {
+            $summary[$key] = (float)($summary[$key] ?? 0) + (float)($ptSummary[$key] ?? 0);
+        }
 
         jsonSuccess([
             'period' => ['from' => $dateFrom, 'to' => $dateTo],
