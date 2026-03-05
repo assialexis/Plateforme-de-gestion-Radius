@@ -123,6 +123,13 @@ class VoucherController
             }
         }
 
+        // Zone: utiliser la sélection du formulaire, sinon celle du profil
+        if (empty($data['zone_id']) && !empty($profile['zone_id'])) {
+            $data['zone_id'] = (int)$profile['zone_id'];
+        } elseif (!empty($data['zone_id'])) {
+            $data['zone_id'] = (int)$data['zone_id'];
+        }
+
         $data['created_by'] = $_SESSION['admin_id'] ?? null;
         $data['admin_id'] = $this->getAdminId();
 
@@ -235,6 +242,9 @@ class VoucherController
                 $password = $code; // Pour les vouchers, password = username
             }
 
+            // Zone: utiliser la sélection du formulaire, sinon celle du profil
+            $zoneId = !empty($data['zone_id']) ? (int)$data['zone_id'] : ($profile['zone_id'] ?? null);
+
             $voucherData = array_merge($profileData, [
                 'username' => $code,
                 'password' => $password,
@@ -246,7 +256,7 @@ class VoucherController
                 'price' => $data['price'] ?? $profileData['price'] ?? 0,
                 'simultaneous_use' => $data['simultaneous_use'] ?? $profileData['simultaneous_use'] ?? 1,
                 'valid_until' => $data['valid_until'] ?? null,
-                'zone_id' => $data['zone_id'] ?? null,
+                'zone_id' => $zoneId,
                 'batch_id' => $batchId,
                 'created_by' => $_SESSION['admin_id'] ?? null,
                 'admin_id' => $this->getAdminId(),
