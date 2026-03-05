@@ -43,6 +43,8 @@ class SetupScriptGenerator
 
         $script = '';
         $script .= $this->generateHeader($routerId, $nas);
+        $script .= $this->generateIdentity($routerId);
+        $script .= $this->generateRadiusConfig($nas);
         $script .= $this->generateCleanup();
         $script .= $this->generateWalledGarden($walledGardenRules);
         $script .= $this->generatePollingScript($routerId, $fetchUrl, $pollingToken);
@@ -59,8 +61,13 @@ class SetupScriptGenerator
     private function getNasInfo(string $routerId): ?array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, router_id, admin_id, shortname, polling_token, polling_interval
-             FROM nas WHERE router_id = ? LIMIT 1"
+            "SELECT n.id, n.router_id, n.admin_id, n.shortname, n.secret, n.polling_token, n.polling_interval,
+                    n.zone_id, z.radius_server_id,
+                    rs.host as radius_host, rs.webhook_port as radius_port
+             FROM nas n
+             LEFT JOIN zones z ON n.zone_id = z.id
+             LEFT JOIN radius_servers rs ON z.radius_server_id = rs.id
+             WHERE n.router_id = ? LIMIT 1"
         );
         $stmt->execute([$routerId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -115,6 +122,59 @@ class SetupScriptGenerator
 # Routeur: {$name} ({$routerId})
 # Serveur: {$this->serverUrl}
 # =====================================================
+
+
+RSC;
+    }
+
+    /**
+     * Configuration de l'identité du routeur
+     */
+    private function generateIdentity(string $routerId): string
+    {
+        return <<<RSC
+# --- Configuration Identite ---
+/system identity set name="{$routerId}"
+:put "=== Identite configuree: {$routerId} ==="
+
+
+RSC;
+    }
+
+    /**
+     * Configuration RADIUS (hotspot + PPP)
+     */
+    private function generateRadiusConfig(array $nas): string
+    {
+        $secret = $nas['secret'] ?? 'radius';
+        $radiusHost = $nas['radius_host'] ?? '';
+
+        // Si pas de serveur RADIUS assigné, utiliser l'IP du serveur NAS
+        if (empty($radiusHost)) {
+            $radiusHost = parse_url($this->serverUrl, PHP_URL_HOST);
+        }
+
+        return <<<RSC
+# --- Configuration RADIUS ---
+# Supprimer les anciennes entrees RADIUS NAS
+:foreach i in=[/radius find where comment="NAS-RADIUS"] do={
+    /radius remove \$i
+}
+:delay 500ms
+
+# Ajouter le serveur RADIUS avec hotspot et ppp
+/radius add address={$radiusHost} secret="{$secret}" service=hotspot,ppp comment="NAS-RADIUS"
+:delay 500ms
+
+# Activer RADIUS pour le Hotspot
+/ip hotspot profile set [find] use-radius=yes
+:delay 500ms
+
+# Activer RADIUS pour PPP
+/ppp aaa set use-radius=yes
+:delay 500ms
+
+:put "=== RADIUS configure: {$radiusHost} (hotspot + ppp) ==="
 
 
 RSC;
