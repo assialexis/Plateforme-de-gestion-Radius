@@ -170,7 +170,7 @@ class ZoneController
             jsonError(__('api.zone_not_found'), 404);
         }
 
-        $nas = $this->db->getNasByZone($id);
+        $nas = $this->db->getNasByZone($id, $this->getAdminId());
         jsonSuccess($nas);
     }
 
@@ -186,7 +186,7 @@ class ZoneController
             jsonError(__('api.zone_not_found'), 404);
         }
 
-        $profiles = $this->db->getProfilesByZone($id);
+        $profiles = $this->db->getProfilesByZone($id, $this->getAdminId());
         jsonSuccess($profiles);
     }
 
