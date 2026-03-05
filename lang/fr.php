@@ -1916,6 +1916,16 @@ return [
     'chat.confirm_close' => 'Fermer cette conversation ?',
     'chat.confirm_delete' => 'Supprimer cette conversation et tous ses messages ?',
     'chat.confirm_regenerate_key' => 'Régénérer la clé du widget ? L\'ancien code d\'intégration ne fonctionnera plus.',
+    'chat.calling' => 'Appel en cours...',
+    'chat.unmute' => 'Activer le micro',
+    'chat.mute' => 'Couper le micro',
+    'chat.hangup' => 'Raccrocher',
+    'chat.status_active' => 'Active',
+    'chat.status_closed' => 'Fermée',
+    'chat.incoming_call' => 'Appel entrant',
+    'chat.is_calling_you' => 'vous appelle',
+    'chat.accept' => 'Accepter',
+    'chat.reject' => 'Refuser',
 
     // =============================================
     // CHAT WIDGET (widget.*)

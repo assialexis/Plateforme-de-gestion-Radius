@@ -1919,6 +1919,16 @@ return [
     'chat.confirm_close' => 'Close this conversation?',
     'chat.confirm_delete' => 'Delete this conversation and all its messages?',
     'chat.confirm_regenerate_key' => 'Regenerate widget key? The previous integration code will no longer work.',
+    'chat.calling' => 'Calling...',
+    'chat.unmute' => 'Unmute',
+    'chat.mute' => 'Mute',
+    'chat.hangup' => 'Hang up',
+    'chat.status_active' => 'Active',
+    'chat.status_closed' => 'Closed',
+    'chat.incoming_call' => 'Incoming call',
+    'chat.is_calling_you' => 'is calling you',
+    'chat.accept' => 'Accept',
+    'chat.reject' => 'Reject',
 
     // =============================================
     // CHAT WIDGET (widget.*)
