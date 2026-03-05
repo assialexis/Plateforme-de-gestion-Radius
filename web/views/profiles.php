@@ -455,7 +455,7 @@ $currentPage = 'profiles'; ?>
                             <input type="text" x-model="form.description"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                         </div>
-                        <!-- Temps d'utilisation (optionnel) -->
+                        <!-- Temps d'utilisation -->
                         <div
                             class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <label class="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
@@ -463,11 +463,11 @@ $currentPage = 'profiles'; ?>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <?= __('profile.form_usage_time')?>
+                                <?= __('profile.form_usage_time')?> *
                             </label>
                             <div class="flex gap-2">
                                 <input type="number" x-model="form.time_limit_value" min="1"
-                                    :placeholder="__('profile.placeholder_empty_unlimited')"
+                                    placeholder="Ex: 1" required
                                     class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                                 <select x-model="form.time_limit_unit"
                                     class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
