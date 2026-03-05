@@ -168,6 +168,8 @@ CREATE TABLE IF NOT EXISTS pppoe_profiles (
     burst_upload BIGINT DEFAULT 0,
     burst_threshold BIGINT DEFAULT 0,
     burst_time INT DEFAULT 0,
+    mikrotik_group VARCHAR(100) DEFAULT NULL,
+    fup_quota BIGINT DEFAULT 0,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -181,6 +183,7 @@ CREATE TABLE IF NOT EXISTS pppoe_users (
     password VARCHAR(64) NOT NULL,
     profile_id INT DEFAULT NULL,
     profile_name VARCHAR(50) DEFAULT NULL,
+    zone_id INT DEFAULT NULL,
     customer_name VARCHAR(100) DEFAULT NULL,
     customer_phone VARCHAR(50) DEFAULT NULL,
     status ENUM('active', 'suspended', 'expired', 'disabled') DEFAULT 'active',
@@ -192,6 +195,24 @@ CREATE TABLE IF NOT EXISTS pppoe_users (
     ip_pool_name VARCHAR(100) DEFAULT NULL,
     mikrotik_group VARCHAR(100) DEFAULT NULL,
     valid_until DATETIME DEFAULT NULL,
+    first_use DATETIME DEFAULT NULL,
+    last_login DATETIME DEFAULT NULL,
+    valid_from DATETIME DEFAULT NULL,
+    data_used BIGINT DEFAULT 0,
+    fup_download_speed BIGINT DEFAULT 0,
+    fup_upload_speed BIGINT DEFAULT 0,
+    fup_data_used BIGINT DEFAULT 0,
+    fup_triggered TINYINT(1) DEFAULT 0,
+    fup_triggered_at DATETIME DEFAULT NULL,
+    fup_last_reset DATETIME DEFAULT NULL,
+    fup_override TEXT DEFAULT NULL,
+    fup_data_offset BIGINT DEFAULT 0,
+    last_mac VARCHAR(17) DEFAULT NULL,
+    last_ip VARCHAR(45) DEFAULT NULL,
+    time_used BIGINT DEFAULT 0,
+    sold_by INT DEFAULT NULL,
+    nas_id INT DEFAULT NULL,
+    admin_id INT DEFAULT NULL,
     burst_upload INT DEFAULT NULL,
     burst_download INT DEFAULT NULL,
     burst_threshold INT DEFAULT NULL,
@@ -200,13 +221,14 @@ CREATE TABLE IF NOT EXISTS pppoe_users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY (username),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_admin (admin_id)
 ) ENGINE=InnoDB;
 
 -- PPPoE Sessions (local, pushed to central)
 CREATE TABLE IF NOT EXISTS pppoe_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    pppoe_user_id INT NOT NULL,
     acct_session_id VARCHAR(64) NOT NULL,
     username VARCHAR(64) NOT NULL,
     nas_ip VARCHAR(45) NOT NULL,
@@ -226,8 +248,9 @@ CREATE TABLE IF NOT EXISTS pppoe_sessions (
     stop_time DATETIME DEFAULT NULL,
     terminate_cause VARCHAR(32) DEFAULT NULL,
     synced TINYINT(1) DEFAULT 0 COMMENT 'Synced to central platform',
+    admin_id INT DEFAULT NULL,
     UNIQUE KEY (acct_session_id, nas_ip),
-    INDEX idx_user (user_id),
+    INDEX idx_user (pppoe_user_id),
     INDEX idx_synced (synced)
 ) ENGINE=InnoDB;
 
