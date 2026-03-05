@@ -226,7 +226,7 @@
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-xs text-gray-400 dark:text-gray-500">
                             <span x-text="(tpl.message_template || '').length"></span> <?= __('sms.chars_count') ?>
-                            · <span x-text="Math.ceil((tpl.message_template || '').length / 160)"></span> <?= __('sms.sms_count') ?>
+                            · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((tpl.message_template || '').length)"></span> SMS
                         </span>
                     </div>
 
@@ -430,6 +430,12 @@
                             </label>
                             <textarea x-model="testMessage" rows="4"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                            <div class="mt-1">
+                                <span class="text-xs text-gray-400">
+                                    <span x-text="testMessage.length"></span> <?= __('sms.chars_count') ?>
+                                    · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))(testMessage.length)"></span> SMS
+                                </span>
+                            </div>
                         </div>
                         <button @click="sendTestSms()" :disabled="testSending || !testPhone"
                             class="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
@@ -560,7 +566,7 @@
                     <div class="flex items-center justify-between mt-1">
                         <span class="text-xs text-gray-400">
                             <span x-text="(templateForm.message_template || '').length"></span> <?= __('sms.chars_count') ?>
-                            · <span x-text="Math.ceil(Math.max(1, (templateForm.message_template || '').length) / 160)"></span> <?= __('sms.sms_count') ?>
+                            · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((templateForm.message_template || '').length)"></span> SMS
                         </span>
                     </div>
                 </div>
@@ -647,7 +653,13 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= __('sms.message_preview') ?></label>
                     <textarea x-model="testTemplateMessage" rows="5"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"></textarea>
-                    <p class="text-xs text-gray-400 mt-1"><?= __('sms.test_preview_hint') ?></p>
+                    <div class="flex items-center justify-between mt-1">
+                        <p class="text-xs text-gray-400"><?= __('sms.test_preview_hint') ?></p>
+                        <span class="text-xs text-gray-400">
+                            <span x-text="testTemplateMessage.length"></span> <?= __('sms.chars_count') ?>
+                            · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))(testTemplateMessage.length)"></span> SMS
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Send button -->

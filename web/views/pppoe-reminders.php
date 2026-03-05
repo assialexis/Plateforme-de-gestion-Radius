@@ -517,6 +517,12 @@ $currentPage = 'pppoe-reminders'; ?>
                         </label>
                         <textarea x-model="ruleForm.message_template" rows="6" x-ref="templateTextarea"
                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white font-mono"></textarea>
+                        <div class="mt-1" x-show="ruleForm.channel === 'sms'">
+                            <span class="text-xs text-gray-400">
+                                <span x-text="(ruleForm.message_template || '').length"></span> car.
+                                · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((ruleForm.message_template || '').length)"></span> SMS
+                            </span>
+                        </div>
                         <!-- Variable chips -->
                         <div class="flex flex-wrap gap-1 mt-2">
                             <template x-for="v in quickVars" :key="v">

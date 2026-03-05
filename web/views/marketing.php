@@ -344,7 +344,7 @@
                     <span class="text-xs text-gray-400">
                         <span x-text="message.length"></span> <?= __('marketing.chars') ?>
                         <span x-show="channel === 'sms'">
-                            &middot; <span x-text="Math.ceil(Math.max(1, message.length) / 160)"></span> SMS
+                            &middot; <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))(message.length)"></span> SMS
                         </span>
                     </span>
                 </div>
