@@ -61,7 +61,7 @@ class CaptivePortalController
         $templateDir = $this->templatesDir . '/' . $folderName;
 
         if (!$this->templatesDir || !is_dir($templateDir) || !in_array($folderName, ['Template 18', 'Template 19'])) {
-            jsonError('Template not found', 404);
+            return jsonError('Template not found', 404);
         }
 
         // Parse actual current values from HTML
@@ -218,10 +218,18 @@ class CaptivePortalController
         $templateDir = $this->templatesDir . '/' . $folderName;
 
         if (!$this->templatesDir || !is_dir($templateDir) || !in_array($folderName, ['Template 18', 'Template 19'])) {
-            jsonError('Template not found', 404);
+            return jsonError('Template not found', 404);
+        }
+
+        // Vérifier les permissions d'écriture
+        if (!is_writable($templateDir)) {
+            return jsonError('Le dossier du template n\'est pas accessible en écriture. Exécutez: chmod -R 775 "' . $templateDir . '"', 500);
         }
 
         $data = getJsonBody();
+        if (empty($data)) {
+            return jsonError('Aucune donnée reçue', 400);
+        }
 
         // Sauvegarder la config JSON complète pour persistance
         $configFile = $templateDir . '/config.json';
@@ -252,7 +260,9 @@ class CaptivePortalController
             'custom_js' => $data['custom_js'] ?? '',
             'custom_html' => $data['custom_html'] ?? '',
         ];
-        file_put_contents($configFile, json_encode($configToSave, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        if (@file_put_contents($configFile, json_encode($configToSave, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) === false) {
+            return jsonError('Impossible d\'écrire config.json. Vérifiez les permissions du dossier.', 500);
+        }
 
         $filesToUpdate = ['login.html', 'logout.html', 'status.html', 'tarifs.html', 'services.html'];
 
@@ -274,13 +284,16 @@ class CaptivePortalController
         // Si custom_html est fourni, remplacer entièrement login.html
         $customHtml = trim($data['custom_html'] ?? '');
 
+        $errors = [];
         foreach ($filesToUpdate as $filename) {
             $filePath = $templateDir . '/' . $filename;
             if (file_exists($filePath)) {
 
                 // Si HTML complet personnalisé, remplacer login.html entièrement
                 if ($filename === 'login.html' && $customHtml !== '') {
-                    file_put_contents($filePath, $customHtml);
+                    if (@file_put_contents($filePath, $customHtml) === false) {
+                        $errors[] = $filename;
+                    }
                     continue;
                 }
 
@@ -302,8 +315,14 @@ class CaptivePortalController
                 // Injecter CSS/JS personnalisé sur toutes les pages
                 $content = $this->injectCustomCode($content, $data);
 
-                file_put_contents($filePath, $content);
+                if (@file_put_contents($filePath, $content) === false) {
+                    $errors[] = $filename;
+                }
             }
+        }
+
+        if (!empty($errors)) {
+            return jsonError('Impossible d\'écrire: ' . implode(', ', $errors) . '. Vérifiez les permissions.', 500);
         }
 
         jsonResponse(['success' => true, 'message' => 'Configuration sauvegardée', 'data' => $data]);
@@ -321,7 +340,7 @@ class CaptivePortalController
         $templateDir = $this->templatesDir . '/' . $folderName;
 
         if (!$this->templatesDir || !is_dir($templateDir) || !in_array($folderName, ['Template 18', 'Template 19'])) {
-            jsonError('Template not found', 404);
+            return jsonError('Template not found', 404);
         }
 
         $zipFile = tempnam(sys_get_temp_dir(), 'tpl_') . '.zip';
