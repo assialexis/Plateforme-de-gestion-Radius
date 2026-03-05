@@ -6851,8 +6851,8 @@ class RadiusDatabase
                             pppoe_user_id, acct_session_id, nas_ip, nas_port, nas_identifier,
                             client_ip, client_mac, calling_station_id, called_station_id,
                             session_time, input_octets, output_octets, input_packets, output_packets,
-                            start_time, last_update, stop_time, terminate_cause
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            start_time, last_update, stop_time, terminate_cause, admin_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
                             session_time = VALUES(session_time),
                             input_octets = VALUES(input_octets),
@@ -6861,7 +6861,8 @@ class RadiusDatabase
                             output_packets = VALUES(output_packets),
                             last_update = VALUES(last_update),
                             stop_time = VALUES(stop_time),
-                            terminate_cause = VALUES(terminate_cause)
+                            terminate_cause = VALUES(terminate_cause),
+                            admin_id = VALUES(admin_id)
                     ");
                     $stmt->execute([
                         $pUser['id'],
@@ -6882,6 +6883,7 @@ class RadiusDatabase
                         $ps['last_update'] ?? null,
                         $ps['stop_time'] ?? null,
                         $ps['terminate_cause'] ?? null,
+                        $pUser['admin_id'],
                     ]);
                     $imported['pppoe_sessions']++;
 
