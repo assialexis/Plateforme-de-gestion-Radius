@@ -779,8 +779,8 @@ if (!$templateId) {
                 this.loadingPreview = true;
                 const iframe = document.getElementById('previewIframe');
 
-                const templatePathName = this.templateId.replace(/_/g, '%20');
-                const url = `../Portail Captif/${templatePathName}/${this.previewPage}`;
+                const templateName = this.templateId.replace(/_/g, ' ');
+                const url = `portal-preview.php/${encodeURIComponent(templateName)}/${encodeURIComponent(this.previewPage)}`;
 
                 // Add a timestamp to bypass cache
                 iframe.src = url + '?t=' + new Date().getTime();
