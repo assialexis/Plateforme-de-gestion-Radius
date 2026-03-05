@@ -96,10 +96,6 @@ $currentPage = 'nas'; ?>
                                     class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#161b22]"
                                     :class="routerStatuses[nas.router_id]?.online ? 'bg-emerald-500' : 'bg-gray-400'"
                                     :title="routerStatuses[nas.router_id]?.online ? 'En ligne' : 'Hors ligne'"></div>
-                                <!-- Fallback: statut ICMP si pas de polling -->
-                                <div x-show="!routerStatuses[nas.router_id] && nas.pingStatus && nas.pingMethod !== 'api'"
-                                    class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#161b22]"
-                                    :class="nas.pingStatus === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'"></div>
                             </div>
 
                             <!-- Titre et IP -->
@@ -201,27 +197,24 @@ $currentPage = 'nas'; ?>
                         </template>
                     </div>
 
-                    <!-- Ligne Méta (ICMP + API séparés) -->
+                    <!-- Ligne Méta (Sync + API séparés) -->
                     <div class="flex flex-col gap-2.5 text-sm mb-4">
-                        <!-- Statut ICMP -->
+                        <!-- Statut Synchronisation -->
                         <template x-if="nas.pingStatus === 'ok'">
                             <div class="flex items-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/10 px-3 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
                                 <span class="relative flex h-2.5 w-2.5 mr-2.5">
                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                                 </span>
-                                <span class="font-medium mr-1">ICMP</span>
-                                <span class="text-xs opacity-75" x-text="nas.pingLatency ? '(' + nas.pingLatency + 'ms)' : ''"></span>
-                                <span class="ml-auto text-xs opacity-75" x-text="nas.pingHost || ''"></span>
+                                <span class="font-medium"><?= __('nas.sync_ok') ?></span>
                             </div>
                         </template>
                         <template x-if="nas.pingStatus === 'fail'">
-                            <div class="flex items-center text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/10 px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-800/30">
+                            <div class="flex items-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/10 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700/30">
                                 <span class="relative flex h-2.5 w-2.5 mr-2.5">
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gray-400"></span>
                                 </span>
-                                <span class="font-medium">ICMP</span>
-                                <span class="ml-2 text-xs truncate" x-text="nas.pingMessage || '<?= __('nas.ping_offline') ?>'"></span>
+                                <span class="font-medium"><?= __('nas.sync_fail') ?></span>
                             </div>
                         </template>
 
@@ -332,10 +325,10 @@ $currentPage = 'nas'; ?>
                             class="flex items-center gap-1 bg-gray-50 dark:bg-[#21262d] p-1 rounded-lg border border-gray-200 dark:border-[#30363d]">
                             <button @click="pingNas(nas)"
                                 class="p-1.5 text-gray-400 hover:text-emerald-500 hover:bg-white dark:hover:bg-[#30363d] rounded-md transition-all"
-                                :title="'<?= __('nas.ping_icmp') ?>'">
+                                :title="'<?= __('nas.check_sync') ?>'">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             </button>
                             <button @click="pingApiDirect(nas)" x-show="nas.mikrotik_host && nas.mikrotik_api_username"
@@ -458,9 +451,6 @@ $currentPage = 'nas'; ?>
                 <!-- DNS / IP -->
                 <div class="hidden sm:block col-span-2">
                     <p class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate" x-text="nas.nasname && nas.nasname !== '0.0.0.0/0' ? nas.nasname : (nas.mikrotik_host || '—')"></p>
-                    <template x-if="nas.pingStatus === 'ok' && nas.pingLatency">
-                        <p class="text-[10px] text-emerald-600 dark:text-emerald-400" x-text="nas.pingLatency + 'ms'"></p>
-                    </template>
                 </div>
 
                 <!-- Zone -->
@@ -515,8 +505,8 @@ $currentPage = 'nas'; ?>
 
                 <!-- Actions -->
                 <div class="sm:col-span-2 flex items-center justify-end gap-0.5">
-                    <button @click="pingNas(nas)" class="p-1.5 text-gray-400 hover:text-emerald-500 rounded-md transition-colors" :title="'<?= __('nas.ping_icmp') ?>'">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+                    <button @click="pingNas(nas)" class="p-1.5 text-gray-400 hover:text-emerald-500 rounded-md transition-colors" :title="'<?= __('nas.check_sync') ?>'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     </button>
                     <button @click="pingApiDirect(nas)" x-show="nas.mikrotik_host && nas.mikrotik_api_username" class="p-1.5 text-gray-400 hover:text-orange-500 rounded-md transition-colors" :title="'<?= __('nas.ping_api') ?>'">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -1252,16 +1242,17 @@ $currentPage = 'nas'; ?>
                 nas.pingMessage = null;
                 nas.pingTime = null;
                 try {
-                    const response = await API.post(`/nas/${nas.id}/ping`);
-                    nas.pingStatus = response.data.reachable ? 'ok' : 'fail';
-                    nas.pingLatency = response.data.latency;
-                    nas.pingMethod = 'icmp';
-                    nas.pingMessage = response.data.message;
-                    nas.pingHost = response.data.host || '';
+                    await this.loadRouterStatuses();
+                    const status = this.routerStatuses[nas.router_id];
+                    nas.pingStatus = status?.online ? 'ok' : 'fail';
+                    nas.pingLatency = null;
+                    nas.pingMethod = 'sync';
+                    nas.pingMessage = status?.online ? '<?= __js('nas.sync_ok') ?>' : '<?= __js('nas.sync_fail') ?>';
+                    nas.pingHost = '';
                     nas.pingTime = Date.now();
                 } catch (error) {
                     nas.pingStatus = 'fail';
-                    nas.pingMessage = error.message || __('common.error');
+                    nas.pingMessage = '<?= __js('nas.sync_fail') ?>';
                     nas.pingTime = Date.now();
                 }
                 this.savePingResult(nas);
