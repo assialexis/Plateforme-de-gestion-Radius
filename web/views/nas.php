@@ -1138,13 +1138,24 @@ $currentPage = 'nas'; ?>
                 }
             },
 
+            generateSecret(length = 16) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                const array = new Uint8Array(length);
+                crypto.getRandomValues(array);
+                for (let i = 0; i < length; i++) {
+                    result += chars[array[i] % chars.length];
+                }
+                return result;
+            },
+
             resetForm() {
                 this.form = {
                     router_id: '',
                     zone_id: this.filterZone && this.filterZone !== 0 ? this.filterZone : '',
                     shortname: '',
                     nasname: '',
-                    secret: '',
+                    secret: this.generateSecret(),
                     type: 'mikrotik',
                     ports: '',
                     description: '',
@@ -1166,6 +1177,8 @@ $currentPage = 'nas'; ?>
                     this.map.removeLayer(this.marker);
                     this.marker = null;
                 }
+                // Auto-generate NAS identifier
+                this.generateNasId();
             },
 
             async generateNasId() {
