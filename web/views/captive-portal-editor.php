@@ -1153,12 +1153,20 @@ if (!$templateId) {
                         body: JSON.stringify(payload)
                     });
 
+                    const text = await response.text();
+
                     if (!response.ok) {
-                        const text = await response.text();
-                        throw new Error('HTTP ' + response.status + ': ' + (text.substring(0, 100) || 'Erreur serveur'));
+                        // Essayer de parser le JSON pour un message d'erreur détaillé
+                        try {
+                            const err = JSON.parse(text);
+                            throw new Error(err.message || ('Erreur ' + response.status));
+                        } catch (parseErr) {
+                            if (parseErr.message && !parseErr.message.includes('JSON')) throw parseErr;
+                            throw new Error('Erreur ' + response.status + ': ' + (text.substring(0, 200) || 'Erreur serveur'));
+                        }
                     }
 
-                    const data = await response.json();
+                    const data = JSON.parse(text);
 
                     if (!data.success) {
                         throw new Error(data.message || 'Erreur inconnue');

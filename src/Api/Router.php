@@ -147,7 +147,7 @@ class Router
                 try {
                     $handler = $route['handler'];
                     $handler($params);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     $this->handleError($e);
                 }
                 return;
@@ -161,15 +161,22 @@ class Router
     /**
      * Gérer une erreur
      */
-    private function handleError(Exception $e): void
+    private function handleError(\Throwable $e): void
     {
+        // Nettoyer tout output buffer pour éviter de corrompre le JSON
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         $rawCode = $e->getCode();
         $code = is_int($rawCode) && $rawCode >= 400 && $rawCode < 600 ? $rawCode : 500;
         http_response_code($code);
         header('Content-Type: application/json');
         echo json_encode([
             'success' => false,
-            'message' => $e->getMessage()
+            'message' => $e->getMessage(),
+            'error_type' => get_class($e),
+            'file' => basename($e->getFile()) . ':' . $e->getLine()
         ]);
     }
 
