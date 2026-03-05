@@ -155,15 +155,21 @@ class SuperAdminController
             // Les superadmins sont cross-tenant, pas besoin
             if ($role === 'admin') {
                 $zoneCode = 'zone_' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $data['username'])) . '_' . substr(md5(time()), 0, 4);
+
+                // Récupérer le serveur RADIUS par défaut
+                $defaultServer = $this->db->getDefaultRadiusServer();
+                $defaultServerId = $defaultServer ? (int)$defaultServer['id'] : null;
+
                 $stmt = $pdo->prepare("
-                    INSERT INTO zones (name, code, description, color, is_active, owner_id, admin_id)
-                    VALUES (?, ?, 'Zone principale', '#3b82f6', 1, ?, ?)
+                    INSERT INTO zones (name, code, description, color, is_active, owner_id, admin_id, radius_server_id)
+                    VALUES (?, ?, 'Zone principale', '#3b82f6', 1, ?, ?, ?)
                 ");
                 $stmt->execute([
                     'Zone de ' . ($data['full_name'] ?? $data['username']),
                     $zoneCode,
                     $adminId,
-                    $adminId
+                    $adminId,
+                    $defaultServerId
                 ]);
 
                 $this->provisionDefaultModules($pdo, $adminId);
