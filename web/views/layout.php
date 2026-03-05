@@ -1462,7 +1462,7 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                                         <p class="text-xs text-blue-600 dark:text-blue-400">
                                             1 CRT = <span class="font-bold" x-text="csmsPerCrt"></span> CSMS
                                             <span class="text-blue-400 dark:text-blue-500">(1 SMS = <span
-                                                    x-text="costPerSmsFcfa"></span> FCFA)</span>
+                                                    x-text="costPerSmsFcfa"></span> <span x-text="APP_CURRENCY"></span>)</span>
                                         </p>
                                     </div>
 
@@ -1832,6 +1832,7 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
             }
             return text;
         }
+        const APP_CURRENCY = '<?= addslashes($adminCurrency ?? 'XAF') ?>';
     </script>
 
     <!-- Common Scripts -->

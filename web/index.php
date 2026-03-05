@@ -52,6 +52,12 @@ if (isset($_GET['lang']) && in_array(strtolower($_GET['lang']), ['fr', 'en'])) {
 $appName = $config['app']['name'] ?? 'RADIUS Manager';
 $flashMessages = getFlash();
 
+// Charger la devise de l'admin
+$adminId = $currentUser->getId();
+$currencyStmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key = 'currency' AND admin_id = ? LIMIT 1");
+$currencyStmt->execute([$adminId]);
+$adminCurrency = $currencyStmt->fetchColumn() ?: 'XAF';
+
 // Router les pages
 $page = $_GET['page'] ?? 'dashboard';
 

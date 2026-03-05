@@ -971,7 +971,7 @@ $currentPage = 'pppoe';
                             <div class="relative">
                                 <input type="number" x-model="paymentForm.amount" required min="0" :max="(selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0)"
                                        class="w-full px-4 py-2.5 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">FCFA</span>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" x-text="APP_CURRENCY"></span>
                             </div>
                             <button type="button" @click="paymentForm.amount = (selectedInvoice?.total_amount || 0) - (selectedInvoice?.paid_amount || 0)" class="mt-1 text-xs text-primary-600 hover:underline">
                                 <?= __('pppoe_user.pay_full_amount') ?>
@@ -1478,7 +1478,7 @@ function pppoeUserPage() {
         },
 
         formatPrice(price) {
-            return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
+            return new Intl.NumberFormat('fr-FR').format(price) + ' ' + APP_CURRENCY;
         },
 
         formatBytes(bytes) {

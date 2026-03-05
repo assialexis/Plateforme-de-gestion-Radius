@@ -1855,8 +1855,8 @@ $currentPage = 'billing'; ?>
                         if (this.settings.payment_notif_template && !this.settings.payment_notif_template_sms) {
                             this.settings.payment_notif_template_sms = this.settings.payment_notif_template;
                         }
-                        if (!this.settings.payment_notif_template_whatsapp) this.settings.payment_notif_template_whatsapp = "\u2705 *Paiement re\u00e7u !*\n\nBonjour *{{customer_name}}* \ud83d\udc4b\n\nNous confirmons la r\u00e9ception de votre paiement de *{{invoice_amount}} FCFA* pour la facture *{{invoice_number}}*.\n\n\ud83d\udcc5 Profil : {{profile_name}}\n\ud83d\udcc6 Valide jusqu'au : {{expiration_date}}\n\nMerci pour votre confiance ! \ud83d\ude4f\n\n{{company_name}}\n\ud83d\udcde {{support_phone}}";
-                        if (!this.settings.payment_notif_template_sms) this.settings.payment_notif_template_sms = "Paiement de {{invoice_amount}} FCFA recu pour la facture {{invoice_number}}. Profil: {{profile_name}}. Valide jusqu'au {{expiration_date}}. Merci - {{company_name}}";
+                        if (!this.settings.payment_notif_template_whatsapp) this.settings.payment_notif_template_whatsapp = "\u2705 *Paiement re\u00e7u !*\n\nBonjour *{{customer_name}}* \ud83d\udc4b\n\nNous confirmons la r\u00e9ception de votre paiement de *{{invoice_amount}} " + APP_CURRENCY + "* pour la facture *{{invoice_number}}*.\n\n\ud83d\udcc5 Profil : {{profile_name}}\n\ud83d\udcc6 Valide jusqu'au : {{expiration_date}}\n\nMerci pour votre confiance ! \ud83d\ude4f\n\n{{company_name}}\n\ud83d\udcde {{support_phone}}";
+                        if (!this.settings.payment_notif_template_sms) this.settings.payment_notif_template_sms = "Paiement de {{invoice_amount}} " + APP_CURRENCY + " recu pour la facture {{invoice_number}}. Profil: {{profile_name}}. Valide jusqu'au {{expiration_date}}. Merci - {{company_name}}";
                     }
                 } catch (error) {
                     console.error('Error loading settings:', error);

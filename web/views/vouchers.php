@@ -372,7 +372,7 @@ $currentPage = 'vouchers'; ?>
                                 </template>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                <span x-text="voucher.price > 0 ? voucher.price + ' XAF' : '-'"></span>
+                                <span x-text="voucher.price > 0 ? voucher.price + ' ' + APP_CURRENCY : '-'"></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                                 <div class="flex items-center justify-end gap-2">
@@ -555,7 +555,7 @@ $currentPage = 'vouchers'; ?>
                                     <?= __('voucher.select_profile')?>
                                 </option>
                                 <template x-for="profile in profiles" :key="profile.id">
-                                    <option :value="profile.id" x-text="profile.name + ' - ' + profile.price + ' XAF'">
+                                    <option :value="profile.id" x-text="profile.name + ' - ' + profile.price + ' ' + APP_CURRENCY">
                                     </option>
                                 </template>
                             </select>
@@ -567,7 +567,7 @@ $currentPage = 'vouchers'; ?>
                                 <span class="text-sm text-gray-600 dark:text-gray-400"
                                     x-text="__('voucher.profile_price')"></span>
                                 <span class="font-bold text-blue-600 dark:text-blue-400"
-                                    x-text="getSelectedProfilePrice(newVoucher.profile_id) + ' XAF'"></span>
+                                    x-text="getSelectedProfilePrice(newVoucher.profile_id) + ' ' + APP_CURRENCY"></span>
                             </div>
                         </div>
                     </div>
@@ -763,7 +763,7 @@ $currentPage = 'vouchers'; ?>
                                     <span class="text-sm font-medium text-gray-500 dark:text-gray-400"
                                         x-text="__('voucher.profile_price')"></span>
                                     <span class="text-sm font-bold text-green-600 dark:text-green-400 px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full"
-                                        x-text="getSelectedZoneProfilePrice(generateForm.profile_id) + ' XAF'"></span>
+                                        x-text="getSelectedZoneProfilePrice(generateForm.profile_id) + ' ' + APP_CURRENCY"></span>
                                 </div>
                             </div>
                         </div>
@@ -830,7 +830,7 @@ $currentPage = 'vouchers'; ?>
                         <div>
                             <p class="text-sm text-gray-500 dark:text-gray-400" x-text="__('voucher.price')"></p>
                             <p class="font-semibold text-gray-900 dark:text-white"
-                                x-text="(selectedVoucher?.price || 0) + ' XAF'"></p>
+                                x-text="(selectedVoucher?.price || 0) + ' ' + APP_CURRENCY"></p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
@@ -1220,7 +1220,7 @@ $currentPage = 'vouchers'; ?>
                         profileName: profile?.name || '',
                         time: profile?.time_limit ? formatTime(profile.time_limit) : '',
                         speed: profile?.download_speed ? formatSpeed(profile.download_speed) : '',
-                        price: profile?.price ? Number(profile.price).toLocaleString() + ' XAF' : ''
+                        price: profile?.price ? Number(profile.price).toLocaleString() + ' ' + APP_CURRENCY : ''
                     };
                 });
 
@@ -1235,7 +1235,7 @@ $currentPage = 'vouchers'; ?>
                     profileName: profile.name || (voucher.profile_name || ''),
                     time: voucher.time_limit ? formatTime(voucher.time_limit) : '',
                     speed: voucher.download_speed ? formatSpeed(voucher.download_speed) : '',
-                    price: voucher.price ? Number(voucher.price).toLocaleString() + ' XAF' : ''
+                    price: voucher.price ? Number(voucher.price).toLocaleString() + ' ' + APP_CURRENCY : ''
                 }];
                 this.openPrintWindow(items, printType);
             },
@@ -1463,7 +1463,7 @@ $currentPage = 'vouchers'; ?>
                 if (!p) return {};
                 return {
                     name: p.name || '',
-                    price: p.price ? Number(p.price).toLocaleString() + ' XAF' : '',
+                    price: p.price ? Number(p.price).toLocaleString() + ' ' + APP_CURRENCY : '',
                     time: p.time_limit ? formatTime(p.time_limit) : 'Illimité',
                     speed: p.download_speed ? formatSpeed(p.download_speed) : ''
                 };

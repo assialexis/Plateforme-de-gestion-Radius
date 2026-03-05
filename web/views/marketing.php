@@ -261,7 +261,7 @@
                                 <td class="px-4 py-3 font-mono text-xs text-gray-900 dark:text-white" x-text="client.phone"></td>
                                 <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="client.name || '-'"></td>
                                 <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs" x-text="client.date ? new Date(client.date).toLocaleDateString() : '-'"></td>
-                                <td x-show="clientSource === 'hotspot'" class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="client.amount ? Number(client.amount).toLocaleString() + ' FCFA' : '-'"></td>
+                                <td x-show="clientSource === 'hotspot'" class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="client.amount ? Number(client.amount).toLocaleString() + ' ' + APP_CURRENCY : '-'"></td>
                                 <td x-show="clientSource === 'pppoe'" class="px-4 py-3">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                                         :class="{

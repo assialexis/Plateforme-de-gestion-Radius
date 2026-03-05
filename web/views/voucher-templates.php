@@ -114,7 +114,7 @@ $currentPage = 'voucher-templates'; ?>
                                 class="flex justify-between text-xs mt-2 pt-2 border-t border-gray-100 dark:border-[#30363d]">
                                 <span x-show="template.show_validity" class="text-gray-500">1h</span>
                                 <span x-show="template.show_price" :style="'color: ' + template.primary_color">100
-                                    XAF</span>
+                                    <span x-text="APP_CURRENCY"></span></span>
                             </div>
                             <!-- Footer -->
                             <p x-show="template.footer_text" class="text-center text-xs text-gray-400 mt-2"

@@ -537,7 +537,7 @@ $currentPage = 'pppoe-transactions'; ?>
                                 <?= __('pppoe_trans.th_amount')?>
                             </p>
                             <p class="font-semibold text-lg text-primary-600 dark:text-primary-400"
-                                x-text="formatPrice(selectedTransaction?.amount) + ' ' + (selectedTransaction?.currency || 'XAF')">
+                                x-text="formatPrice(selectedTransaction?.amount) + ' ' + (selectedTransaction?.currency || APP_CURRENCY)">
                             </p>
                         </div>
                         <div>
@@ -661,7 +661,7 @@ $currentPage = 'pppoe-transactions'; ?>
                         <strong>
                             <?= __('pppoe_trans.th_amount')?>:
                         </strong> <span
-                            x-text="formatPrice(transactionToComplete?.amount) + ' ' + (transactionToComplete?.currency || 'XAF')"></span>
+                            x-text="formatPrice(transactionToComplete?.amount) + ' ' + (transactionToComplete?.currency || APP_CURRENCY)"></span>
                     </p>
                 </div>
                 <div class="flex justify-end gap-2">
@@ -910,7 +910,7 @@ $currentPage = 'pppoe-transactions'; ?>
                             email: txn.customer_email || '',
                             type: this.getTypeLabel(txn.payment_type) || txn.payment_type || '',
                             amount: txn.amount || 0,
-                            currency: txn.currency || 'XAF',
+                            currency: txn.currency || APP_CURRENCY,
                             gateway: (this.getGatewayLabel(txn.gateway_code) || txn.gateway_code || '') + (txn.is_platform == 1 ? ' [P]' : ''),
                             status: this.getStatusLabel(txn.status) || txn.status || '',
                             date: this.formatDate(txn.created_at) + ' ' + this.formatTime(txn.created_at)

@@ -1763,7 +1763,7 @@ $currentPage = 'pppoe'; ?>
             },
 
             formatPrice(price) {
-                return new Intl.NumberFormat('fr-FR').format(price || 0) + ' FCFA';
+                return new Intl.NumberFormat('fr-FR').format(price || 0) + ' ' + APP_CURRENCY;
             },
 
             formatDate(date) {

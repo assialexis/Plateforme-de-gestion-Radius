@@ -1142,7 +1142,7 @@ $currentPage = 'sales'; ?>
                                         @change="updateRate(rate)"
                                         class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white pr-10">
                                     <span class="absolute right-3 top-2 text-gray-500 dark:text-gray-400"
-                                        x-text="rate.rate_type === 'percentage' ? '%' : 'FCFA'"></span>
+                                        x-text="rate.rate_type === 'percentage' ? '%' : APP_CURRENCY"></span>
                                 </div>
                             </div>
                         </div>

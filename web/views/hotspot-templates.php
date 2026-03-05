@@ -677,7 +677,7 @@ $currentPage = 'hotspot-templates'; ?>
                                                         x-model="form.config.selected_profiles"
                                                         class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4">
                                                     <span class="text-sm text-gray-700 dark:text-gray-300"
-                                                        x-text="profile.name + ' (' + profile.price + ' FCFA)' "></span>
+                                                        x-text="profile.name + ' (' + profile.price + ' ' + APP_CURRENCY + ')' "></span>
                                                 </label>
                                             </template>
                                             <p x-show="filteredProfiles.length === 0"

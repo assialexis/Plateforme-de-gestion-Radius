@@ -175,7 +175,7 @@ $currentPage = 'profiles'; ?>
                     <div class="flex items-baseline gap-1 mb-4 pl-6">
                         <span class="text-2xl font-black text-primary-600 dark:text-primary-400"
                             x-text="Number(profile.price || 0).toLocaleString('fr-FR')"></span>
-                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">XAF</span>
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400" x-text="APP_CURRENCY"></span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 text-[11px] mb-4 flex-1">
@@ -364,7 +364,7 @@ $currentPage = 'profiles'; ?>
                         <td class="px-4 py-3 text-sm text-gray-900 dark:text-white" x-text="getSpeedText(profile)"></td>
                         <td class="px-4 py-3">
                             <span class="font-semibold text-primary-600 dark:text-primary-400"
-                                x-text="profile.price + ' XAF'"></span>
+                                x-text="profile.price + ' ' + APP_CURRENCY"></span>
                         </td>
                         <td class="px-4 py-3">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -634,7 +634,7 @@ $currentPage = 'profiles'; ?>
                     </p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         <?= __('common.price')?>: <span class="font-semibold text-primary-600 dark:text-primary-400"
-                            x-text="selectedProfileForLink?.price + ' XAF'"></span>
+                            x-text="selectedProfileForLink?.price + ' ' + APP_CURRENCY"></span>
                     </p>
                 </div>
 

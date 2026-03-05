@@ -760,7 +760,7 @@
                             class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">-- Choisir un profil --</option>
                             <template x-for="p in regProfiles" :key="p.id">
-                                <option :value="p.id" x-text="p.name + (p.price ? ' (' + p.price + ' XAF)' : '')"></option>
+                                <option :value="p.id" x-text="p.name + (p.price ? ' (' + p.price + ' ' + APP_CURRENCY + ')' : '')"></option>
                             </template>
                         </select>
                     </div>

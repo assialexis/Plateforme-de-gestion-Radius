@@ -65,7 +65,7 @@ $currentPage = 'superadmin-sms-config'; ?>
                         <div class="flex items-center gap-2">
                             <input type="number" x-model="smsSettings.sms_credit_cost_fcfa" min="1" step="1"
                                 class="w-32 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
-                            <span class="text-xs text-gray-500">FCFA = 1 CSMS</span>
+                            <span class="text-xs text-gray-500"><span x-text="APP_CURRENCY"></span> = 1 CSMS</span>
                         </div>
                     </div>
                     <div>
@@ -118,7 +118,7 @@ $currentPage = 'superadmin-sms-config'; ?>
                 <div class="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3">
                     <p class="text-xs text-blue-700 dark:text-blue-300">
                         <strong>Taux de conversion :</strong>
-                        1 CRT = <span x-text="creditExchangeRate || 100"></span> FCFA =
+                        1 CRT = <span x-text="creditExchangeRate || 100"></span> <span x-text="APP_CURRENCY"></span> =
                         <span x-text="smsSettings.sms_credit_cost_fcfa > 0 ? Math.floor((creditExchangeRate || 100) / smsSettings.sms_credit_cost_fcfa) : 0"></span> CSMS
                     </p>
                 </div>
