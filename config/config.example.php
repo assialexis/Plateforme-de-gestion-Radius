@@ -28,6 +28,7 @@ return [
         'debug' => false,
         'session_lifetime' => 3600,
         'update_url' => '', // URL du serveur de mises à jour (ex: https://updates.example.com)
+        // 'base_url' => 'https://example.com', // URL de base (sans /web/, sans slash final)
     ],
 
     'currency' => 'XOF',
