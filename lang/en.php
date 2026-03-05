@@ -652,6 +652,8 @@ return [
     'session.terminate_default' => 'Terminated',
 
     'session.empty_active' => 'No active session',
+    'session.empty_active_desc' => 'No users are currently connected.',
+    'session.empty_active_hint' => 'Sessions will appear here when users connect.',
     'session.empty_history' => 'No session found',
     'session.disconnect_all_title' => 'Disconnect all users?',
     'session.disconnecting' => 'Disconnecting...',
