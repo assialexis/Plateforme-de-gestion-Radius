@@ -747,6 +747,7 @@ $router->get('/credits/balance', fn($p) => $creditController->getBalance());
 $router->get('/credits/transactions', fn($p) => $creditController->getTransactions());
 $router->post('/credits/recharge', fn($p) => $creditController->initiateRecharge());
 $router->get('/credits/recharge/status', fn($p) => $creditController->checkRechargeStatus());
+$router->post('/credits/recharge/verify', fn($p) => $creditController->verifyRecharge());
 $router->get('/credits/module-prices', fn($p) => $creditController->getModulePrices());
 $router->get('/credits/recharge-gateways', fn($p) => $creditController->getRechargeGateways());
 

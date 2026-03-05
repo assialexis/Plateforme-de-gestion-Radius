@@ -73,12 +73,23 @@ class CreditController
         $stmt->execute();
         $nasValidityDays = (int)($stmt->fetchColumn() ?: 0);
 
+        // Liste des recharges pending
+        $stmt = $pdo->prepare("
+            SELECT transaction_id, amount, currency, gateway_code, created_at
+            FROM payment_transactions
+            WHERE admin_id = ? AND transaction_type = 'credit_recharge' AND status = 'pending'
+            ORDER BY created_at DESC LIMIT 10
+        ");
+        $stmt->execute([$adminId]);
+        $pendingList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         echo json_encode([
             'success' => true,
             'data' => [
                 'balance' => $balance,
                 'pending_recharges' => (int)$pending['count'],
                 'pending_amount' => (float)$pending['total'],
+                'pending_list' => $pendingList,
                 'exchange_rate' => $exchangeRate,
                 'currency' => $currency,
                 'nas_creation_cost' => $nasCost,
@@ -225,6 +236,176 @@ class CreditController
         }
 
         echo json_encode(['success' => true, 'data' => $txn]);
+    }
+
+    /**
+     * POST /credits/recharge/verify
+     * Vérifier manuellement le statut d'une recharge pending auprès de la passerelle
+     */
+    public function verifyRecharge(): void
+    {
+        $adminId = $this->getAdminId();
+        $pdo = $this->db->getPdo();
+        $data = getJsonBody();
+        $txnId = $data['transaction_id'] ?? '';
+
+        if (empty($txnId)) {
+            jsonError('Transaction ID requis', 400);
+            return;
+        }
+
+        // Récupérer la transaction pending
+        $stmt = $pdo->prepare("
+            SELECT * FROM payment_transactions
+            WHERE transaction_id = ? AND admin_id = ? AND transaction_type = 'credit_recharge' AND status = 'pending'
+        ");
+        $stmt->execute([$txnId, $adminId]);
+        $txn = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$txn) {
+            jsonError('Transaction non trouvée ou déjà traitée', 404);
+            return;
+        }
+
+        $config = require __DIR__ . '/../../config/config.php';
+        require_once __DIR__ . '/../Payment/PaymentService.php';
+        $paymentService = new PaymentService($this->db, $config);
+
+        $gatewayCode = $txn['gateway_code'];
+        $gatewayTransactionId = $txn['gateway_transaction_id'] ?? '';
+        $verified = null;
+
+        // Résoudre la config depuis les passerelles globales de recharge
+        $gateway = $this->db->getGlobalGatewayByCode($gatewayCode);
+
+        switch ($gatewayCode) {
+            case 'fedapay':
+                if ($gatewayTransactionId && $gateway) {
+                    $apiKey = $gateway['config']['secret_key'] ?? $gateway['config']['api_key'] ?? '';
+                    $apiUrl = ($gateway['is_sandbox'] ?? false)
+                        ? 'https://sandbox-api.fedapay.com'
+                        : 'https://api.fedapay.com';
+
+                    $ch = curl_init($apiUrl . '/v1/transactions/' . $gatewayTransactionId);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Bearer ' . $apiKey,
+                        'Content-Type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    $result = json_decode($response, true);
+                    $txData = $result['v1/transaction'] ?? $result['transaction'] ?? $result ?? [];
+                    $status = $txData['status'] ?? '';
+
+                    if ($status === 'approved') {
+                        $operatorRef = $txData['transaction_key'] ?? $txData['reference'] ?? null;
+                        $completed = $paymentService->completeTransaction($txnId, (string)$gatewayTransactionId, $txData, $operatorRef);
+                        jsonSuccess(['status' => 'completed', 'result' => $completed]);
+                        return;
+                    }
+                    $verified = ['gateway_status' => $status];
+                }
+                break;
+
+            case 'cinetpay':
+                if ($gateway) {
+                    $apiConfig = $gateway['config'];
+                    $cleanedId = preg_replace('/[^A-Za-z0-9]/', '', $txnId);
+                    $payload = json_encode([
+                        'apikey' => $apiConfig['api_key'],
+                        'site_id' => $apiConfig['site_id'],
+                        'transaction_id' => $cleanedId
+                    ]);
+                    $ch = curl_init('https://api-checkout.cinetpay.com/v2/payment/check');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    $result = json_decode($response, true);
+                    if (isset($result['code']) && $result['code'] === '00' && isset($result['data'])) {
+                        $cinetStatus = $result['data']['status'] ?? '';
+                        if ($cinetStatus === 'ACCEPTED') {
+                            $operatorRef = $result['data']['operator_id'] ?? null;
+                            $completed = $paymentService->completeTransaction($txnId, $result['data']['payment_token'] ?? $cleanedId, $result['data'], $operatorRef);
+                            jsonSuccess(['status' => 'completed', 'result' => $completed]);
+                            return;
+                        }
+                        $verified = ['gateway_status' => $cinetStatus];
+                    }
+                }
+                break;
+
+            case 'paygate_global':
+            case 'paygate':
+                if ($gateway) {
+                    $apiConfig = $gateway['config'];
+                    $ch = curl_init('https://paygateglobal.com/api/v2/status');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                        'auth_token' => $apiConfig['auth_token'],
+                        'identifier' => $txnId
+                    ]));
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    $result = json_decode($response, true);
+                    $pgStatus = $result['status'] ?? null;
+                    if ($pgStatus === 0) {
+                        $operatorRef = $result['payment_reference'] ?? null;
+                        $completed = $paymentService->completeTransaction($txnId, $result['tx_reference'] ?? '', $result, $operatorRef);
+                        jsonSuccess(['status' => 'completed', 'result' => $completed]);
+                        return;
+                    }
+                    $verified = ['gateway_status' => $pgStatus === 2 ? 'pending' : ($pgStatus === 4 ? 'expired' : 'status_' . $pgStatus)];
+                }
+                break;
+
+            case 'feexpay':
+                if ($gateway) {
+                    $apiConfig = $gateway['config'];
+                    $apiKey = $apiConfig['api_key'] ?? '';
+                    $ch = curl_init('https://api.feexpay.me/api/transactions/status/' . urlencode($txnId));
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Bearer ' . $apiKey,
+                        'Content-Type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    $result = json_decode($response, true);
+                    $feexStatus = $result['status'] ?? '';
+                    if ($feexStatus === 'SUCCESSFUL') {
+                        $completed = $paymentService->completeTransaction($txnId, $result['reference'] ?? '', $result, $result['reference'] ?? null);
+                        jsonSuccess(['status' => 'completed', 'result' => $completed]);
+                        return;
+                    }
+                    $verified = ['gateway_status' => $feexStatus];
+                }
+                break;
+
+            default:
+                jsonError('Vérification non supportée pour cette passerelle: ' . $gatewayCode, 400);
+                return;
+        }
+
+        // Si on arrive ici, la transaction n'est pas encore approuvée
+        jsonSuccess([
+            'status' => 'still_pending',
+            'gateway_code' => $gatewayCode,
+            'details' => $verified
+        ]);
     }
 
     /**
