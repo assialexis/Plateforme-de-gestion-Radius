@@ -1620,11 +1620,26 @@ return [
 
     'sales.msg_loading_error' => 'Erreur chargement ventes',
     'sales.msg_loading_rates_error' => 'Erreur chargement taux',
-    'sales.update_rate_success' => 'Taux de conversion mis à jour',
-
-    // Notifications Système    'sales.msg_rate_update_error' => 'Erreur mise à jour taux',
+    'sales.msg_rate_updated' => 'Taux de commission mis à jour',
+    'sales.msg_rate_update_error' => 'Erreur mise à jour taux',
     'sales.msg_commissions_paid' => 'Commissions marquées comme payées',
     'sales.msg_mark_paid_error' => 'Erreur marquage paiement',
+    'sales.msg_no_data' => 'Aucune donnée à exporter',
+
+    'sales.today' => 'Aujourd\'hui',
+    'sales.this_month' => 'Ce mois-ci',
+    'sales.this_year' => 'Cette année',
+    'sales.selected_period' => 'Période sélectionnée',
+    'sales.export_csv' => 'Export CSV',
+    'sales.export_excel' => 'Export Excel',
+    'sales.export_json' => 'Export JSON',
+    'sales.export_pdf' => 'Export PDF',
+    'sales.sales_summary' => 'Résumé des ventes',
+    'sales.zone_sellers_perf' => 'Vendeurs de la zone (Performances globales)',
+    'sales.sales_in_period' => 'Ventes sur la période sélectionnée',
+    'sales.no_sales_recorded' => 'Aucune vente enregistrée.',
+    'sales.no_sales_seller_period' => 'Il n\'y a pas de ventes pour ce vendeur sur la période sélectionnée.',
+    'sales.export_error' => 'Erreur lors de l\'export',
 
     // =============================================
     // PAYMENTS / GATEWAYS (payment.*)

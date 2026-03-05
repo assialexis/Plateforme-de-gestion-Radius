@@ -11,7 +11,7 @@ $currentPage = 'sales'; ?>
                 <div>
                     <p
                         class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        Aujourd'hui
+                        <?= __('sales.today') ?>
                     </p>
                     <h3 class="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2 tracking-tight"
                         x-text="formatPrice(stats.summary?.revenue_today || 0)"></h3>
@@ -41,7 +41,7 @@ $currentPage = 'sales'; ?>
                 <div>
                     <p
                         class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        Ce mois-ci
+                        <?= __('sales.this_month') ?>
                     </p>
                     <h3 class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 tracking-tight"
                         x-text="formatPrice(stats.summary?.revenue_month || 0)"></h3>
@@ -71,7 +71,7 @@ $currentPage = 'sales'; ?>
                 <div>
                     <p
                         class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                        Cette année
+                        <?= __('sales.this_year') ?>
                     </p>
                     <h3 class="text-3xl font-black text-purple-600 dark:text-purple-400 mt-2 tracking-tight"
                         x-text="formatPrice(stats.summary?.revenue_year || 0)"></h3>
@@ -101,7 +101,7 @@ $currentPage = 'sales'; ?>
                 <div>
                     <p
                         class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        <?= __('sales.selected_period') ?? 'Période Sélectionnée'?>
+                        <?= __('sales.selected_period') ?>
                     </p>
                     <h3 class="text-3xl font-black text-gray-800 dark:text-white mt-2 tracking-tight"
                         x-text="formatPrice(stats.total_amount || 0)"></h3>
@@ -151,12 +151,12 @@ $currentPage = 'sales'; ?>
                 <div class="flex items-end gap-4 flex-wrap">
                     <div>
                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            <?= __('sales.role_gerant') ?? 'Gérant'?>
+                            <?= __('sales.role_gerant') ?>
                         </label>
                         <select x-model="filters.gerant_id" @change="loadSales()"
                             class="px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white text-sm">
                             <option value="">
-                                Tous
+                                <?= __('sales.all') ?>
                             </option>
                             <template x-for="gerant in sellers.filter(s => s.role === 'gerant')" :key="gerant.id">
                                 <option :value="gerant.id" x-text="gerant.full_name || gerant.username"></option>
@@ -225,7 +225,7 @@ $currentPage = 'sales'; ?>
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <?= __('sales.export') ?? 'Exporter' ?>
+                    <?= __('sales.export') ?>
                     <svg class="w-4 h-4 ml-2" :class="{'rotate-180': openExport}" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transition: transform 0.2s;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
@@ -235,19 +235,19 @@ $currentPage = 'sales'; ?>
                     class="absolute right-0 mt-2 w-48 bg-white dark:bg-[#161b22] rounded-xl shadow-lg border border-gray-200 dark:border-[#30363d] py-1 z-50">
                     <button @click="exportSales('csv'); openExport = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#30363d] flex items-center">
                         <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Export CSV
+                        <?= __('sales.export_csv') ?>
                     </button>
                     <button @click="exportSales('excel'); openExport = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#30363d] flex items-center">
                         <svg class="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Export Excel
+                        <?= __('sales.export_excel') ?>
                     </button>
                     <button @click="exportSales('json'); openExport = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#30363d] flex items-center">
                         <svg class="w-4 h-4 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                        Export JSON
+                        <?= __('sales.export_json') ?>
                     </button>
                     <button @click="exportSales('pdf'); openExport = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#30363d] flex items-center">
                         <svg class="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        Export PDF
+                        <?= __('sales.export_pdf') ?>
                     </button>
                 </div>
             </div>
@@ -1194,7 +1194,7 @@ $currentPage = 'sales'; ?>
                             <div>
                                 <h4
                                     class="text-sm border-b border-gray-100 dark:border-[#30363d] pb-2 font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                                    Résumé des ventes
+                                    <?= __('sales.sales_summary') ?>
                                 </h4>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div
@@ -1203,7 +1203,7 @@ $currentPage = 'sales'; ?>
                                             <div>
                                                 <p
                                                     class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                                    Aujourd'hui</p>
+                                                    <?= __('sales.today') ?></p>
                                                 <h3 class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1.5 tracking-tight"
                                                     x-text="formatPrice(sellerDetailsData.summary.revenue_today)"></h3>
                                             </div>
@@ -1233,7 +1233,7 @@ $currentPage = 'sales'; ?>
                                             <div>
                                                 <p
                                                     class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                                    Ce mois-ci</p>
+                                                    <?= __('sales.this_month') ?></p>
                                                 <h3 class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1.5 tracking-tight"
                                                     x-text="formatPrice(sellerDetailsData.summary.revenue_month)"></h3>
                                             </div>
@@ -1263,7 +1263,7 @@ $currentPage = 'sales'; ?>
                                             <div>
                                                 <p
                                                     class="text-sm font-semibold text-gray-500 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                                    Cette année</p>
+                                                    <?= __('sales.this_year') ?></p>
                                                 <h3 class="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1.5 tracking-tight"
                                                     x-text="formatPrice(sellerDetailsData.summary.revenue_year)"></h3>
                                             </div>
@@ -1294,10 +1294,10 @@ $currentPage = 'sales'; ?>
                                 <h4
                                     class="text-sm border-b border-gray-100 dark:border-[#30363d] pb-2 font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
                                     <template x-if="sellerDetailsData.seller.role === 'gerant'">
-                                        <span>Vendeurs de la zone (Performances globales)</span>
+                                        <span><?= __('sales.zone_sellers_perf') ?></span>
                                     </template>
                                     <template x-if="sellerDetailsData.seller.role !== 'gerant'">
-                                        <span>Ventes sur la période sélectionnée</span>
+                                        <span><?= __('sales.sales_in_period') ?></span>
                                     </template>
                                 </h4>
 
@@ -1310,16 +1310,16 @@ $currentPage = 'sales'; ?>
                                                 <tr>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d]">
-                                                        Ticket</th>
+                                                        <?= __('sales.ticket') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d]">
-                                                        Profil</th>
+                                                        <?= __('sales.profile') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d]">
-                                                        Date</th>
+                                                        <?= __('sales.date') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d] text-right">
-                                                        Montant</th>
+                                                        <?= __('sales.amount') ?></th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-50 dark:divide-[#30363d]">
@@ -1359,10 +1359,8 @@ $currentPage = 'sales'; ?>
                                                             </div>
                                                             <p
                                                                 class="text-sm font-medium text-gray-900 dark:text-white">
-                                                                Aucune vente enregistrée.</p>
-                                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Il
-                                                                n'y a pas de ventes pour ce vendeur sur la période
-                                                                sélectionnée.</p>
+                                                                <?= __('sales.no_sales_recorded') ?></p>
+                                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><?= __('sales.no_sales_seller_period') ?></p>
                                                         </td>
                                                     </tr>
                                                 </template>
@@ -1380,16 +1378,16 @@ $currentPage = 'sales'; ?>
                                                 <tr>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d]">
-                                                        Vendeur</th>
+                                                        <?= __('sales.seller') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d] text-right">
-                                                        Aujourd'hui</th>
+                                                        <?= __('sales.today') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d] text-right">
-                                                        Ce mois-ci</th>
+                                                        <?= __('sales.this_month') ?></th>
                                                     <th
                                                         class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-[#30363d] text-right">
-                                                        Cette année</th>
+                                                        <?= __('sales.this_year') ?></th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-50 dark:divide-[#30363d]">
@@ -1487,7 +1485,7 @@ $currentPage = 'sales'; ?>
                 <div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white"><?= __('sales.delete_confirm_title') ?></h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        <span x-text="deleteTargetId ? '<?= __('sales.delete_confirm_single') ?>' : '<?= __('sales.delete_confirm_batch') ?>'.replace(':count', selectedSales.length)"></span>
+                        <span x-text="deleteTargetId ? '<?= __js('sales.delete_confirm_single') ?>' : '<?= __js('sales.delete_confirm_batch') ?>'.replace(':count', selectedSales.length)"></span>
                     </p>
                 </div>
             </div>
@@ -1605,14 +1603,14 @@ $currentPage = 'sales'; ?>
                     } else {
                         await API.delete('/sales/batch', { ids: this.selectedSales });
                     }
-                    showToast('<?= __('sales.delete_success') ?>', 'success');
+                    showToast('<?= __js('sales.delete_success') ?>', 'success');
                     this.selectedSales = [];
                     this.deleteTargetId = null;
                     this.showDeleteConfirm = false;
                     this.loadSales();
                     this.loadStats();
                 } catch (error) {
-                    showToast(error.message || '<?= __('sales.delete_error') ?>', 'error');
+                    showToast(error.message || '<?= __js('sales.delete_error') ?>', 'error');
                 }
             },
 
@@ -2082,8 +2080,8 @@ $currentPage = 'sales'; ?>
                     }
 
                 } catch (error) {
-                    console.error('Erreur export:', error);
-                    showToast('Erreur lors de l\'export', 'error');
+                    console.error('Export error:', error);
+                    showToast(__('sales.export_error'), 'error');
                 }
             },
             

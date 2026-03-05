@@ -1623,6 +1623,22 @@ return [
     'sales.msg_rate_update_error' => 'Error updating rate',
     'sales.msg_commissions_paid' => 'Commissions marked as paid',
     'sales.msg_mark_paid_error' => 'Error marking payment',
+    'sales.msg_no_data' => 'No data to export',
+
+    'sales.today' => 'Today',
+    'sales.this_month' => 'This month',
+    'sales.this_year' => 'This year',
+    'sales.selected_period' => 'Selected period',
+    'sales.export_csv' => 'Export CSV',
+    'sales.export_excel' => 'Export Excel',
+    'sales.export_json' => 'Export JSON',
+    'sales.export_pdf' => 'Export PDF',
+    'sales.sales_summary' => 'Sales summary',
+    'sales.zone_sellers_perf' => 'Zone sellers (Overall performance)',
+    'sales.sales_in_period' => 'Sales in selected period',
+    'sales.no_sales_recorded' => 'No sales recorded.',
+    'sales.no_sales_seller_period' => 'No sales found for this seller in the selected period.',
+    'sales.export_error' => 'Error during export',
 
     // =============================================
     // PAYMENTS / GATEWAYS (payment.*)
