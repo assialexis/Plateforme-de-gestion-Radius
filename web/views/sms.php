@@ -153,6 +153,7 @@
         <!-- Sub-tabs PPPoE / Hotspot -->
         <div class="flex items-center justify-between mb-5">
             <div class="flex gap-2">
+                <?php if ($isModuleActive('pppoe')): ?>
                 <button @click="templateCategory = 'pppoe'; loadTemplates()"
                     class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     :class="templateCategory === 'pppoe'
@@ -165,6 +166,7 @@
                         <?= __('sms.sub_pppoe') ?>
                     </span>
                 </button>
+                <?php endif; ?>
                 <button @click="templateCategory = 'hotspot'; loadTemplates()"
                     class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                     :class="templateCategory === 'hotspot'
@@ -754,7 +756,7 @@ function smsPage() {
         // Templates state
         templates: [],
         templatesLoaded: false,
-        templateCategory: 'pppoe',
+        templateCategory: '<?= $isModuleActive('pppoe') ? 'pppoe' : 'hotspot' ?>',
         templateVariables: [],
         showTemplateModal: false,
         templateSaving: false,
