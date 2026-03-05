@@ -521,6 +521,7 @@ $currentPage = 'pppoe-reminders'; ?>
                             <span class="text-xs text-gray-400">
                                 <span x-text="(ruleForm.message_template || '').length"></span> car.
                                 · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((ruleForm.message_template || '').length)"></span> SMS
+                                · <span class="text-amber-500 dark:text-amber-400" x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((ruleForm.message_template || '').length)"></span> CSMS
                             </span>
                         </div>
                         <!-- Variable chips -->

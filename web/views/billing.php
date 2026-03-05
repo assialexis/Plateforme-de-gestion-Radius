@@ -1121,7 +1121,7 @@ $currentPage = 'billing'; ?>
                                     <?php endforeach; ?>
                                 </div>
                                 <span class="text-xs text-gray-400 ml-2 flex-shrink-0"
-                                    x-text="(settings.payment_notif_template_sms || '').length + ' car. · ' + ((l) => l <= 160 ? 1 : Math.ceil(l / 153))((settings.payment_notif_template_sms || '').length) + ' SMS'"></span>
+                                    x-text="(settings.payment_notif_template_sms || '').length + ' car. · ' + ((l) => l <= 160 ? 1 : Math.ceil(l / 153))((settings.payment_notif_template_sms || '').length) + ' SMS · ' + ((l) => l <= 160 ? 1 : Math.ceil(l / 153))((settings.payment_notif_template_sms || '').length) + ' CSMS'"></span>
                             </div>
                             <!-- Aperçu SMS -->
                             <div x-show="settings.payment_notif_template_sms" class="mt-3">

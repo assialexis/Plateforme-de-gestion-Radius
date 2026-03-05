@@ -345,6 +345,7 @@
                         <span x-text="message.length"></span> <?= __('marketing.chars') ?>
                         <span x-show="channel === 'sms'">
                             &middot; <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))(message.length)"></span> SMS
+                            &middot; <span class="text-amber-500 dark:text-amber-400" x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))(message.length)"></span> CSMS
                         </span>
                     </span>
                 </div>
