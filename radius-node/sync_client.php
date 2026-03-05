@@ -282,11 +282,13 @@ function collectPushData(PDO $pdo): array
     $stmt = $pdo->query("SELECT * FROM auth_logs WHERE synced = 0 LIMIT 500");
     $data['auth_logs'] = $stmt->fetchAll();
 
-    // Voucher updates (compteurs modifiés localement)
+    // Voucher updates (compteurs et ventes modifiés localement)
     $stmt = $pdo->query("
-        SELECT id, username, time_used, data_used, upload_used, download_used, status, first_use
+        SELECT id, username, time_used, data_used, upload_used, download_used, status, first_use,
+               sold_at, sold_by, sold_on_nas_id, vendeur_id, gerant_id,
+               payment_method, sale_amount, commission_vendeur, commission_gerant, commission_admin
         FROM vouchers
-        WHERE (time_used > 0 OR data_used > 0) AND status IN ('active', 'expired')
+        WHERE (time_used > 0 OR data_used > 0 OR sold_at IS NOT NULL) AND status IN ('active', 'expired')
     ");
     $data['voucher_updates'] = $stmt->fetchAll();
 

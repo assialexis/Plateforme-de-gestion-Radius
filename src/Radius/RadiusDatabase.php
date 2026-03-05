@@ -6734,14 +6734,14 @@ class RadiusDatabase
             }
         }
 
-        // Mettre à jour les compteurs de vouchers (données directes du nœud)
+        // Mettre à jour les compteurs et ventes de vouchers (données directes du nœud)
         if (!empty($data['voucher_updates'])) {
             foreach ($data['voucher_updates'] as $update) {
                 try {
                     $username = $update['username'] ?? '';
                     if (empty($username)) continue;
 
-                    // Mettre à jour les compteurs avec GREATEST pour ne jamais réduire
+                    // Mettre à jour les compteurs avec GREATEST + les champs de vente
                     $stmt = $this->pdo->prepare("
                         UPDATE vouchers SET
                             time_used = GREATEST(time_used, ?),
@@ -6749,6 +6749,16 @@ class RadiusDatabase
                             upload_used = GREATEST(upload_used, ?),
                             download_used = GREATEST(download_used, ?),
                             first_use = COALESCE(first_use, ?),
+                            sold_at = COALESCE(sold_at, ?),
+                            sold_by = COALESCE(sold_by, ?),
+                            sold_on_nas_id = COALESCE(sold_on_nas_id, ?),
+                            vendeur_id = COALESCE(vendeur_id, ?),
+                            gerant_id = COALESCE(gerant_id, ?),
+                            payment_method = COALESCE(payment_method, ?),
+                            sale_amount = COALESCE(sale_amount, ?),
+                            commission_vendeur = GREATEST(commission_vendeur, ?),
+                            commission_gerant = GREATEST(commission_gerant, ?),
+                            commission_admin = GREATEST(commission_admin, ?),
                             status = IF(? = 'expired', 'expired', status)
                         WHERE username = ?
                     ");
@@ -6758,13 +6768,23 @@ class RadiusDatabase
                         $update['upload_used'] ?? 0,
                         $update['download_used'] ?? 0,
                         $update['first_use'] ?? null,
+                        $update['sold_at'] ?? null,
+                        $update['sold_by'] ?? null,
+                        $update['sold_on_nas_id'] ?? null,
+                        $update['vendeur_id'] ?? null,
+                        $update['gerant_id'] ?? null,
+                        $update['payment_method'] ?? null,
+                        $update['sale_amount'] ?? null,
+                        $update['commission_vendeur'] ?? 0,
+                        $update['commission_gerant'] ?? 0,
+                        $update['commission_admin'] ?? 0,
                         $update['status'] ?? 'active',
                         $username,
                     ]);
 
                     if ($stmt->rowCount() > 0) {
                         $imported['voucher_updates']++;
-                        file_put_contents($debugLog, "  OK voucher_update for '{$username}': time_used={$update['time_used']}, data_used={$update['data_used']}\n", FILE_APPEND);
+                        file_put_contents($debugLog, "  OK voucher_update for '{$username}': time_used={$update['time_used']}, sold_at=" . ($update['sold_at'] ?? 'NULL') . "\n", FILE_APPEND);
                     }
                 } catch (PDOException $e) {
                     file_put_contents($debugLog, "  ERROR voucher_update: " . $e->getMessage() . "\n", FILE_APPEND);

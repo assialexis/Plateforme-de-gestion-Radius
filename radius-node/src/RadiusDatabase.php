@@ -1947,81 +1947,61 @@ class RadiusDatabase
             $nasId = $nas['id'];
             $zoneId = $nas['zone_id'];
 
-            // Trouver le vendeur assigné à ce NAS (fallback)
-            $stmt = $this->pdo->prepare("
-                SELECT un.user_id, u.role, u.parent_id
-                FROM user_nas un
-                JOIN users u ON un.user_id = u.id
-                WHERE un.nas_id = ? AND un.can_manage = 1 AND u.is_active = 1
-                ORDER BY u.role = 'vendeur' DESC, un.assigned_at ASC
-                LIMIT 1
-            ");
-            $stmt->execute([$nasId]);
-            $nasSeller = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // 1. Déterminer le vendeur_id (priorité au voucher, sinon NAS)
-            $vendeurId = !empty($voucher['vendeur_id']) ? $voucher['vendeur_id'] : ($nasSeller ? $nasSeller['user_id'] : null);
-
-            // 2. Retracer la hiérarchie pour associer le gérant et l'admin
-            $gerantId = null;
+            // Trouver le vendeur assigné à ce NAS (tables users/user_nas peuvent ne pas exister sur le nœud)
+            $nasSeller = null;
+            $vendeurId = !empty($voucher['vendeur_id']) ? $voucher['vendeur_id'] : null;
+            $gerantId = !empty($voucher['gerant_id']) ? $voucher['gerant_id'] : null;
             $adminId = $voucher['admin_id'] ?? null;
-
-            // Si le ticket n'avait pas de vendeur, il est désormais affecté à celui défini par le NAS
             $soldBy = $vendeurId;
 
-            if ($vendeurId) {
-                $stmtUser = $this->pdo->prepare("SELECT id, role, parent_id FROM users WHERE id = ?");
-                $stmtUser->execute([$vendeurId]);
-                $userTarget = $stmtUser->fetch(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $this->pdo->prepare("
+                    SELECT un.user_id, u.role, u.parent_id
+                    FROM user_nas un
+                    JOIN users u ON un.user_id = u.id
+                    WHERE un.nas_id = ? AND un.can_manage = 1 AND u.is_active = 1
+                    ORDER BY u.role = 'vendeur' DESC, un.assigned_at ASC
+                    LIMIT 1
+                ");
+                $stmt->execute([$nasId]);
+                $nasSeller = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($userTarget) {
-                    if ($userTarget['role'] === 'vendeur') {
-                        $stmtParent = $this->pdo->prepare("SELECT id, role, parent_id FROM users WHERE id = ?");
-                        $stmtParent->execute([$userTarget['parent_id']]);
-                        $parent = $stmtParent->fetch(PDO::FETCH_ASSOC);
-                        if ($parent) {
-                            if ($parent['role'] === 'gerant') {
-                                $gerantId = $parent['id'];
-                                if (!$adminId)
-                                    $adminId = $parent['parent_id'];
-                            }
-                            elseif ($parent['role'] === 'admin') {
-                                if (!$adminId)
-                                    $adminId = $parent['id'];
+                if (!$vendeurId && $nasSeller) {
+                    $vendeurId = $nasSeller['user_id'];
+                    $soldBy = $vendeurId;
+                }
 
-                                // Parent n'est pas gérant, on cherche par zone assignée!
-                                $stmtZone = $this->pdo->prepare("
-                                    SELECT u.id, u.parent_id 
-                                    FROM user_zones uz 
-                                    JOIN users u ON uz.user_id = u.id 
-                                    WHERE uz.zone_id IN (SELECT zone_id FROM user_zones WHERE user_id = ?) 
-                                    AND u.role = 'gerant' 
-                                    LIMIT 1
-                                ");
-                                $stmtZone->execute([$vendeurId]);
-                                $gerantCheck = $stmtZone->fetch(PDO::FETCH_ASSOC);
-                                if ($gerantCheck) {
-                                    $gerantId = $gerantCheck['id'];
-                                    if (!$adminId) {
-                                        $adminId = $gerantCheck['parent_id'];
-                                    }
+                if ($vendeurId) {
+                    $stmtUser = $this->pdo->prepare("SELECT id, role, parent_id FROM users WHERE id = ?");
+                    $stmtUser->execute([$vendeurId]);
+                    $userTarget = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
+                    if ($userTarget) {
+                        if ($userTarget['role'] === 'vendeur') {
+                            $stmtParent = $this->pdo->prepare("SELECT id, role, parent_id FROM users WHERE id = ?");
+                            $stmtParent->execute([$userTarget['parent_id']]);
+                            $parent = $stmtParent->fetch(PDO::FETCH_ASSOC);
+                            if ($parent) {
+                                if ($parent['role'] === 'gerant') {
+                                    $gerantId = $parent['id'];
+                                    if (!$adminId) $adminId = $parent['parent_id'];
+                                } elseif ($parent['role'] === 'admin') {
+                                    if (!$adminId) $adminId = $parent['id'];
                                 }
                             }
+                        } elseif ($userTarget['role'] === 'gerant') {
+                            $gerantId = $userTarget['id'];
+                            $vendeurId = null;
+                            if (!$adminId) $adminId = $userTarget['parent_id'];
+                        } elseif ($userTarget['role'] === 'admin') {
+                            if (!$adminId) $adminId = $userTarget['id'];
+                            $vendeurId = null;
                         }
                     }
-                    elseif ($userTarget['role'] === 'gerant') {
-                        // Le 'vendeurId' est en fait un gérant qui vend en direct
-                        $gerantId = $userTarget['id'];
-                        $vendeurId = null; // Optionnel : annuler le vendeur_id si ce n'est pas un vendeur strict
-                        if (!$adminId)
-                            $adminId = $userTarget['parent_id'];
-                    }
-                    elseif ($userTarget['role'] === 'admin') {
-                        if (!$adminId)
-                            $adminId = $userTarget['id'];
-                        $vendeurId = null;
-                    }
                 }
+            } catch (PDOException $e) {
+                // Tables users/user_nas n'existent pas sur le nœud - continuer sans info vendeur
+                error_log("trackVoucherSale: User lookup skipped (tables may not exist): " . $e->getMessage());
             }
 
             // Récupérer le prix du profil
@@ -2033,8 +2013,13 @@ class RadiusDatabase
                 $profilePrice = $profile['price'] ?? 0;
             }
 
-            // Calculer les commissions
-            $commissions = $this->calculateSaleCommissions($profilePrice, $zoneId, $voucher['profile_id']);
+            // Calculer les commissions (table commission_rates peut ne pas exister sur le nœud)
+            $commissions = ['vendeur' => 0, 'gerant' => 0, 'admin' => 0];
+            try {
+                $commissions = $this->calculateSaleCommissions($profilePrice, $zoneId, $voucher['profile_id']);
+            } catch (PDOException $e) {
+                error_log("trackVoucherSale: Commission calc skipped: " . $e->getMessage());
+            }
 
             // Déterminer si c'est une mise à jour partielle (ticket déjà payé en ligne) ou complète
             $isOnlinePayment = !empty($voucher['sold_at']) && !empty($voucher['payment_method']);
