@@ -712,6 +712,7 @@ $router->post('/settings/password', fn($p) => $settingsController->changePasswor
 $router->get('/captive-portal/templates', fn($p) => $captivePortalController->listTemplates());
 $router->get('/captive-portal/templates/{id}', fn($p) => $captivePortalController->getTemplate($p));
 $router->post('/captive-portal/templates/{id}/save', fn($p) => $captivePortalController->saveTemplate($p));
+$router->get('/captive-portal/templates/{id}/download', fn($p) => $captivePortalController->downloadTemplate($p));
 
 // Routes SuperAdmin
 $router->get('/superadmin/admins', fn($p) => $superAdminController->listAdmins());

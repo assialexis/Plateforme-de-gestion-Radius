@@ -70,6 +70,19 @@ if (!$templateId) {
                 </svg>
                 <span x-text="saving ? 'Sauvegarde...' : 'Sauvegarder'"></span>
             </button>
+
+            <!-- Download ZIP -->
+            <button @click="downloadZip()" :disabled="downloading"
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg x-show="!downloading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <svg x-show="downloading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span x-text="downloading ? 'Téléchargement...' : 'Télécharger ZIP'"></span>
+            </button>
         </div>
     </div>
 
@@ -644,6 +657,7 @@ if (!$templateId) {
             loading: true,
             loadingPreview: false,
             saving: false,
+            downloading: false,
             zones: [],
             availableProfiles: [],
             mediaItems: [],
@@ -1158,6 +1172,27 @@ if (!$templateId) {
                     this.showNotification('Erreur de sauvegarde: ' + error.message, 'error');
                 } finally {
                     this.saving = false;
+                }
+            },
+
+            async downloadZip() {
+                this.downloading = true;
+                try {
+                    const response = await fetch(`api.php?route=/captive-portal/templates/${this.templateId}/download`);
+                    if (!response.ok) throw new Error('Erreur téléchargement');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.templateId.replace(/_/g, ' ') + '.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } catch (error) {
+                    this.showNotification('Erreur: ' + error.message, 'error');
+                } finally {
+                    this.downloading = false;
                 }
             },
 

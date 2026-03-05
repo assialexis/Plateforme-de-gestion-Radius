@@ -310,6 +310,56 @@ class CaptivePortalController
     }
 
     /**
+     * Download template as ZIP
+     */
+    public function downloadTemplate($params)
+    {
+        $this->auth->requireRole('admin');
+
+        $id = is_array($params) ? ($params['id'] ?? '') : (string)$params;
+        $folderName = str_replace('_', ' ', $id);
+        $templateDir = $this->templatesDir . '/' . $folderName;
+
+        if (!$this->templatesDir || !is_dir($templateDir) || !in_array($folderName, ['Template 18', 'Template 19'])) {
+            jsonError('Template not found', 404);
+        }
+
+        $zipFile = tempnam(sys_get_temp_dir(), 'tpl_') . '.zip';
+        $zip = new \ZipArchive();
+
+        if ($zip->open($zipFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            jsonError('Cannot create ZIP', 500);
+        }
+
+        $this->addDirToZip($zip, $templateDir, $folderName);
+        $zip->close();
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $folderName . '.zip"');
+        header('Content-Length: ' . filesize($zipFile));
+        readfile($zipFile);
+        unlink($zipFile);
+        exit;
+    }
+
+    /**
+     * Add directory recursively to ZIP
+     */
+    private function addDirToZip(\ZipArchive $zip, string $dir, string $baseName): void
+    {
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($files as $file) {
+            $filePath = $file->getRealPath();
+            $relativePath = $baseName . '/' . substr($filePath, strlen($dir) + 1);
+            $zip->addFile($filePath, $relativePath);
+        }
+    }
+
+    /**
      * Détecte l'URL de base du serveur
      */
     private function detectBaseUrl()
