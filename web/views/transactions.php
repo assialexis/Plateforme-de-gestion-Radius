@@ -49,7 +49,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400"><?= __('transaction.total_revenue') ?></p>
-                    <p class="text-2xl font-bold text-primary-600 dark:text-primary-400" x-text="formatPrice(stats.total_amount || 0)"></p>
+                    <p class="text-2xl font-bold text-primary-600 dark:text-primary-400" x-text="formatPrice(stats.total_revenue || 0)"></p>
                 </div>
                 <div class="w-12 h-12 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                     <svg class="w-6 h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
