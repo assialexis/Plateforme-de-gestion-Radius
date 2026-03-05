@@ -314,9 +314,9 @@ function collectPushData(PDO $pdo): array
 
     $data['has_data'] = !empty($data['sessions']) || !empty($data['auth_logs']) || !empty($data['voucher_updates']);
 
-    // Aussi les sessions PPPoE
+    // Aussi les sessions PPPoE (non sync + actives pour mettre à jour les compteurs)
     try {
-        $stmt = $pdo->query("SELECT * FROM pppoe_sessions WHERE synced = 0 LIMIT 500");
+        $stmt = $pdo->query("SELECT * FROM pppoe_sessions WHERE synced = 0 OR stop_time IS NULL LIMIT 500");
         $pppoe = $stmt->fetchAll();
         if (!empty($pppoe)) {
             $data['pppoe_sessions'] = $pppoe;
