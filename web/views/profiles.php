@@ -553,7 +553,7 @@ $currentPage = 'profiles'; ?>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                <?= __('profile.form_price')?>
+                                <?= __('profile.form_price')?> (<span x-text="APP_CURRENCY"></span>)
                             </label>
                             <input type="number" x-model="form.price" placeholder="100"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">

@@ -60,7 +60,7 @@ $currentPage = 'superadmin-sms-config'; ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            <?= __('superadmin.sms_cost_per_sms') ?? 'Coût par SMS (FCFA)' ?>
+                            <?= __('superadmin.sms_cost_per_sms') ?? 'Coût par SMS' ?> (<span x-text="APP_CURRENCY"></span>)
                         </label>
                         <div class="flex items-center gap-2">
                             <input type="number" x-model="smsSettings.sms_credit_cost_fcfa" min="1" step="1"

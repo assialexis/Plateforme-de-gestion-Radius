@@ -553,7 +553,7 @@ return [
     'profile.form_max_connections' => 'Max connections',
     'profile.form_download' => 'Download (Mbps)',
     'profile.form_upload' => 'Upload (Mbps)',
-    'profile.form_price' => 'Price (XAF)',
+    'profile.form_price' => 'Price',
     'profile.form_zone' => 'Zone *',
     'profile.form_active' => 'Profile active',
 
@@ -3734,7 +3734,7 @@ return [
     // SuperAdmin SMS Credits
     'superadmin.sms_credit_settings' => 'SMS Credits Configuration (CSMS)',
     'superadmin.sms_credit_settings_desc' => 'Platform SMS gateway billed to admins in CSMS',
-    'superadmin.sms_cost_per_sms' => 'Cost per SMS (FCFA)',
+    'superadmin.sms_cost_per_sms' => 'Cost per SMS',
     'superadmin.sms_credit_enabled' => 'CSMS system active',
     'superadmin.sms_settings_saved' => 'SMS settings updated',
     'superadmin.sms_credits_adjusted' => 'SMS credits adjusted successfully',

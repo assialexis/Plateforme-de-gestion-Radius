@@ -553,7 +553,7 @@ return [
     'profile.form_max_connections' => 'Connexions max',
     'profile.form_download' => 'Download (Mbps)',
     'profile.form_upload' => 'Upload (Mbps)',
-    'profile.form_price' => 'Prix (XAF)',
+    'profile.form_price' => 'Prix',
     'profile.form_zone' => 'Zone *',
     'profile.form_active' => 'Profil actif',
 
@@ -3718,7 +3718,7 @@ return [
     // SuperAdmin CSMS
     'superadmin.sms_credit_settings' => 'Configuration des crédits SMS (CSMS)',
     'superadmin.sms_credit_settings_desc' => 'Passerelle SMS plateforme facturée aux admins en CSMS',
-    'superadmin.sms_cost_per_sms' => 'Coût par SMS (FCFA)',
+    'superadmin.sms_cost_per_sms' => 'Coût par SMS',
     'superadmin.sms_credit_enabled' => 'Système CSMS actif',
     'superadmin.platform_sms_provider' => 'Provider SMS backend',
     'superadmin.platform_sms_config' => 'Configuration du provider backend',
