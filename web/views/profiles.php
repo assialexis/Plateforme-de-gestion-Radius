@@ -5,8 +5,7 @@ $currentPage = 'profiles'; ?>
     <!-- Lien page de paiement -->
     <div class="mb-5 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border border-primary-200 dark:border-primary-800/40 rounded-xl p-4"
         x-data="{ payUrl: '', copied: false }" x-init="
-            const base = window.location.origin + window.location.pathname.replace(/\/web\/.*$/, '/web/pay.php');
-            payUrl = base + '?admin=<?= $auth->getAdminId() ?>';
+            payUrl = window.location.origin + '/pay.php?admin=<?= $auth->getAdminId() ?>';
          ">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">

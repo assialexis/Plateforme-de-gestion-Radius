@@ -299,9 +299,9 @@ class PPPoEPayController
         // Le config peut être déjà un tableau ou une chaîne JSON
         $gatewayConfig = is_array($gateway['config']) ? $gateway['config'] : (json_decode($gateway['config'], true) ?? []);
         $baseUrl = $this->config['app']['base_url'] ?? $this->detectBaseUrl();
-        $callbackUrl = $baseUrl . '/web/pppoe-payment-callback.php';
-        $successUrl = $baseUrl . '/web/pppoe-payment-success.php?transaction=' . $transactionId;
-        $cancelUrl = $baseUrl . '/web/pppoe-pay.php?cancelled=1';
+        $callbackUrl = $baseUrl . '/pppoe-payment-callback.php';
+        $successUrl = $baseUrl . '/pppoe-payment-success.php?transaction=' . $transactionId;
+        $cancelUrl = $baseUrl . '/pppoe-pay.php?cancelled=1';
 
         switch ($gateway['gateway_code']) {
             case 'fedapay':
@@ -312,7 +312,7 @@ class PPPoEPayController
 
             case 'kkiapay':
                 // Kkiapay utilise une intégration JS côté client
-                return $baseUrl . '/web/pppoe-kkiapay.php?transaction=' . $transactionId;
+                return $baseUrl . '/pppoe-kkiapay.php?transaction=' . $transactionId;
 
             case 'feexpay':
                 return $this->initiateFeexPay($gatewayConfig, $transactionId, $amount, $phone, $description, $callbackUrl);
@@ -483,7 +483,7 @@ class PPPoEPayController
             $this->updateTransaction($transactionId, ['gateway_transaction_id' => $response['reference']]);
             // FeexPay envoie un push USSD au client, pas de redirect
             $baseUrl = $this->config['app']['base_url'] ?? $this->detectBaseUrl();
-            return $baseUrl . '/web/pppoe-payment-success.php?transaction=' . $transactionId . '&status=pending';
+            return $baseUrl . '/pppoe-payment-success.php?transaction=' . $transactionId . '&status=pending';
         }
 
         throw new Exception('Erreur FeexPay: ' . json_encode($response));

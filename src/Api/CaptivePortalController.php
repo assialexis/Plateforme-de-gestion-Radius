@@ -187,7 +187,7 @@ class CaptivePortalController
                 $user = $this->auth->getUser();
                 if ($user) $adminId = $user->getId();
             } catch (\Exception $e) {}
-            $config['buy_ticket_url'] = $baseUrl . '/web/pay.php?admin=' . $adminId;
+            $config['buy_ticket_url'] = $baseUrl . '/pay.php?admin=' . $adminId;
         }
 
         $data = [
@@ -337,7 +337,7 @@ class CaptivePortalController
             if ($profile) {
                 $name = htmlspecialchars($profile['name']);
                 $price = number_format($profile['price'], 0, '', ' ') . ' Fcfa';
-                $link = $baseUrl . '/web/pay.php?profile=' . (int)$profile['id'];
+                $link = $baseUrl . '/pay.php?profile=' . (int)$profile['id'];
 
                 $featuresHtml = "";
                 if (!empty($profile['description'])) {

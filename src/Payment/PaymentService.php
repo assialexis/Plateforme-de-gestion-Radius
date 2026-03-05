@@ -1881,7 +1881,7 @@ class PaymentService
             throw new Exception('Profile not found');
         }
 
-        $url = $this->baseUrl . '/web/pay.php?profile=' . $profileId;
+        $url = $this->baseUrl . '/pay.php?profile=' . $profileId;
 
         // Ajouter l'admin_id pour l'isolation multi-tenant
         $effectiveAdminId = $adminId ?? ($profile['admin_id'] ?? null);
