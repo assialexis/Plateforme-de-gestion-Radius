@@ -220,14 +220,26 @@ $currentPage = 'nas'; ?>
 
                         <!-- Statut API (séparé) -->
                         <template x-if="nas.apiStatus === 'ok' && nas.apiData">
-                            <div class="flex items-center text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/10 px-3 py-1.5 rounded-lg border border-orange-100 dark:border-orange-800/30">
-                                <span class="relative flex h-2.5 w-2.5 mr-2.5">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+                            <div class="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/10 px-3 py-2 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
+                                <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                                 </span>
-                                <span class="font-medium mr-1">API</span>
-                                <span class="text-xs opacity-75" x-text="nas.apiLatency ? '(' + nas.apiLatency + 'ms)' : ''"></span>
-                                <span class="text-xs opacity-75 hidden sm:inline ml-2" x-text="'| ' + (nas.apiData.board || '') + ' | v' + (nas.apiData.version || '') + ' | Up: ' + (nas.apiData.uptime || '')"></span>
+                                <span class="font-semibold text-emerald-700 dark:text-emerald-300 text-xs">API</span>
+                                <div class="flex items-center gap-2 ml-auto text-[11px]">
+                                    <template x-if="nas.apiData.board">
+                                        <span class="px-1.5 py-0.5 rounded bg-white dark:bg-[#161b22] text-gray-700 dark:text-gray-300 font-mono border border-gray-200 dark:border-[#30363d]" x-text="nas.apiData.board"></span>
+                                    </template>
+                                    <template x-if="nas.apiData.version">
+                                        <span class="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono border border-blue-100 dark:border-blue-800/30" x-text="'v' + nas.apiData.version"></span>
+                                    </template>
+                                    <template x-if="nas.apiData.uptime">
+                                        <span class="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-mono border border-emerald-200 dark:border-emerald-800/30" x-text="'⏱ ' + nas.apiData.uptime"></span>
+                                    </template>
+                                    <template x-if="nas.apiLatency">
+                                        <span class="text-gray-400 dark:text-gray-500 font-mono" x-text="nas.apiLatency + 'ms'"></span>
+                                    </template>
+                                </div>
                             </div>
                         </template>
                         <template x-if="nas.apiStatus === 'fail'">
