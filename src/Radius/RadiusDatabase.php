@@ -1818,6 +1818,16 @@ class RadiusDatabase
             $adminId = (int)$nas['admin_id'];
         }
 
+        // Fallback: résoudre admin_id depuis le voucher (username)
+        if ($adminId === null) {
+            $stmtVoucher = $this->pdo->prepare("SELECT admin_id FROM vouchers WHERE username = ? LIMIT 1");
+            $stmtVoucher->execute([$username]);
+            $voucherAdmin = $stmtVoucher->fetchColumn();
+            if ($voucherAdmin) {
+                $adminId = (int)$voucherAdmin;
+            }
+        }
+
         $stmt = $this->pdo->prepare("
             INSERT INTO auth_logs (username, nas_ip, nas_name, action, reason, client_mac, client_ip, admin_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
