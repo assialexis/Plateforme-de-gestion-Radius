@@ -294,9 +294,8 @@
                                 </label>
                                 <select x-model="form.radius_server_id"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-[#21262d] dark:text-white">
-                                    <option value=""><?= __('zone.form_radius_server_local') ?? 'Local (ce serveur)' ?></option>
                                     <template x-for="rs in radiusServers" :key="rs.id">
-                                        <option :value="rs.id" x-text="rs.name + ' (' + rs.host + ')'"></option>
+                                        <option :value="rs.id" x-text="rs.name"></option>
                                     </template>
                                 </select>
                                 <p class="text-xs text-gray-400 mt-1"><?= __('zone.form_radius_server_help') ?? 'Serveur RADIUS qui gèrera les authentifications de cette zone' ?></p>
