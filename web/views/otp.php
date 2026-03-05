@@ -149,13 +149,20 @@
                     <textarea x-model="config.sms_template" rows="3"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                         placeholder="Votre code OTP: {{otp_code}}"></textarea>
-                    <div class="mt-1 flex flex-wrap gap-1">
-                        <span class="text-xs text-gray-500 dark:text-gray-400"><?= __('otp.available_vars') ?>:</span>
-                        <template x-for="v in ['{{otp_code}}', '{{company_name}}', '{{expiry_duration}}']">
-                            <button @click="config.sms_template += ' ' + v" type="button"
-                                class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 font-mono"
-                                x-text="v"></button>
-                        </template>
+                    <div class="mt-1 flex items-center justify-between">
+                        <div class="flex flex-wrap gap-1">
+                            <span class="text-xs text-gray-500 dark:text-gray-400"><?= __('otp.available_vars') ?>:</span>
+                            <template x-for="v in ['{{otp_code}}', '{{company_name}}', '{{expiry_duration}}']">
+                                <button @click="config.sms_template += ' ' + v" type="button"
+                                    class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 font-mono"
+                                    x-text="v"></button>
+                            </template>
+                        </div>
+                        <span class="text-xs text-gray-400 flex-shrink-0 ml-2">
+                            <span x-text="(config.sms_template || '').length"></span> car.
+                            · <span x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((config.sms_template || '').length)"></span> SMS
+                            · <span class="text-amber-500 dark:text-amber-400" x-text="((l) => l <= 160 ? 1 : Math.ceil(l / 153))((config.sms_template || '').length)"></span> CSMS
+                        </span>
                     </div>
                 </div>
 
