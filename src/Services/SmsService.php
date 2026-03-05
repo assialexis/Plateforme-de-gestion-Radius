@@ -184,8 +184,23 @@ class SmsService
 
     // --- Platform SMS (CSMS) ---
 
+    /**
+     * Calcule le nombre de segments SMS nécessaires pour un message.
+     * 1 SMS = 160 caractères, au-delà chaque segment fait 153 caractères (header UDH).
+     */
+    public static function calculateSmsSegments(string $message): int
+    {
+        $length = mb_strlen($message);
+        if ($length <= 160) {
+            return 1;
+        }
+        return (int)ceil($length / 153);
+    }
+
     private function sendViaPlatform(int $adminId, string $phone, string $message, ?string $reference = null): array
     {
+        $segments = self::calculateSmsSegments($message);
+
         $this->pdo->beginTransaction();
         try {
             // 1. Check CSMS balance with row lock
@@ -193,9 +208,12 @@ class SmsService
             $stmt->execute([$adminId]);
             $balance = (float)$stmt->fetchColumn();
 
-            if ($balance < 1) {
+            if ($balance < $segments) {
                 $this->pdo->rollBack();
-                return ['success' => false, 'error' => 'Solde CSMS insuffisant. Convertissez des CRT en CSMS.'];
+                return [
+                    'success' => false,
+                    'error' => "Solde CSMS insuffisant. Ce message nécessite {$segments} CSMS ({$this->getMessageLength($message)} caractères). Solde actuel: {$balance} CSMS."
+                ];
             }
 
             // 2. Load platform backend config from global_settings
@@ -220,19 +238,26 @@ class SmsService
                 default => ['success' => false, 'error' => 'Provider backend inconnu: ' . $backendProvider],
             };
 
-            // 4. Deduct 1 CSMS only on success
+            // 4. Deduct CSMS based on segments, only on success
             if ($result['success']) {
-                $newBalance = $balance - 1;
+                $newBalance = $balance - $segments;
                 $stmt = $this->pdo->prepare("UPDATE users SET sms_credit_balance = ? WHERE id = ?");
                 $stmt->execute([$newBalance, $adminId]);
 
                 $stmt = $this->pdo->prepare(
                     "INSERT INTO sms_credit_transactions (admin_id, type, amount, balance_after, reference_type, reference_id, description)
-                     VALUES (?, 'sms_sent', -1, ?, 'sms_notification', ?, ?)"
+                     VALUES (?, 'sms_sent', ?, ?, 'sms_notification', ?, ?)"
                 );
-                $stmt->execute([$adminId, $newBalance, $reference, "SMS envoyé au $phone"]);
+                $stmt->execute([
+                    $adminId,
+                    -$segments,
+                    $newBalance,
+                    $reference,
+                    "SMS ({$segments} segment" . ($segments > 1 ? 's' : '') . ") envoyé au $phone"
+                ]);
 
                 $result['credits'] = $newBalance;
+                $result['segments'] = $segments;
             }
 
             $this->pdo->commit();
@@ -241,6 +266,11 @@ class SmsService
             $this->pdo->rollBack();
             return ['success' => false, 'error' => 'Erreur plateforme SMS: ' . $e->getMessage()];
         }
+    }
+
+    private function getMessageLength(string $message): int
+    {
+        return mb_strlen($message);
     }
 
     private function balancePlatform(int $adminId): array
