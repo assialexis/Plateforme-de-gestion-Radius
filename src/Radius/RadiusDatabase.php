@@ -6759,7 +6759,12 @@ class RadiusDatabase
                             commission_vendeur = GREATEST(commission_vendeur, ?),
                             commission_gerant = GREATEST(commission_gerant, ?),
                             commission_admin = GREATEST(commission_admin, ?),
-                            status = IF(? = 'expired', 'expired', status)
+                            status = CASE
+                                WHEN ? = 'expired' THEN 'expired'
+                                WHEN ? = 'active' AND status = 'unused' THEN 'active'
+                                WHEN ? = 'disabled' THEN 'disabled'
+                                ELSE status
+                            END
                         WHERE username = ?
                     ");
                     $stmt->execute([
@@ -6778,6 +6783,8 @@ class RadiusDatabase
                         $update['commission_vendeur'] ?? 0,
                         $update['commission_gerant'] ?? 0,
                         $update['commission_admin'] ?? 0,
+                        $update['status'] ?? 'active',
+                        $update['status'] ?? 'active',
                         $update['status'] ?? 'active',
                         $username,
                     ]);
