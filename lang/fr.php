@@ -756,8 +756,8 @@ return [
     'nas.api_address' => 'Adresse IP ou DDNS du MikroTik',
     'nas.api_port' => 'Port API',
     'nas.api_ssl' => 'Connexion SSL',
-    'nas.api_username' => 'Utilisateur API',
-    'nas.api_password' => 'Mot de passe API',
+    'nas.api_username' => 'Utilisateur Winbox',
+    'nas.api_password' => 'Mot de passe Winbox',
     'nas.api_test' => 'Tester la connexion API',
 
     'nas.location_click_map' => 'Cliquez sur la carte...',

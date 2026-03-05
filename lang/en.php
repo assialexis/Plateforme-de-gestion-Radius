@@ -756,8 +756,8 @@ return [
     'nas.api_address' => 'MikroTik IP address or DDNS',
     'nas.api_port' => 'API Port',
     'nas.api_ssl' => 'SSL Connection',
-    'nas.api_username' => 'API Username',
-    'nas.api_password' => 'API Password',
+    'nas.api_username' => 'Winbox Username',
+    'nas.api_password' => 'Winbox Password',
     'nas.api_test' => 'Test API connection',
 
     'nas.location_click_map' => 'Click on the map...',
