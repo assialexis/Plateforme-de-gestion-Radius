@@ -260,7 +260,8 @@ class RadiusServerController
      */
     public function setDefault(array $params): void
     {
-        if (!$this->auth->getCurrentUser()->isSuperAdmin()) {
+        $this->auth->requireAuth();
+        if (!$this->auth->getUser()->isSuperAdmin()) {
             jsonError(__('api.forbidden'), 403);
             return;
         }
