@@ -9,10 +9,8 @@ JOIN nas n ON (a.nas_ip = n.nasname)
 SET a.admin_id = n.admin_id
 WHERE a.admin_id IS NULL AND n.admin_id IS NOT NULL;
 
--- Idem pour sessions
+-- Idem pour sessions (join uniquement par nas_ip)
 UPDATE sessions s
-JOIN nas n ON (s.nas_ip = n.nasname)
-   OR (s.nas_identifier = n.router_id AND n.router_id IS NOT NULL)
-   OR (s.nas_identifier = n.shortname)
+JOIN nas n ON s.nas_ip = n.nasname
 SET s.admin_id = n.admin_id
 WHERE s.admin_id IS NULL AND n.admin_id IS NOT NULL;
