@@ -763,12 +763,9 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             <?= __('registration.default_profile') ?> <span class="text-red-500">*</span>
                         </label>
-                        <select x-model="regConfig.registration_profile_id"
+                        <select x-model="regConfig.registration_profile_id" x-ref="profileSelect"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">-- Choisir un profil --</option>
-                            <template x-for="p in regProfiles" :key="p.id">
-                                <option :value="p.id" x-text="p.name + (p.price ? ' (' + p.price + ' ' + APP_CURRENCY + ')' : '')"></option>
-                            </template>
                         </select>
                     </div>
 
@@ -1514,7 +1511,7 @@ function otpPage() {
                         registration_enabled: parseInt(data.data.config.registration_enabled) || 0,
                         daily_code: data.data.config.daily_code || '',
                         daily_code_auto_rotate: parseInt(data.data.config.daily_code_auto_rotate) || 0,
-                        registration_profile_id: data.data.config.registration_profile_id || '',
+                        registration_profile_id: String(data.data.config.registration_profile_id || ''),
                         registration_validity_days: parseInt(data.data.config.registration_validity_days) || 1,
                         registration_max_per_phone: parseInt(data.data.config.registration_max_per_phone) || 1,
                     };
@@ -1526,6 +1523,23 @@ function otpPage() {
                 console.error('Error loading registration config:', e);
             }
             this.regConfigLoading = false;
+            this.$nextTick(() => this.populateProfileSelect());
+        },
+
+        populateProfileSelect() {
+            const select = this.$refs.profileSelect;
+            if (!select || !this.regProfiles.length) return;
+            while (select.options.length > 1) select.remove(1);
+            this.regProfiles.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name + (p.price ? ' (' + p.price + ' ' + (typeof APP_CURRENCY !== 'undefined' ? APP_CURRENCY : 'FCFA') + ')' : '');
+                select.appendChild(opt);
+            });
+            if (this.regConfig.registration_profile_id) {
+                select.value = String(this.regConfig.registration_profile_id);
+                select.dispatchEvent(new Event('input'));
+            }
         },
 
         async saveRegConfig() {
