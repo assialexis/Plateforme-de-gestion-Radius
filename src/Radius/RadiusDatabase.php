@@ -3005,7 +3005,7 @@ class RadiusDatabase
         $sql = "SELECT pt.*, p.name as profile_name
                 FROM payment_transactions pt
                 LEFT JOIN profiles p ON pt.profile_id = p.id
-                WHERE 1=1";
+                WHERE pt.transaction_type = 'voucher_purchase'";
         $params = [];
 
         if ($adminId !== null) {
@@ -3088,9 +3088,10 @@ class RadiusDatabase
                 SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END) as total_revenue,
                 SUM(CASE WHEN status = 'completed' AND DATE(paid_at) = CURDATE() THEN amount ELSE 0 END) as today_revenue
             FROM payment_transactions
+            WHERE transaction_type = 'voucher_purchase'
         ";
         if ($adminId !== null) {
-            $sql .= " WHERE admin_id = ?";
+            $sql .= " AND admin_id = ?";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([$adminId]);
         }

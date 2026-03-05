@@ -231,13 +231,14 @@ class SalesController
         $stmt->execute($baseParams);
         $global = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // --- Stats globales payment_transactions (completed) ---
+        // --- Stats globales payment_transactions (completed, voucher_purchase only) ---
         $stmt = $this->pdo->prepare("
             SELECT
                 COUNT(*) as total_sales,
                 COALESCE(SUM(amount), 0) as total_revenue
             FROM payment_transactions
             WHERE status = 'completed'
+            AND transaction_type = 'voucher_purchase'
             AND DATE(paid_at) BETWEEN ? AND ?
             $adminFilter
         ");
@@ -263,7 +264,7 @@ class SalesController
         $stmt->execute($baseParams);
         $byPaymentMethod = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- Stats par passerelle (payment_transactions completed) ---
+        // --- Stats par passerelle (payment_transactions completed, voucher_purchase only) ---
         $stmt = $this->pdo->prepare("
             SELECT
                 gateway_code as payment_method,
@@ -271,6 +272,7 @@ class SalesController
                 COALESCE(SUM(amount), 0) as total
             FROM payment_transactions
             WHERE status = 'completed'
+            AND transaction_type = 'voucher_purchase'
             AND DATE(paid_at) BETWEEN ? AND ?
             $adminFilter
             GROUP BY gateway_code
@@ -291,7 +293,7 @@ class SalesController
                 UNION ALL
                 SELECT DATE(paid_at) as date, COUNT(*) as count, COALESCE(SUM(amount), 0) as total
                 FROM payment_transactions
-                WHERE status = 'completed' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
+                WHERE status = 'completed' AND transaction_type = 'voucher_purchase' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
                 GROUP BY DATE(paid_at)
             ) combined
             GROUP BY date
@@ -312,7 +314,7 @@ class SalesController
                 UNION ALL
                 SELECT DATE_FORMAT(paid_at, '%Y-%m') as month, COUNT(*) as count, COALESCE(SUM(amount), 0) as total
                 FROM payment_transactions
-                WHERE status = 'completed' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
+                WHERE status = 'completed' AND transaction_type = 'voucher_purchase' AND DATE(paid_at) BETWEEN ? AND ? $adminFilter
                 GROUP BY DATE_FORMAT(paid_at, '%Y-%m')
             ) combined
             GROUP BY month
@@ -345,7 +347,7 @@ class SalesController
         $stmt->execute($paramSummary);
         $summary = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Ajouter les paiements en ligne au résumé
+        // Ajouter les paiements en ligne (achats de tickets uniquement) au résumé
         $stmt = $this->pdo->prepare("
             SELECT
                 SUM(CASE WHEN DATE(paid_at) = CURDATE() THEN 1 ELSE 0 END) as tickets_today,
@@ -356,6 +358,7 @@ class SalesController
                 COALESCE(SUM(CASE WHEN YEAR(paid_at) = YEAR(CURDATE()) THEN amount ELSE 0 END), 0) as revenue_year
             FROM payment_transactions
             WHERE status = 'completed'
+            AND transaction_type = 'voucher_purchase'
             $adminFilter
         ");
         $stmt->execute($paramSummary2);
