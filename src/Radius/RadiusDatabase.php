@@ -6828,6 +6828,80 @@ class RadiusDatabase
             }
         }
 
+        // Importer les sessions PPPoE
+        if (!empty($data['pppoe_sessions'])) {
+            $imported['pppoe_sessions'] = 0;
+            foreach ($data['pppoe_sessions'] as $ps) {
+                try {
+                    $username = $ps['username'] ?? '';
+                    $acctSessionId = $ps['acct_session_id'] ?? '';
+                    if (empty($username) || empty($acctSessionId)) continue;
+
+                    // Trouver le pppoe_user_id et admin_id dans la base centrale
+                    $stmt = $this->pdo->prepare("SELECT id, admin_id FROM pppoe_users WHERE username = ?");
+                    $stmt->execute([$username]);
+                    $pUser = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$pUser) {
+                        file_put_contents($debugLog, "  SKIP pppoe_session for '{$username}': user not found\n", FILE_APPEND);
+                        continue;
+                    }
+
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO pppoe_sessions (
+                            pppoe_user_id, acct_session_id, nas_ip, nas_port, nas_identifier,
+                            client_ip, client_mac, calling_station_id, called_station_id,
+                            session_time, input_octets, output_octets, input_packets, output_packets,
+                            start_time, last_update, stop_time, terminate_cause, admin_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            session_time = VALUES(session_time),
+                            input_octets = VALUES(input_octets),
+                            output_octets = VALUES(output_octets),
+                            input_packets = VALUES(input_packets),
+                            output_packets = VALUES(output_packets),
+                            last_update = VALUES(last_update),
+                            stop_time = VALUES(stop_time),
+                            terminate_cause = VALUES(terminate_cause)
+                    ");
+                    $stmt->execute([
+                        $pUser['id'],
+                        $acctSessionId,
+                        $ps['nas_ip'] ?? '',
+                        $ps['nas_port'] ?? null,
+                        $ps['nas_identifier'] ?? null,
+                        $ps['client_ip'] ?? null,
+                        $ps['client_mac'] ?? null,
+                        $ps['calling_station_id'] ?? null,
+                        $ps['called_station_id'] ?? null,
+                        $ps['session_time'] ?? 0,
+                        $ps['input_octets'] ?? 0,
+                        $ps['output_octets'] ?? 0,
+                        $ps['input_packets'] ?? 0,
+                        $ps['output_packets'] ?? 0,
+                        $ps['start_time'] ?? date('Y-m-d H:i:s'),
+                        $ps['last_update'] ?? null,
+                        $ps['stop_time'] ?? null,
+                        $ps['terminate_cause'] ?? null,
+                        $pUser['admin_id'],
+                    ]);
+                    $imported['pppoe_sessions']++;
+
+                    // Mettre à jour les compteurs de l'utilisateur PPPoE
+                    $this->pdo->prepare("
+                        UPDATE pppoe_users SET
+                            data_used = (SELECT COALESCE(SUM(input_octets + output_octets), 0) FROM pppoe_sessions WHERE pppoe_user_id = ?),
+                            time_used = (SELECT COALESCE(SUM(session_time), 0) FROM pppoe_sessions WHERE pppoe_user_id = ?),
+                            last_login = NOW()
+                        WHERE id = ?
+                    ")->execute([$pUser['id'], $pUser['id'], $pUser['id']]);
+
+                } catch (PDOException $e) {
+                    file_put_contents($debugLog, "  ERROR pppoe_session: " . $e->getMessage() . "\n", FILE_APPEND);
+                }
+            }
+            file_put_contents($debugLog, "  Imported {$imported['pppoe_sessions']} pppoe_sessions\n", FILE_APPEND);
+        }
+
         file_put_contents($debugLog, date('Y-m-d H:i:s') . " importNodeSyncData done - imported: " . json_encode($imported) . "\n\n", FILE_APPEND);
 
         return $imported;
