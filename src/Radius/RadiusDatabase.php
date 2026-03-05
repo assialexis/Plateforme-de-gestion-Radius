@@ -1807,11 +1807,16 @@ class RadiusDatabase
     public function logAuth(string $username, string $nasIp, string $action, ?string $reason = null, ?string $clientMac = null, ?string $clientIp = null, ?string $nasIdentifier = null, ?int $adminId = null): void
     {
         // Essayer de trouver le NAS par IP, ou par identifiant
-        $stmt = $this->pdo->prepare("SELECT shortname FROM nas WHERE nasname = ? OR (router_id = ? AND router_id IS NOT NULL) OR (shortname = ?)");
+        $stmt = $this->pdo->prepare("SELECT shortname, admin_id FROM nas WHERE nasname = ? OR (router_id = ? AND router_id IS NOT NULL) OR (shortname = ?)");
         $stmt->execute([$nasIp, $nasIdentifier, $nasIdentifier]);
         $nas = $stmt->fetch();
 
         $nasNameToSave = $nas['shortname'] ?? $nasIdentifier ?? null;
+
+        // Si admin_id non fourni, le résoudre depuis le NAS
+        if ($adminId === null && !empty($nas['admin_id'])) {
+            $adminId = (int)$nas['admin_id'];
+        }
 
         $stmt = $this->pdo->prepare("
             INSERT INTO auth_logs (username, nas_ip, nas_name, action, reason, client_mac, client_ip, admin_id)
