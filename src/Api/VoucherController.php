@@ -183,12 +183,11 @@ class VoucherController
         }
 
         $type = $data['type'] ?? 'voucher'; // 'voucher' ou 'ticket'
-        $defaultPrefix = $type === 'ticket' ? 'USER' : 'V';
-        $prefix = $data['prefix'] ?? $defaultPrefix;
+        $prefix = $data['prefix'] ?? '';
         if ($type !== 'ticket') {
             $prefix = strtoupper($prefix);
         }
-        $length = (int)($data['length'] ?? 8);
+        $length = max(4, min(8, (int)($data['length'] ?? 8)));
         $passwordLength = (int)($data['password_length'] ?? 6);
         $passwordType = $data['password_type'] ?? 'alphanumeric';
         $batchId = generateUUID();

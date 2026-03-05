@@ -663,7 +663,7 @@ $currentPage = 'vouchers'; ?>
                                 </button>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         <?= __('voucher.quantity')?> <span class="text-red-500">*</span>
@@ -673,10 +673,17 @@ $currentPage = 'vouchers'; ?>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <?= __('voucher.code_length')?>
+                                    </label>
+                                    <input type="number" x-model="generateForm.code_length" min="4" max="8"
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         <?= __('voucher.prefix')?>
                                     </label>
                                     <input type="text" x-model="generateForm.prefix" maxlength="10"
-                                        :placeholder="generateForm.type === 'ticket' ? 'USER' : 'V'"
+                                        placeholder="<?= __('voucher.prefix_placeholder')?>"
                                         class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 placeholder-gray-400">
                                 </div>
                             </div>
@@ -1093,7 +1100,8 @@ $currentPage = 'vouchers'; ?>
             generateForm: {
                 type: 'voucher',
                 count: 10,
-                prefix: 'V',
+                prefix: '',
+                code_length: 8,
                 password_length: 6,
                 password_type: 'alphanumeric',
                 profile_id: '',
@@ -1308,6 +1316,7 @@ $currentPage = 'vouchers'; ?>
                     const data = {
                         type: this.generateForm.type,
                         count: parseInt(this.generateForm.count),
+                        length: parseInt(this.generateForm.code_length) || 8,
                         prefix: this.generateForm.type === 'ticket' ? this.generateForm.prefix : this.generateForm.prefix.toUpperCase(),
                         password_length: this.generateForm.type === 'ticket' ? parseInt(this.generateForm.password_length) : null,
                         password_type: this.generateForm.type === 'ticket' ? this.generateForm.password_type : null,

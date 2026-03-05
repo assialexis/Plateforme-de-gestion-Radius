@@ -489,6 +489,8 @@ return [
     'voucher.generate_title' => 'Generate Vouchers',
     'voucher.quantity' => 'Quantity',
     'voucher.prefix' => 'Prefix',
+    'voucher.prefix_placeholder' => 'Optional',
+    'voucher.code_length' => 'Code length',
     'voucher.password_length' => 'Password length',
     'voucher.password_type' => 'Password type',
     'voucher.password_alphanumeric' => 'Alphanumeric',
