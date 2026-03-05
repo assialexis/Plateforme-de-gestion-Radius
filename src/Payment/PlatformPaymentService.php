@@ -346,6 +346,9 @@ class PlatformPaymentService
                 return $this->initiateCinetPay($gateway, $transaction, $profile, $customerData, $callbackUrl, $returnUrl);
             case 'yengapay':
                 return $this->initiateYengaPay($gateway, $transaction, $profile, $customerData, $callbackUrl, $returnUrl);
+            case 'paygate':
+            case 'paygate_global':
+                return $this->initiatePayGate($gateway, $transaction, $profile, $customerData, $callbackUrl, $returnUrl);
             default:
                 throw new Exception('Passerelle plateforme non implémentée: ' . $gatewayCode);
         }
@@ -554,6 +557,57 @@ class PlatformPaymentService
             'payment_url' => $paymentUrl,
             'transaction_id' => $transaction['transaction_id'],
             'gateway_transaction_id' => $response['id'] ?? null
+        ];
+    }
+
+    /**
+     * PayGate Global - Initier paiement (redirection vers page PayGate)
+     */
+    private function initiatePayGate(array $gateway, array $transaction, array $profile, array $customerData, string $callbackUrl, string $returnUrl): array
+    {
+        $config = $gateway['config'];
+
+        if (empty($config['auth_token'])) {
+            throw new Exception('PayGate: Configuration incomplète (auth_token requis)');
+        }
+
+        $params = [
+            'token' => $config['auth_token'],
+            'amount' => (int)$transaction['amount'],
+            'description' => 'Achat voucher WiFi - ' . $profile['name'],
+            'identifier' => $transaction['transaction_id'],
+            'url' => $returnUrl,
+        ];
+
+        // Téléphone et réseau optionnels
+        $phone = preg_replace('/[^0-9]/', '', $customerData['phone'] ?? '');
+        if ($phone) {
+            if (strlen($phone) <= 8 && !str_starts_with($phone, '228')) {
+                $phone = '228' . $phone;
+            }
+            $params['phone'] = $phone;
+        }
+
+        $network = strtoupper($customerData['network'] ?? '');
+        if ($network) {
+            $params['network'] = $network;
+        }
+
+        $paymentUrl = 'https://paygateglobal.com/v1/page?' . http_build_query($params);
+
+        $this->updateTransaction($transaction['transaction_id'], [
+            'gateway_response' => json_encode([
+                'network' => $network,
+                'phone' => $phone,
+                'method' => 'redirect'
+            ])
+        ]);
+
+        return [
+            'success' => true,
+            'payment_url' => $paymentUrl,
+            'transaction_id' => $transaction['transaction_id'],
+            'message' => 'Redirection vers PayGate...'
         ];
     }
 
