@@ -37,6 +37,47 @@ class PaymentService
     }
 
     /**
+     * Normaliser un numéro de téléphone en ajoutant le code pays si nécessaire
+     */
+    private function normalizePhone(string $phone, ?int $adminId): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (empty($phone)) return '';
+
+        // Récupérer le code pays de l'admin depuis otp_config
+        $countryCode = '229'; // Bénin par défaut
+        if ($adminId) {
+            $stmt = $this->db->getPdo()->prepare("SELECT country_code FROM otp_config WHERE admin_id = ?");
+            $stmt->execute([$adminId]);
+            $cc = $stmt->fetchColumn();
+            if ($cc) $countryCode = preg_replace('/[^0-9]/', '', $cc);
+        }
+
+        // Ajouter le code pays si le numéro est local (max 9 chiffres)
+        if (strlen($phone) <= 9 && !str_starts_with($phone, $countryCode)) {
+            $phone = $countryCode . $phone;
+        }
+
+        return $phone;
+    }
+
+    /**
+     * Déterminer le code ISO pays à partir du préfixe téléphonique
+     */
+    private function getCountryIsoFromPhone(string $phone): string
+    {
+        $map = [
+            '229' => 'bj', '228' => 'tg', '226' => 'bf', '225' => 'ci',
+            '221' => 'sn', '237' => 'cm', '242' => 'cg', '241' => 'ga',
+            '235' => 'td', '227' => 'ne', '223' => 'ml', '224' => 'gn',
+        ];
+        foreach ($map as $prefix => $iso) {
+            if (str_starts_with($phone, $prefix)) return $iso;
+        }
+        return 'bj'; // défaut Bénin
+    }
+
+    /**
      * Générer un ID de transaction unique
      */
     public function generateTransactionId(): string
@@ -565,6 +606,11 @@ class PaymentService
             throw new Exception('Payment gateway not available');
         }
 
+        // Normaliser le téléphone avec le code pays de l'admin
+        if (!empty($customerData['phone'])) {
+            $customerData['phone'] = $this->normalizePhone($customerData['phone'], $profileAdminId);
+        }
+
         // Déterminer la devise (XOF par défaut pour FedaPay)
         $currency = $this->config['currency'] ?? 'XOF';
 
@@ -674,12 +720,13 @@ class PaymentService
             $customer['email'] = $customerData['email'];
         }
 
-        // Téléphone
+        // Téléphone (déjà normalisé avec code pays par normalizePhone())
         if (!empty($customerData['phone'])) {
             $phone = preg_replace('/[^0-9+]/', '', $customerData['phone']);
+            $countryIso = $this->getCountryIsoFromPhone($phone);
             $customer['phone_number'] = [
                 'number' => $phone,
-                'country' => 'bj'
+                'country' => $countryIso
             ];
         }
 

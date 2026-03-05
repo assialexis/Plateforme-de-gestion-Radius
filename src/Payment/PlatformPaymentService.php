@@ -285,6 +285,11 @@ class PlatformPaymentService
             throw new Exception('Profile not available');
         }
 
+        // Normaliser le téléphone avec le code pays de l'admin
+        if (!empty($customerData['phone'])) {
+            $customerData['phone'] = $this->normalizePhone($customerData['phone'], $adminId);
+        }
+
         $currency = $this->config['currency'] ?? 'XOF';
         if ($gatewayCode === 'fedapay' && $currency === 'XAF') {
             $currency = 'XOF';
@@ -375,7 +380,7 @@ class PlatformPaymentService
         }
         if (!empty($customerData['phone'])) {
             $phone = preg_replace('/[^0-9+]/', '', $customerData['phone']);
-            $customer['phone_number'] = ['number' => $phone, 'country' => 'bj'];
+            $customer['phone_number'] = ['number' => $phone, 'country' => $this->getCountryIsoFromPhone($phone)];
         }
         if (!empty($customer)) {
             $payload['customer'] = $customer;
@@ -550,6 +555,37 @@ class PlatformPaymentService
             'transaction_id' => $transaction['transaction_id'],
             'gateway_transaction_id' => $response['id'] ?? null
         ];
+    }
+
+    private function normalizePhone(string $phone, int $adminId): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (empty($phone)) return '';
+
+        $countryCode = '229';
+        $stmt = $this->pdo->prepare("SELECT country_code FROM otp_config WHERE admin_id = ?");
+        $stmt->execute([$adminId]);
+        $cc = $stmt->fetchColumn();
+        if ($cc) $countryCode = preg_replace('/[^0-9]/', '', $cc);
+
+        if (strlen($phone) <= 9 && !str_starts_with($phone, $countryCode)) {
+            $phone = $countryCode . $phone;
+        }
+
+        return $phone;
+    }
+
+    private function getCountryIsoFromPhone(string $phone): string
+    {
+        $map = [
+            '229' => 'bj', '228' => 'tg', '226' => 'bf', '225' => 'ci',
+            '221' => 'sn', '237' => 'cm', '242' => 'cg', '241' => 'ga',
+            '235' => 'td', '227' => 'ne', '223' => 'ml', '224' => 'gn',
+        ];
+        foreach ($map as $prefix => $iso) {
+            if (str_starts_with($phone, $prefix)) return $iso;
+        }
+        return 'bj';
     }
 
     private function updateTransaction(string $transactionId, array $data): void
