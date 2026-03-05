@@ -455,37 +455,6 @@ $currentPage = 'profiles'; ?>
                             <input type="text" x-model="form.description"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                         </div>
-                        <!-- Validité du voucher (durée de vie calendaire) -->
-                        <div
-                            class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                            <label class="block text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <?= __('profile.form_validity')?>
-                            </label>
-                            <div class="flex gap-2">
-                                <input type="number" x-model="form.validity_value" min="1" placeholder="Ex: 24" required
-                                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                                <select x-model="form.validity_unit"
-                                    class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                                    <option value="minutes">
-                                        <?= __('time.minutes')?>
-                                    </option>
-                                    <option value="hours">
-                                        <?= __('time.hours')?>
-                                    </option>
-                                    <option value="days">
-                                        <?= __('time.days')?>
-                                    </option>
-                                </select>
-                            </div>
-                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                                <?= __('profile.validity_hint')?>
-                            </p>
-                        </div>
-
                         <!-- Temps d'utilisation (optionnel) -->
                         <div
                             class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -515,6 +484,37 @@ $currentPage = 'profiles'; ?>
                             </div>
                             <p class="mt-1 text-xs text-blue-700 dark:text-blue-300">
                                 <?= __('profile.usage_time_hint')?>
+                            </p>
+                        </div>
+
+                        <!-- Validité du voucher (durée de vie calendaire) -->
+                        <div
+                            class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                            <label class="block text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <?= __('profile.form_validity')?>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="number" x-model="form.validity_value" min="1" placeholder="Ex: 24" required
+                                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
+                                <select x-model="form.validity_unit"
+                                    class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
+                                    <option value="minutes">
+                                        <?= __('time.minutes')?>
+                                    </option>
+                                    <option value="hours">
+                                        <?= __('time.hours')?>
+                                    </option>
+                                    <option value="days">
+                                        <?= __('time.days')?>
+                                    </option>
+                                </select>
+                            </div>
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                <?= __('profile.validity_hint')?>
                             </p>
                         </div>
 
