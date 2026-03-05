@@ -179,16 +179,15 @@ class CaptivePortalController
             }
         }
 
-        // Générer l'URL de paiement par défaut si pas encore configurée
-        if (empty($config['buy_ticket_url'])) {
-            $baseUrl = $this->detectBaseUrl();
-            $adminId = '';
-            try {
-                $user = $this->auth->getUser();
-                if ($user) $adminId = $user->getId();
-            } catch (\Exception $e) {}
-            $config['buy_ticket_url'] = $baseUrl . '/pay.php?admin=' . $adminId;
-        }
+        // Toujours régénérer les URLs avec l'admin_id courant
+        $baseUrl = $this->detectBaseUrl();
+        $adminId = '';
+        try {
+            $user = $this->auth->getUser();
+            if ($user) $adminId = $user->getId();
+        } catch (\Exception $e) {}
+        $config['buy_ticket_url'] = $baseUrl . '/pay.php?admin=' . $adminId;
+        $config['admin_id'] = $adminId;
 
         $data = [
             'id' => $id,
@@ -225,7 +224,9 @@ class CaptivePortalController
 
         // Sauvegarder la config JSON complète pour persistance
         $configFile = $templateDir . '/config.json';
+        $adminId = getAdminId() ?? 1;
         $configToSave = [
+            'admin_id' => $adminId,
             'selected_zone' => $data['selected_zone'] ?? null,
             'selected_profiles' => $data['selected_profiles'] ?? [],
             'services' => $data['services'] ?? [],
@@ -328,6 +329,12 @@ class CaptivePortalController
     private function generateTariffsHtml($profileIds, $zoneId = null, $showBuyBtn = true)
     {
         $baseUrl = $this->detectBaseUrl();
+        $adminId = '';
+        try {
+            $user = $this->auth->getUser();
+            if ($user) $adminId = $user->getId();
+        } catch (\Exception $e) {}
+
         $html = '';
         foreach ($profileIds as $id) {
             $stmt = $this->db->getPdo()->prepare("SELECT * FROM profiles WHERE id = ?");
@@ -337,7 +344,7 @@ class CaptivePortalController
             if ($profile) {
                 $name = htmlspecialchars($profile['name']);
                 $price = number_format($profile['price'], 0, '', ' ') . ' Fcfa';
-                $link = $baseUrl . '/pay.php?profile=' . (int)$profile['id'];
+                $link = $baseUrl . '/pay.php?profile=' . (int)$profile['id'] . '&admin=' . $adminId;
 
                 $featuresHtml = "";
                 if (!empty($profile['description'])) {
@@ -715,11 +722,7 @@ class CaptivePortalController
         $apiUrl = $baseUrl . '/api.php';
         $otpPageUrl = $baseUrl . '/public/otp-verify.html';
 
-        $adminId = 1;
-        try {
-            $user = $this->auth->getUser();
-            if ($user) $adminId = $user->getId();
-        } catch (\Exception $e) {}
+        $adminId = getAdminId() ?? 1;
 
         return <<<HTML
 
@@ -757,11 +760,7 @@ HTML;
         $baseUrl = $this->detectBaseUrl();
         $registrationPageUrl = $baseUrl . '/public/registration.html';
 
-        $adminId = 1;
-        try {
-            $user = $this->auth->getUser();
-            if ($user) $adminId = $user->getId();
-        } catch (\Exception $e) {}
+        $adminId = getAdminId() ?? 1;
 
         return <<<HTML
 
