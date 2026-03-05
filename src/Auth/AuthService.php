@@ -640,7 +640,9 @@ class AuthService
                 echo json_encode(['success' => false, 'message' => __('auth.authentication_required')]);
                 exit;
             }
-            header('Location: /web/login.php');
+            $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+            if ($basePath === '.' || $basePath === '/' || $basePath === '\\') $basePath = '';
+            header('Location: ' . $basePath . '/login.php');
             exit;
         }
     }
@@ -662,8 +664,12 @@ class AuthService
 
     private function isApiRequest(): bool
     {
-        return strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false
-            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        return strpos($uri, '/api/') !== false
+            || strpos($script, 'api.php') !== false
+            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+            || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
     }
 
     public function logActivity(int $userId, string $action, ?string $entityType = null, ?int $entityId = null, ?array $details = null): void
