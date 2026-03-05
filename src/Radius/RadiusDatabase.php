@@ -6562,14 +6562,27 @@ class RadiusDatabase
         $stmt->execute($zoneIds);
         $vouchers = $stmt->fetchAll();
 
-        // Utilisateurs PPPoE actifs de ces zones
+        // Profils PPPoE de ces zones
+        $pppoeProfiles = [];
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT * FROM pppoe_profiles
+                WHERE zone_id IN ($placeholders) OR zone_id IS NULL
+            ");
+            $stmt->execute($zoneIds);
+            $pppoeProfiles = $stmt->fetchAll();
+        } catch (PDOException $e) {
+            // Table pppoe_profiles peut ne pas exister
+        }
+
+        // Utilisateurs PPPoE de ces zones (tous les statuts pour sync correcte)
         $pppoeUsers = [];
         try {
             $stmt = $this->pdo->prepare("
                 SELECT pu.* FROM pppoe_users pu
                 INNER JOIN pppoe_profiles pp ON pu.profile_id = pp.id
                 WHERE (pp.zone_id IN ($placeholders) OR pp.zone_id IS NULL)
-                AND pu.status = 'active'
+                AND pu.status IN ('active', 'enabled', 'disabled', 'expired')
             ");
             $stmt->execute($zoneIds);
             $pppoeUsers = $stmt->fetchAll();
@@ -6582,6 +6595,7 @@ class RadiusDatabase
             'nas' => $nas,
             'vouchers' => $vouchers,
             'profiles' => $profiles,
+            'pppoe_profiles' => $pppoeProfiles,
             'pppoe_users' => $pppoeUsers,
         ];
 

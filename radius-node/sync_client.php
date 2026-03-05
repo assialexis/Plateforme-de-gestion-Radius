@@ -237,6 +237,26 @@ function applyPullData(PDO $pdo, array $data): array
             }
         }
 
+        // Sync PPPoE profiles
+        if (!empty($data['pppoe_profiles'])) {
+            $pdo->exec("DELETE FROM pppoe_profiles");
+            $stmt = $pdo->prepare("
+                INSERT INTO pppoe_profiles (id, zone_id, name, description, download_speed, upload_speed, data_limit, validity_days, price, ip_pool_name, local_address, simultaneous_use, burst_download, burst_upload, burst_threshold, burst_time, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            foreach ($data['pppoe_profiles'] as $pp) {
+                $stmt->execute([
+                    $pp['id'], $pp['zone_id'] ?? null, $pp['name'], $pp['description'] ?? null,
+                    $pp['download_speed'] ?? 1048576, $pp['upload_speed'] ?? 524288,
+                    $pp['data_limit'] ?? 0, $pp['validity_days'] ?? 30, $pp['price'] ?? 0,
+                    $pp['ip_pool_name'] ?? null, $pp['local_address'] ?? null,
+                    $pp['simultaneous_use'] ?? 1, $pp['burst_download'] ?? 0, $pp['burst_upload'] ?? 0,
+                    $pp['burst_threshold'] ?? 0, $pp['burst_time'] ?? 0, $pp['is_active'] ?? 1
+                ]);
+                $stats['pppoe_profiles'] = ($stats['pppoe_profiles'] ?? 0) + 1;
+            }
+        }
+
         // Sync PPPoE users
         if (!empty($data['pppoe_users'])) {
             $pdo->exec("DELETE FROM pppoe_users");
