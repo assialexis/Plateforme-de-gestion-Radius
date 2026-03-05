@@ -400,33 +400,30 @@ function payFormatSpeed($bps) {
                     </div>
                 </div>
 
-                <!-- Numéro de téléphone -->
+                <?php if ($loyaltyEnabled): ?>
+                <!-- Numéro de téléphone (fidélité) -->
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         <?= __('pay.phone_label') ?>
                     </label>
                     <div class="flex gap-2">
-                        <input type="tel" x-model="customerPhone" <?php if ($loyaltyEnabled):
-                            ?>@input.debounce.500ms="checkLoyalty()"
-                        <?php endif; ?>
+                        <input type="tel" x-model="customerPhone"
+                            @input.debounce.500ms="checkLoyalty()"
                         class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500
                         focus:border-blue-500 text-lg"
                         placeholder="Ex: 90000000">
-                        <?php if ($loyaltyEnabled): ?>
                         <button @click="checkLoyalty()" type="button"
                             class="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
                             :disabled="!customerPhone || loadingLoyalty">
                             <i class="fas fa-search" :class="loadingLoyalty ? 'animate-spin' : ''"></i>
                         </button>
-                        <?php endif; ?>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">
                         <?= __('pay.phone_help') ?>
-                        <?php if ($loyaltyEnabled): ?>
                         <?= __('pay.phone_loyalty_help') ?>
-                        <?php endif; ?>
                     </p>
                 </div>
+                <?php endif; ?>
 
                 <?php if ($loyaltyEnabled): ?>
                 <!-- Carte de fidélité -->
@@ -1059,11 +1056,6 @@ function payFormatSpeed($bps) {
                         return;
                     }
 
-                    if (!this.customerPhone) {
-                        alert('Veuillez entrer votre numéro de téléphone');
-                        return;
-                    }
-
                     this.loading = true;
                     this.showFeexPayModal = false;
 
@@ -1071,7 +1063,6 @@ function payFormatSpeed($bps) {
                         const payload = {
                             gateway_code: gatewayCode,
                             profile_id: this.selectedProfile.id,
-                            customer_phone: this.customerPhone,
                             device_info: collectDeviceInfo()
                         };
 
@@ -1126,11 +1117,6 @@ function payFormatSpeed($bps) {
                         return;
                     }
 
-                    if (!this.customerPhone) {
-                        alert('Veuillez entrer votre numéro de téléphone');
-                        return;
-                    }
-
                     // Vérifier que le SDK Kkiapay est chargé
                     if (typeof openKkiapayWidget !== 'function') {
                         alert('Le SDK Kkiapay n\'est pas chargé. Veuillez rafraîchir la page.');
@@ -1147,7 +1133,6 @@ function payFormatSpeed($bps) {
                             body: JSON.stringify({
                                 gateway_code: 'kkiapay',
                                 profile_id: this.selectedProfile.id,
-                                customer_phone: this.customerPhone,
                                 device_info: collectDeviceInfo()
                             })
                         });
