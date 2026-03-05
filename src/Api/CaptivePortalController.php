@@ -13,6 +13,11 @@ class CaptivePortalController
         $this->templatesDir = realpath(__DIR__ . '/../../Portail Captif');
     }
 
+    private function getAdminId(): ?int
+    {
+        return $this->auth->getAdminId();
+    }
+
     /**
      * List available captive portal templates
      */
@@ -233,7 +238,7 @@ class CaptivePortalController
 
         // Sauvegarder la config JSON complète pour persistance
         $configFile = $templateDir . '/config.json';
-        $adminId = getAdminId() ?? 1;
+        $adminId = $this->getAdminId() ?? 1;
         $configToSave = [
             'admin_id' => $adminId,
             'selected_zone' => $data['selected_zone'] ?? null,
@@ -792,7 +797,7 @@ class CaptivePortalController
         $apiUrl = $baseUrl . '/api.php';
         $otpPageUrl = $baseUrl . '/public/otp-verify.html';
 
-        $adminId = getAdminId() ?? 1;
+        $adminId = $this->getAdminId() ?? 1;
 
         return <<<HTML
 
@@ -830,7 +835,7 @@ HTML;
         $baseUrl = $this->detectBaseUrl();
         $registrationPageUrl = $baseUrl . '/public/registration.html';
 
-        $adminId = getAdminId() ?? 1;
+        $adminId = $this->getAdminId() ?? 1;
 
         return <<<HTML
 
