@@ -61,7 +61,13 @@ if (!$transaction || !$gateway) {
 
 $publicKey = $gatewayConfig['public_key'] ?? '';
 $sandbox = ($gatewayConfig['environment'] ?? 'sandbox') !== 'live';
-$baseUrl = $config['app']['base_url'] ?? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+$baseUrl = $config['app']['base_url'] ?? (function() {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+    if ($basePath === '.' || $basePath === '/' || $basePath === '\\') $basePath = '';
+    return $protocol . '://' . $host . $basePath;
+})();
 
 ?>
 <!DOCTYPE html>
@@ -140,7 +146,7 @@ document.getElementById('payButton').addEventListener('click', function() {
     openKkiapayWidget({
         amount: <?= (int)$transaction['amount'] ?>,
         position: 'center',
-        callback: '<?= $baseUrl ?>/web/pppoe-payment-callback.php',
+        callback: '<?= $baseUrl ?>/pppoe-payment-callback.php',
         data: '<?= $transactionId ?>',
         theme: '#4F46E5',
         key: '<?= htmlspecialchars($publicKey) ?>',
@@ -158,7 +164,7 @@ if (typeof addKkiapayListener === 'function') {
         document.getElementById('error').classList.add('hidden');
 
         // Notifier le callback avec la transaction Kkiapay
-        const callbackUrl = '<?= $baseUrl ?>/web/pppoe-payment-callback.php?' +
+        const callbackUrl = '<?= $baseUrl ?>/pppoe-payment-callback.php?' +
             'transaction_id=<?= $transactionId ?>&' +
             'kkiapay_transaction_id=' + response.transactionId;
 
@@ -166,12 +172,12 @@ if (typeof addKkiapayListener === 'function') {
             .then(response => response.json())
             .then(data => {
                 // Rediriger vers la page de succès
-                window.location.href = '<?= $baseUrl ?>/web/pppoe-payment-success.php?transaction=<?= $transactionId ?>';
+                window.location.href = '<?= $baseUrl ?>/pppoe-payment-success.php?transaction=<?= $transactionId ?>';
             })
             .catch(error => {
                 console.error('Callback error:', error);
                 // Rediriger quand même vers la page de succès
-                window.location.href = '<?= $baseUrl ?>/web/pppoe-payment-success.php?transaction=<?= $transactionId ?>';
+                window.location.href = '<?= $baseUrl ?>/pppoe-payment-success.php?transaction=<?= $transactionId ?>';
             });
     });
 

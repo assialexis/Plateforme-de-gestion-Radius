@@ -23,9 +23,9 @@ class PlatformPaymentService
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = '';
-        if (preg_match('#^(/[^/]+)/web/#', $scriptName, $matches)) {
-            $basePath = $matches[1];
+        $basePath = rtrim(dirname($scriptName), '/\\');
+        if ($basePath === '.' || $basePath === '/' || $basePath === '\\') {
+            $basePath = '';
         }
         return $protocol . '://' . $host . $basePath;
     }
@@ -319,8 +319,8 @@ class PlatformPaymentService
         $transaction = $txStmt->fetch();
 
         // Construire les URLs callback avec &platform=1
-        $callbackUrl = $this->baseUrl . '/web/payment-callback.php?admin=' . $adminId . '&platform=1';
-        $returnUrl = $this->baseUrl . '/web/payment-success.php?txn=' . $transactionId;
+        $callbackUrl = $this->baseUrl . '/payment-callback.php?admin=' . $adminId . '&platform=1';
+        $returnUrl = $this->baseUrl . '/payment-success.php?txn=' . $transactionId;
 
         // Résoudre la config API depuis la passerelle recharge (source unique)
         $rechargeGw = $this->getRechargeGatewayConfig($gatewayCode);

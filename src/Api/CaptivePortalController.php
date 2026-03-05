@@ -315,9 +315,9 @@ class CaptivePortalController
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = '';
-        if (preg_match('#^(/[^/]+)/web/#', $scriptName, $matches)) {
-            $basePath = $matches[1];
+        $basePath = rtrim(dirname($scriptName), '/\\');
+        if ($basePath === '.' || $basePath === '/' || $basePath === '\\') {
+            $basePath = '';
         }
         return $protocol . '://' . $host . $basePath;
     }
@@ -712,8 +712,8 @@ class CaptivePortalController
     private function generateOtpSnippet(): string
     {
         $baseUrl = $this->detectBaseUrl();
-        $apiUrl = $baseUrl . '/web/api.php';
-        $otpPageUrl = $baseUrl . '/web/public/otp-verify.html';
+        $apiUrl = $baseUrl . '/api.php';
+        $otpPageUrl = $baseUrl . '/public/otp-verify.html';
 
         $adminId = 1;
         try {
@@ -755,7 +755,7 @@ HTML;
     private function generateRegistrationSnippet(): string
     {
         $baseUrl = $this->detectBaseUrl();
-        $registrationPageUrl = $baseUrl . '/web/public/registration.html';
+        $registrationPageUrl = $baseUrl . '/public/registration.html';
 
         $adminId = 1;
         try {

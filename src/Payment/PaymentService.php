@@ -18,18 +18,19 @@ class PaymentService
 
     /**
      * Détecter l'URL de base automatiquement
+     * Retourne l'URL du répertoire web (où se trouvent les scripts PHP)
      */
     private function detectBaseUrl(): string
     {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-        // Détecter le sous-dossier à partir du SCRIPT_NAME ou REQUEST_URI
+        // Utiliser dirname(SCRIPT_NAME) pour détecter le répertoire web
+        // Ex: /nas/web/api.php → /nas/web, /api.php → /
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = '';
-        // Si le script est dans /nas/web/api.php, extraire /nas
-        if (preg_match('#^(/[^/]+)/web/#', $scriptName, $matches)) {
-            $basePath = $matches[1];
+        $basePath = rtrim(dirname($scriptName), '/\\');
+        if ($basePath === '.' || $basePath === '/' || $basePath === '\\') {
+            $basePath = '';
         }
 
         return $protocol . '://' . $host . $basePath;
@@ -587,10 +588,10 @@ class PaymentService
 
         // Préparer les URLs de callback
         $adminCallbackParam = !empty($profile['admin_id']) ? '?admin=' . $profile['admin_id'] : '';
-        $callbackUrl = $this->baseUrl . '/web/payment-callback.php' . $adminCallbackParam;
-        $returnUrl = $this->baseUrl . '/web/payment-success.php?txn=' . $transaction['transaction_id'];
+        $callbackUrl = $this->baseUrl . '/payment-callback.php' . $adminCallbackParam;
+        $returnUrl = $this->baseUrl . '/payment-success.php?txn=' . $transaction['transaction_id'];
         $adminParam = !empty($profile['admin_id']) ? '&admin=' . $profile['admin_id'] : '';
-        $cancelUrl = $this->baseUrl . '/web/pay.php?profile=' . $profileId . $adminParam . '&cancelled=1';
+        $cancelUrl = $this->baseUrl . '/pay.php?profile=' . $profileId . $adminParam . '&cancelled=1';
 
         // Initialiser le paiement selon la passerelle
         switch ($gatewayCode) {
@@ -2188,9 +2189,9 @@ class PaymentService
         $transaction = $this->getTransaction($transactionId);
 
         // URLs de callback et retour — rediriger vers le dashboard admin après paiement
-        $callbackUrl = $this->baseUrl . '/web/payment-callback.php?admin=' . $adminId;
-        $returnUrl = $this->baseUrl . '/web/index.php?page=dashboard&recharge=success&txn=' . $transactionId;
-        $cancelUrl = $this->baseUrl . '/web/index.php?page=dashboard';
+        $callbackUrl = $this->baseUrl . '/payment-callback.php?admin=' . $adminId;
+        $returnUrl = $this->baseUrl . '/index.php?page=dashboard&recharge=success&txn=' . $transactionId;
+        $cancelUrl = $this->baseUrl . '/index.php?page=dashboard';
 
         // Profil factice pour la description des gateways
         $profile = ['name' => 'Recharge crédits', 'id' => 0, 'price' => $amount];

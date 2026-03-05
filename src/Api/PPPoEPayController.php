@@ -797,10 +797,10 @@ class PPPoEPayController
     {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        // Détecter le sous-répertoire à partir du script courant (ex: /nas/web/api.php → /nas)
+        // Utiliser dirname(SCRIPT_NAME) pour détecter le répertoire web
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = dirname(dirname($scriptName));
-        if ($basePath === '/' || $basePath === '\\') {
+        $basePath = rtrim(dirname($scriptName), '/\\');
+        if ($basePath === '.' || $basePath === '/' || $basePath === '\\') {
             $basePath = '';
         }
         return $protocol . '://' . $host . $basePath;
