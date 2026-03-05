@@ -74,7 +74,7 @@ class CaptivePortalController
             'slider_images' => [],
             'logo_url' => '',
             'recover_ticket' => false,
-            'recover_ticket_url' => 'https://ticket.mna.tg',
+            'recover_ticket_url' => '',
             'live_chat' => false,
             'chat_support_type' => 'live_chat',
             'chat_whatsapp_phone' => '',
@@ -187,6 +187,7 @@ class CaptivePortalController
             if ($user) $adminId = $user->getId();
         } catch (\Exception $e) {}
         $config['buy_ticket_url'] = $baseUrl . '/pay.php?admin=' . $adminId;
+        $config['recover_ticket_url'] = $baseUrl . '/retrieve-ticket.php?admin=' . $adminId;
         $config['admin_id'] = $adminId;
 
         $data = [
@@ -234,7 +235,7 @@ class CaptivePortalController
             'email' => $data['email'] ?? '',
             'slider_images' => $data['slider_images'] ?? [],
             'logo_url' => $data['logo_url'] ?? '',
-            'recover_ticket_url' => $data['recover_ticket_url'] ?? 'https://ticket.mna.tg',
+            'recover_ticket_url' => $data['recover_ticket_url'] ?? '',
             'live_chat' => $data['live_chat'] ?? false,
             'chat_support_type' => $data['chat_support_type'] ?? 'live_chat',
             'chat_whatsapp_phone' => $data['chat_whatsapp_phone'] ?? '',

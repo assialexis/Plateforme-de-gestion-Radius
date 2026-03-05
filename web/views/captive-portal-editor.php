@@ -282,9 +282,9 @@ if (!$templateId) {
                         </label>
                         <div x-show="config.recover_ticket" x-transition x-cloak class="border-t border-gray-200 dark:border-[#30363d] p-3 bg-gray-50/50 dark:bg-[#0d1117]/50">
                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Lien de récupération</label>
-                            <input type="url" x-model="config.recover_ticket_url" @input="updatePreview" placeholder="https://ticket.mna.tg"
-                                class="w-full px-3 py-1.5 bg-white dark:bg-[#0d1117] border border-gray-300 dark:border-[#30363d] rounded-lg text-xs focus:ring-2 focus:ring-primary-500 outline-none">
-                            <p class="text-[10px] text-gray-400 mt-1">URL du système de récupération des tickets</p>
+                            <input type="url" x-model="config.recover_ticket_url" @input="updatePreview" :placeholder="config.recover_ticket_url || 'https://...'"
+                                class="w-full px-3 py-1.5 bg-white dark:bg-[#0d1117] border border-gray-300 dark:border-[#30363d] rounded-lg text-xs focus:ring-2 focus:ring-primary-500 outline-none" readonly>
+                            <p class="text-[10px] text-gray-400 mt-1">Lien auto-généré vers la page de récupération des tickets</p>
                         </div>
                     </div>
 
@@ -657,7 +657,7 @@ if (!$templateId) {
                 slider_images: [],
                 logo_url: '',
                 recover_ticket: false,
-                recover_ticket_url: 'https://ticket.mna.tg',
+                recover_ticket_url: '',
                 live_chat: false,
                 chat_support_type: 'live_chat',
                 chat_whatsapp_phone: '',
@@ -751,7 +751,7 @@ if (!$templateId) {
                         this.config = { ...this.config, ...data.config };
                         if (!this.config.services) this.config.services = [];
                         if (!this.config.slider_images) this.config.slider_images = [];
-                        if (!this.config.recover_ticket_url) this.config.recover_ticket_url = 'https://ticket.mna.tg';
+                        if (!this.config.recover_ticket_url) this.config.recover_ticket_url = '';
                         if (!this.config.chat_support_type) this.config.chat_support_type = 'live_chat';
                     }
                 } catch (error) {
