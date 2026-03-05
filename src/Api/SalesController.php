@@ -66,8 +66,8 @@ class SalesController
                 u_parent.role as parent_role,
                 n.shortname as nas_name,
                 n.router_id,
-                z.id as zone_id,
-                z.name as zone_name,
+                COALESCE(vz.id, z.id) as zone_id,
+                COALESCE(vz.name, z.name) as zone_name,
                 p.id as profile_id,
                 p.name as profile_name,
                 p.price as profile_price
@@ -76,6 +76,7 @@ class SalesController
             LEFT JOIN users u_parent ON u_seller.parent_id = u_parent.id
             LEFT JOIN nas n ON v.sold_on_nas_id = n.id
             LEFT JOIN zones z ON n.zone_id = z.id
+            LEFT JOIN zones vz ON v.zone_id = vz.id
             LEFT JOIN profiles p ON v.profile_id = p.id
             WHERE v.sold_at IS NOT NULL
         ";
@@ -109,7 +110,7 @@ class SalesController
             $params[] = $filters['seller_id'];
         }
         if ($filters['zone_id']) {
-            $sql .= " AND z.id = ?";
+            $sql .= " AND COALESCE(vz.id, z.id) = ?";
             $params[] = $filters['zone_id'];
         }
         if ($filters['nas_id']) {
@@ -141,6 +142,7 @@ class SalesController
                      LEFT JOIN users u_seller ON v.sold_by = u_seller.id
                      LEFT JOIN nas n ON v.sold_on_nas_id = n.id
                      LEFT JOIN zones z ON n.zone_id = z.id
+                     LEFT JOIN zones vz ON v.zone_id = vz.id
                      WHERE v.sold_at IS NOT NULL";
         $countParams = [];
 
@@ -164,7 +166,7 @@ class SalesController
             $countParams[] = $filters['seller_id'];
         }
         if ($filters['zone_id']) {
-            $countSql .= " AND z.id = ?";
+            $countSql .= " AND COALESCE(vz.id, z.id) = ?";
             $countParams[] = $filters['zone_id'];
         }
         if ($filters['nas_id']) {
@@ -512,8 +514,7 @@ class SalesController
                 COUNT(DISTINCT v.sold_by) as sellers_count,
                 COUNT(DISTINCT v.sold_on_nas_id) as nas_count
             FROM zones z
-            LEFT JOIN nas n ON n.zone_id = z.id
-            LEFT JOIN vouchers v ON v.sold_on_nas_id = n.id
+            LEFT JOIN vouchers v ON (v.zone_id = z.id OR v.sold_on_nas_id IN (SELECT id FROM nas WHERE zone_id = z.id))
                 AND v.sold_at IS NOT NULL
                 AND DATE(v.sold_at) BETWEEN ? AND ?
                 $adminFilter

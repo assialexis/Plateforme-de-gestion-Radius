@@ -1193,6 +1193,7 @@ return [
     'transaction.operator_ref' => 'Réf. Opérateur',
     'transaction.client' => 'Client',
     'transaction.profile' => 'Profil',
+    'transaction.zone' => 'Zone',
     'transaction.amount' => 'Montant',
     'transaction.gateway' => 'Passerelle',
     'transaction.status' => 'Statut',

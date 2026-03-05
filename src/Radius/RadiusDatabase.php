@@ -3002,9 +3002,10 @@ class RadiusDatabase
      */
     public function getAllTransactions(array $filters = [], ?int $adminId = null): array
     {
-        $sql = "SELECT pt.*, p.name as profile_name
+        $sql = "SELECT pt.*, p.name as profile_name, z.name as zone_name
                 FROM payment_transactions pt
                 LEFT JOIN profiles p ON pt.profile_id = p.id
+                LEFT JOIN zones z ON p.zone_id = z.id
                 WHERE pt.transaction_type = 'voucher_purchase'";
         $params = [];
 

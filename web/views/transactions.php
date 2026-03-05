@@ -186,6 +186,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.operator_ref') ?></th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.client') ?></th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.profile') ?></th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.zone') ?></th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.amount') ?></th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.gateway') ?></th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"><?= __('transaction.status') ?></th>
@@ -197,7 +198,7 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-[#30363d]">
                     <template x-if="transactions.length === 0 && !loading">
                         <tr>
-                            <td colspan="10" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="11" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                 <svg class="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
@@ -243,6 +244,8 @@
                             </td>
                             <!-- Profil -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" x-text="txn.profile_name || '-'"></td>
+                            <!-- Zone -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" x-text="txn.zone_name || '-'"></td>
                             <!-- Montant -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="formatPrice(txn.amount) + ' ' + txn.currency"></span>
