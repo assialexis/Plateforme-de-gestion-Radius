@@ -3977,14 +3977,15 @@ class RadiusDatabase
 
         $stmt = $this->pdo->prepare("
             INSERT INTO pppoe_sessions (
-                pppoe_user_id, acct_session_id, nas_ip, nas_port, nas_identifier,
+                pppoe_user_id, username, acct_session_id, nas_ip, nas_port, nas_identifier,
                 client_ip, client_mac, calling_station_id, called_station_id, start_time, admin_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
             ON DUPLICATE KEY UPDATE start_time = NOW(), stop_time = NULL, admin_id = VALUES(admin_id)
         ");
 
         $result = $stmt->execute([
             $user['id'],
+            $data['username'],
             $data['acct_session_id'],
             $data['nas_ip'],
             $data['nas_port'] ?? null,
