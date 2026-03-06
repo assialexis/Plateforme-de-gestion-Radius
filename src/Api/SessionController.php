@@ -267,9 +267,11 @@ class SessionController
         // Obtenir les infos du NAS (correspondance exacte ou wildcard)
         $nas = $this->findNasForSession($session);
 
-        $username = $session['username'];
+        $username = $session['username'] ?? $session['voucher_code'] ?? '';
         $methods = [];
         $disconnectedViaApi = false;
+
+        error_log("Disconnect session #{$id}: username={$username}, nas_ip=" . ($session['nas_ip'] ?? 'null') . ", nas_found=" . ($nas ? $nas['shortname'] . '/' . ($nas['router_id'] ?? 'no-router') : 'null'));
 
         if ($nas) {
             // 1. Essayer l'API MikroTik directe (instantané)

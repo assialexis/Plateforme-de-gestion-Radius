@@ -1662,9 +1662,9 @@ class RadiusDatabase
     public function getSessionById(int $id): ?array
     {
         $stmt = $this->pdo->prepare("
-            SELECT s.*, v.username as voucher_code, n.shortname as nas_name
+            SELECT s.*, COALESCE(v.username, s.username) as voucher_code, n.shortname as nas_name
             FROM sessions s
-            JOIN vouchers v ON s.voucher_id = v.id
+            LEFT JOIN vouchers v ON s.voucher_id = v.id
             LEFT JOIN nas n ON (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
             WHERE s.id = ?
         ");
