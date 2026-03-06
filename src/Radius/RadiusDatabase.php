@@ -1491,27 +1491,6 @@ class RadiusDatabase
      */
     public function getActiveSessions(?int $adminId = null): array
     {
-        // Trouver le NAS wildcard par défaut (filtré par admin pour cibler le bon routeur)
-        if ($adminId !== null) {
-            $wStmt = $this->pdo->prepare("
-                SELECT n.id, n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
-                FROM nas n
-                LEFT JOIN zones z ON n.zone_id = z.id
-                WHERE n.nasname = '0.0.0.0/0' AND n.admin_id = ?
-                ORDER BY n.last_seen DESC LIMIT 1
-            ");
-            $wStmt->execute([$adminId]);
-            $wildcardNas = $wStmt->fetch();
-        } else {
-            $wildcardNas = $this->pdo->query("
-                SELECT n.id, n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
-                FROM nas n
-                LEFT JOIN zones z ON n.zone_id = z.id
-                WHERE n.nasname = '0.0.0.0/0'
-                LIMIT 1
-            ")->fetch();
-        }
-
         $where = ["s.stop_time IS NULL"];
         $params = [];
 
@@ -1522,35 +1501,46 @@ class RadiusDatabase
 
         $whereClause = 'WHERE ' . implode(' AND ', $where);
 
+        // Zone via voucher (fiable), NAS name via zone → nas
         $stmt = $this->pdo->prepare("
             SELECT s.*, COALESCE(v.username, s.username) as voucher_code, v.valid_until, v.time_limit,
-                   n.shortname as nas_name, n.router_id,
-                   z.id as zone_id, z.name as zone_name
+                   v.zone_id,
+                   z.name as zone_name
             FROM sessions s
             LEFT JOIN vouchers v ON s.voucher_id = v.id
-            LEFT JOIN nas n ON (
-                (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
-                AND (s.admin_id IS NULL OR n.admin_id = s.admin_id)
-            )
-            LEFT JOIN zones z ON n.zone_id = z.id
+            LEFT JOIN zones z ON v.zone_id = z.id
             {$whereClause}
             ORDER BY s.start_time DESC
         ");
         $stmt->execute($params);
-
         $sessions = $stmt->fetchAll();
 
-        // Appliquer le NAS wildcard pour les sessions sans correspondance directe
-        if ($wildcardNas) {
-            foreach ($sessions as &$session) {
-                if (empty($session['nas_name'])) {
-                    $session['nas_name'] = $wildcardNas['shortname'];
-                    $session['router_id'] = $wildcardNas['router_id'] ?? $session['router_id'];
+        // Batch: récupérer le NAS (routeur) pour chaque zone
+        $zoneIds = array_unique(array_filter(array_column($sessions, 'zone_id')));
+        $nasByZone = [];
+        if ($zoneIds) {
+            $ph = implode(',', array_fill(0, count($zoneIds), '?'));
+            $nStmt = $this->pdo->prepare("
+                SELECT zone_id, shortname, router_id
+                FROM nas WHERE zone_id IN ($ph)
+                ORDER BY last_seen DESC
+            ");
+            $nStmt->execute(array_values($zoneIds));
+            while ($row = $nStmt->fetch()) {
+                if (!isset($nasByZone[$row['zone_id']])) {
+                    $nasByZone[$row['zone_id']] = $row;
                 }
-                if (empty($session['zone_name'])) {
-                    $session['zone_id'] = $wildcardNas['zone_id'];
-                    $session['zone_name'] = $wildcardNas['zone_name'];
-                }
+            }
+        }
+
+        foreach ($sessions as &$session) {
+            $zid = $session['zone_id'] ?? null;
+            if ($zid && isset($nasByZone[$zid])) {
+                $session['nas_name'] = $nasByZone[$zid]['shortname'];
+                $session['router_id'] = $nasByZone[$zid]['router_id'];
+            } else {
+                $session['nas_name'] = null;
+                $session['router_id'] = null;
             }
         }
 
@@ -1569,27 +1559,6 @@ class RadiusDatabase
         if ($adminId !== null) {
             $where[] = "s.admin_id = ?";
             $params[] = $adminId;
-        }
-
-        // Récupérer le NAS wildcard par défaut (filtré par admin pour le bon routeur/zone)
-        if ($adminId !== null) {
-            $wStmt = $this->pdo->prepare("
-                SELECT n.id, n.shortname, n.router_id, n.zone_id, z.name as zone_name
-                FROM nas n
-                LEFT JOIN zones z ON n.zone_id = z.id
-                WHERE n.nasname = '0.0.0.0/0' AND n.admin_id = ?
-                ORDER BY n.last_seen DESC LIMIT 1
-            ");
-            $wStmt->execute([$adminId]);
-            $wildcardNas = $wStmt->fetch();
-        } else {
-            $wildcardNas = $this->pdo->query("
-                SELECT n.id, n.shortname, n.router_id, n.zone_id, z.name as zone_name
-                FROM nas n
-                LEFT JOIN zones z ON n.zone_id = z.id
-                WHERE n.nasname = '0.0.0.0/0'
-                LIMIT 1
-            ")->fetch();
         }
 
         if (!empty($filters['username'])) {
@@ -1621,36 +1590,37 @@ class RadiusDatabase
             }
         }
 
+        // Filtrer par zone via voucher
+        if ($zoneFilter) {
+            $where[] = "v.zone_id = ?";
+            $params[] = $zoneFilter;
+        }
+
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
         $offset = ($page - 1) * $perPage;
 
-        // Compter le total
+        // Compter le total (avec jointure voucher pour le filtre zone)
         $countStmt = $this->pdo->prepare("
             SELECT COUNT(*) as total
             FROM sessions s
+            LEFT JOIN vouchers v ON s.voucher_id = v.id
             {$whereClause}
         ");
         $countStmt->execute($params);
         $total = (int)$countStmt->fetch()['total'];
 
-        // Récupérer les sessions
+        // Zone via voucher (fiable), NAS name via zone → nas
         $stmt = $this->pdo->prepare("
             SELECT s.*,
                    COALESCE(v.username, s.username) as voucher_code,
                    p.name as profile_name,
                    p.price as profile_price,
-                   n.shortname as nas_name,
-                   n.router_id,
-                   z.id as zone_id,
+                   v.zone_id,
                    z.name as zone_name
             FROM sessions s
             LEFT JOIN vouchers v ON s.voucher_id = v.id
             LEFT JOIN profiles p ON v.profile_id = p.id
-            LEFT JOIN nas n ON (
-                (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
-                AND (s.admin_id IS NULL OR n.admin_id = s.admin_id)
-            )
-            LEFT JOIN zones z ON n.zone_id = z.id
+            LEFT JOIN zones z ON v.zone_id = z.id
             {$whereClause}
             ORDER BY s.start_time DESC
             LIMIT {$perPage} OFFSET {$offset}
@@ -1658,27 +1628,33 @@ class RadiusDatabase
         $stmt->execute($params);
         $sessions = $stmt->fetchAll();
 
-        // Appliquer le NAS wildcard pour les sessions sans correspondance directe
-        if ($wildcardNas) {
-            foreach ($sessions as &$session) {
-                if (empty($session['nas_name'])) {
-                    $session['nas_name'] = $wildcardNas['shortname'];
-                    $session['router_id'] = $wildcardNas['router_id'] ?? $session['router_id'];
-                }
-                if (empty($session['zone_name'])) {
-                    $session['zone_id'] = $wildcardNas['zone_id'];
-                    $session['zone_name'] = $wildcardNas['zone_name'];
+        // Batch: récupérer le NAS (routeur) pour chaque zone
+        $zoneIds = array_unique(array_filter(array_column($sessions, 'zone_id')));
+        $nasByZone = [];
+        if ($zoneIds) {
+            $ph = implode(',', array_fill(0, count($zoneIds), '?'));
+            $nStmt = $this->pdo->prepare("
+                SELECT zone_id, shortname, router_id
+                FROM nas WHERE zone_id IN ($ph)
+                ORDER BY last_seen DESC
+            ");
+            $nStmt->execute(array_values($zoneIds));
+            while ($row = $nStmt->fetch()) {
+                if (!isset($nasByZone[$row['zone_id']])) {
+                    $nasByZone[$row['zone_id']] = $row;
                 }
             }
         }
 
-        // Filtrer par zone après application du wildcard
-        if ($zoneFilter) {
-            $sessions = array_filter($sessions, function ($s) use ($zoneFilter) {
-                return isset($s['zone_id']) && (int)$s['zone_id'] === $zoneFilter;
-            });
-            $sessions = array_values($sessions); // Réindexer
-            $total = count($sessions);
+        foreach ($sessions as &$session) {
+            $zid = $session['zone_id'] ?? null;
+            if ($zid && isset($nasByZone[$zid])) {
+                $session['nas_name'] = $nasByZone[$zid]['shortname'];
+                $session['router_id'] = $nasByZone[$zid]['router_id'];
+            } else {
+                $session['nas_name'] = null;
+                $session['router_id'] = null;
+            }
         }
 
         return [
@@ -1695,40 +1671,29 @@ class RadiusDatabase
      */
     public function getSessionById(int $id): ?array
     {
+        // Zone via voucher (fiable), NAS via zone
         $stmt = $this->pdo->prepare("
             SELECT s.*, COALESCE(v.username, s.username) as voucher_code,
-                   n.shortname as nas_name, n.router_id,
-                   z.id as zone_id, z.name as zone_name
+                   v.zone_id, z.name as zone_name
             FROM sessions s
             LEFT JOIN vouchers v ON s.voucher_id = v.id
-            LEFT JOIN nas n ON (
-                (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
-                AND (s.admin_id IS NULL OR n.admin_id = s.admin_id)
-            )
-            LEFT JOIN zones z ON n.zone_id = z.id
+            LEFT JOIN zones z ON v.zone_id = z.id
             WHERE s.id = ?
         ");
         $stmt->execute([$id]);
         $session = $stmt->fetch() ?: null;
 
-        // Fallback: NAS wildcard de l'admin
-        if ($session && empty($session['nas_name']) && !empty($session['admin_id'])) {
-            $wStmt = $this->pdo->prepare("
-                SELECT n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
-                FROM nas n
-                LEFT JOIN zones z ON n.zone_id = z.id
-                WHERE n.nasname = '0.0.0.0/0' AND n.admin_id = ?
-                ORDER BY n.last_seen DESC LIMIT 1
+        // Récupérer le NAS via la zone
+        if ($session && !empty($session['zone_id'])) {
+            $nStmt = $this->pdo->prepare("
+                SELECT shortname, router_id FROM nas
+                WHERE zone_id = ? ORDER BY last_seen DESC LIMIT 1
             ");
-            $wStmt->execute([$session['admin_id']]);
-            $wNas = $wStmt->fetch();
-            if ($wNas) {
-                $session['nas_name'] = $wNas['shortname'];
-                $session['router_id'] = $wNas['router_id'] ?? $session['router_id'];
-                if (empty($session['zone_name'])) {
-                    $session['zone_id'] = $wNas['zone_id'];
-                    $session['zone_name'] = $wNas['zone_name'];
-                }
+            $nStmt->execute([$session['zone_id']]);
+            $nas = $nStmt->fetch();
+            if ($nas) {
+                $session['nas_name'] = $nas['shortname'];
+                $session['router_id'] = $nas['router_id'];
             }
         }
 
