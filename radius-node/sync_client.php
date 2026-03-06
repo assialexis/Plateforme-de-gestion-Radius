@@ -294,8 +294,8 @@ function collectPushData(PDO $pdo): array
 {
     $data = ['has_data' => false];
 
-    // Sessions non synchronisées
-    $stmt = $pdo->query("SELECT * FROM sessions WHERE synced = 0 LIMIT 500");
+    // Sessions non synchronisées + sessions actives (pour mettre à jour les compteurs)
+    $stmt = $pdo->query("SELECT * FROM sessions WHERE synced = 0 OR stop_time IS NULL LIMIT 500");
     $data['sessions'] = $stmt->fetchAll();
 
     // Auth logs non synchronisés
