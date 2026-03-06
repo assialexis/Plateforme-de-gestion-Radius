@@ -1566,14 +1566,26 @@ class RadiusDatabase
             $params[] = $adminId;
         }
 
-        // Récupérer le NAS wildcard par défaut
-        $wildcardNas = $this->pdo->query("
-            SELECT n.id, n.shortname, n.router_id, n.zone_id, z.name as zone_name
-            FROM nas n
-            LEFT JOIN zones z ON n.zone_id = z.id
-            WHERE n.nasname = '0.0.0.0/0'
-            LIMIT 1
-        ")->fetch();
+        // Récupérer le NAS wildcard par défaut (filtré par admin pour le bon routeur/zone)
+        if ($adminId !== null) {
+            $wStmt = $this->pdo->prepare("
+                SELECT n.id, n.shortname, n.router_id, n.zone_id, z.name as zone_name
+                FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.nasname = '0.0.0.0/0' AND n.admin_id = ?
+                ORDER BY n.last_seen DESC LIMIT 1
+            ");
+            $wStmt->execute([$adminId]);
+            $wildcardNas = $wStmt->fetch();
+        } else {
+            $wildcardNas = $this->pdo->query("
+                SELECT n.id, n.shortname, n.router_id, n.zone_id, z.name as zone_name
+                FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.nasname = '0.0.0.0/0'
+                LIMIT 1
+            ")->fetch();
+        }
 
         if (!empty($filters['username'])) {
             $where[] = "s.username LIKE ?";
@@ -1619,7 +1631,7 @@ class RadiusDatabase
         // Récupérer les sessions
         $stmt = $this->pdo->prepare("
             SELECT s.*,
-                   v.username as voucher_code,
+                   COALESCE(v.username, s.username) as voucher_code,
                    p.name as profile_name,
                    p.price as profile_price,
                    n.shortname as nas_name,
@@ -1627,7 +1639,7 @@ class RadiusDatabase
                    z.id as zone_id,
                    z.name as zone_name
             FROM sessions s
-            JOIN vouchers v ON s.voucher_id = v.id
+            LEFT JOIN vouchers v ON s.voucher_id = v.id
             LEFT JOIN profiles p ON v.profile_id = p.id
             LEFT JOIN nas n ON (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
             LEFT JOIN zones z ON n.zone_id = z.id
