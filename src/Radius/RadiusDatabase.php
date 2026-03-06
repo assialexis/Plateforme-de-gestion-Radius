@@ -1511,11 +1511,11 @@ class RadiusDatabase
         $whereClause = 'WHERE ' . implode(' AND ', $where);
 
         $stmt = $this->pdo->prepare("
-            SELECT s.*, v.username as voucher_code, v.valid_until, v.time_limit,
+            SELECT s.*, COALESCE(v.username, s.username) as voucher_code, v.valid_until, v.time_limit,
                    n.shortname as nas_name, n.router_id,
                    z.id as zone_id, z.name as zone_name
             FROM sessions s
-            JOIN vouchers v ON s.voucher_id = v.id
+            LEFT JOIN vouchers v ON s.voucher_id = v.id
             LEFT JOIN nas n ON (s.nas_ip = n.nasname OR (s.nas_ip = n.mikrotik_host AND n.mikrotik_host != ''))
             LEFT JOIN zones z ON n.zone_id = z.id
             {$whereClause}
@@ -6674,7 +6674,7 @@ class RadiusDatabase
                                 output_octets = VALUES(output_octets),
                                 input_packets = VALUES(input_packets),
                                 output_packets = VALUES(output_packets),
-                                last_update = VALUES(last_update),
+                                last_update = IF(VALUES(stop_time) IS NULL, NOW(), VALUES(last_update)),
                                 stop_time = VALUES(stop_time),
                                 terminate_cause = VALUES(terminate_cause)
                         ");
@@ -6712,7 +6712,7 @@ class RadiusDatabase
                                 output_octets = VALUES(output_octets),
                                 input_packets = VALUES(input_packets),
                                 output_packets = VALUES(output_packets),
-                                last_update = VALUES(last_update),
+                                last_update = IF(VALUES(stop_time) IS NULL, NOW(), VALUES(last_update)),
                                 stop_time = VALUES(stop_time),
                                 terminate_cause = VALUES(terminate_cause)
                         ");
