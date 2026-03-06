@@ -267,30 +267,36 @@ class SessionController
             jsonError(__('api.session_already_terminated'), 400);
         }
 
-        // Résoudre l'admin_id : session -> voucher -> fallback
+        // Résoudre l'admin_id : session -> voucher -> admin connecté
         $adminId = $session['admin_id'] ?? null;
+        $pdo = $this->db->getPdo();
+
         if (!$adminId && !empty($session['voucher_id'])) {
-            $pdo = $this->db->getPdo();
             $stmt = $pdo->prepare("SELECT admin_id FROM vouchers WHERE id = ?");
             $stmt->execute([$session['voucher_id']]);
             $v = $stmt->fetch();
             $adminId = $v['admin_id'] ?? null;
-
-            // Mettre à jour la session pour les prochaines fois
-            if ($adminId) {
-                $pdo->prepare("UPDATE sessions SET admin_id = ? WHERE id = ? AND admin_id IS NULL")
-                    ->execute([$adminId, $id]);
-            }
         }
 
-        // Obtenir les infos du NAS (correspondance exacte ou wildcard)
-        $nas = $this->findNasForSession($session, $adminId);
+        // Dernier recours : utiliser l'admin connecté
+        if (!$adminId) {
+            $adminId = $this->getAdminId();
+        }
+
+        // Mettre à jour la session si admin_id était manquant
+        if ($adminId && empty($session['admin_id'])) {
+            $pdo->prepare("UPDATE sessions SET admin_id = ? WHERE id = ? AND admin_id IS NULL")
+                ->execute([$adminId, $id]);
+        }
+
+        // Trouver le NAS de l'admin directement (approche fiable pour architecture décentralisée)
+        $nas = $this->findNasForAdmin($adminId, $session['nas_ip'] ?? '');
 
         $username = $session['username'] ?? $session['voucher_code'] ?? '';
         $methods = [];
         $disconnectedViaApi = false;
 
-        error_log("Disconnect session #{$id}: username={$username}, admin_id={$adminId}, nas_ip=" . ($session['nas_ip'] ?? 'null') . ", nas_found=" . ($nas ? $nas['shortname'] . '(admin=' . ($nas['admin_id'] ?? 'null') . ',router=' . ($nas['router_id'] ?? 'none') . ')' : 'null'));
+        error_log("Disconnect session #{$id}: username={$username}, admin_id={$adminId}, nas_ip=" . ($session['nas_ip'] ?? 'null') . ", nas_found=" . ($nas ? $nas['shortname'] . '(id=' . $nas['id'] . ',admin=' . ($nas['admin_id'] ?? 'null') . ',router=' . ($nas['router_id'] ?? 'none') . ')' : 'null'));
 
         if ($nas) {
             // 1. Essayer l'API MikroTik directe (instantané)
@@ -365,45 +371,65 @@ class SessionController
     }
 
     /**
-     * Trouver le NAS correspondant à une session (match exact ou wildcard)
-     * Filtre par admin_id pour cibler le bon routeur
+     * Trouver le NAS d'un admin pour envoyer des commandes
+     * Approche directe : requête DB filtrée par admin_id
+     * Priorité : match IP exact > mikrotik_host > wildcard avec router_id actif
      */
-    private function findNasForSession(array $session, ?int $adminId = null): ?array
+    private function findNasForAdmin(?int $adminId, string $sessionIp = ''): ?array
     {
-        $nas = null;
-        $mikrotikHostMatch = null;
-        $wildcardNas = null;
-        $sessionIp = $session['nas_ip'] ?? '';
-        $targetAdminId = $adminId ?? ($session['admin_id'] ?? null);
+        $pdo = $this->db->getPdo();
 
-        foreach ($this->db->getAllNas() as $n) {
-            $nasAdminId = $n['admin_id'] ?? null;
-
-            // Si on connaît l'admin, STRICTEMENT filtrer : ne garder que les NAS de cet admin
-            if ($targetAdminId) {
-                if (!$nasAdminId || (int)$nasAdminId !== (int)$targetAdminId) {
-                    continue;
-                }
+        if ($adminId) {
+            // 1. Match exact sur nasname pour cet admin
+            if ($sessionIp) {
+                $stmt = $pdo->prepare("
+                    SELECT n.*, z.name as zone_name FROM nas n
+                    LEFT JOIN zones z ON n.zone_id = z.id
+                    WHERE n.admin_id = ? AND (n.nasname = ? OR (n.mikrotik_host = ? AND n.mikrotik_host != ''))
+                    LIMIT 1
+                ");
+                $stmt->execute([$adminId, $sessionIp, $sessionIp]);
+                $nas = $stmt->fetch();
+                if ($nas) return $nas;
             }
 
-            // Match exact sur nasname (priorité 1)
-            if ($n['nasname'] === $sessionIp) {
-                $nas = $n;
-                break;
-            }
-            // Match sur mikrotik_host (priorité 2)
-            if (!empty($n['mikrotik_host']) && $n['mikrotik_host'] === $sessionIp) {
-                $mikrotikHostMatch = $n;
-            }
-            // Wildcard (priorité 3 - préférer celui avec router_id actif)
-            if ($n['nasname'] === '0.0.0.0/0') {
-                if (!$wildcardNas || (!empty($n['router_id']) && empty($wildcardNas['router_id'])) || (!empty($n['last_seen']) && empty($wildcardNas['last_seen']))) {
-                    $wildcardNas = $n;
-                }
-            }
+            // 2. NAS de l'admin avec router_id actif (préférer le plus récemment vu)
+            $stmt = $pdo->prepare("
+                SELECT n.*, z.name as zone_name FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.admin_id = ? AND n.router_id IS NOT NULL AND n.router_id != ''
+                ORDER BY n.last_seen DESC, n.id DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$adminId]);
+            $nas = $stmt->fetch();
+            if ($nas) return $nas;
+
+            // 3. N'importe quel NAS de l'admin
+            $stmt = $pdo->prepare("
+                SELECT n.*, z.name as zone_name FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.admin_id = ?
+                ORDER BY n.id DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$adminId]);
+            $nas = $stmt->fetch();
+            if ($nas) return $nas;
         }
 
-        return $nas ?? $mikrotikHostMatch ?? $wildcardNas;
+        // Fallback sans admin_id : ancien comportement
+        $allNas = $this->db->getAllNas();
+        $wildcardNas = null;
+        foreach ($allNas as $n) {
+            if ($sessionIp && ($n['nasname'] === $sessionIp || (!empty($n['mikrotik_host']) && $n['mikrotik_host'] === $sessionIp))) {
+                return $n;
+            }
+            if ($n['nasname'] === '0.0.0.0/0' && !$wildcardNas) {
+                $wildcardNas = $n;
+            }
+        }
+        return $wildcardNas;
     }
 
     /**
@@ -418,27 +444,28 @@ class SessionController
         $sessions = $this->db->getActiveSessions();
         $disconnected = 0;
 
-        // Grouper les sessions par NAS pour optimiser les connexions API
-        $sessionsByNas = [];
+        // Grouper les sessions par admin_id pour cibler le bon routeur
+        $sessionsByAdmin = [];
         foreach ($sessions as $session) {
             if ($voucherId && $session['voucher_id'] != $voucherId) {
                 continue;
             }
-            $nasIp = $session['nas_ip'] ?? 'unknown';
-            $sessionsByNas[$nasIp][] = $session;
+            $sessAdminId = $session['admin_id'] ?? 'unknown';
+            $sessionsByAdmin[$sessAdminId][] = $session;
         }
 
-        foreach ($sessionsByNas as $nasIp => $nasSessions) {
-            $nas = $this->findNasForSession($nasSessions[0]);
+        foreach ($sessionsByAdmin as $sessAdminId => $adminSessions) {
+            $adminIdInt = is_numeric($sessAdminId) ? (int)$sessAdminId : null;
+            $nas = $this->findNasForAdmin($adminIdInt, $adminSessions[0]['nas_ip'] ?? '');
             if (!$nas) continue;
 
             // Essayer l'API directe pour ce NAS (une seule connexion)
-            $apiRouter = $this->connectToRouterApi($nas, $nasSessions[0]);
+            $apiRouter = $this->connectToRouterApi($nas, $adminSessions[0]);
 
             $pdo = $this->db->getPdo();
             $routerId = $nas['router_id'] ?? null;
 
-            foreach ($nasSessions as $session) {
+            foreach ($adminSessions as $session) {
                 $username = $session['username'];
 
                 // 1. API directe (instantané)

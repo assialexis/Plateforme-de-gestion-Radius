@@ -1491,14 +1491,26 @@ class RadiusDatabase
      */
     public function getActiveSessions(?int $adminId = null): array
     {
-        // Trouver le NAS wildcard par défaut (le premier 0.0.0.0/0)
-        $wildcardNas = $this->pdo->query("
-            SELECT n.id, n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
-            FROM nas n
-            LEFT JOIN zones z ON n.zone_id = z.id
-            WHERE n.nasname = '0.0.0.0/0'
-            LIMIT 1
-        ")->fetch();
+        // Trouver le NAS wildcard par défaut (filtré par admin pour cibler le bon routeur)
+        if ($adminId !== null) {
+            $wStmt = $this->pdo->prepare("
+                SELECT n.id, n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
+                FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.nasname = '0.0.0.0/0' AND n.admin_id = ?
+                ORDER BY n.last_seen DESC LIMIT 1
+            ");
+            $wStmt->execute([$adminId]);
+            $wildcardNas = $wStmt->fetch();
+        } else {
+            $wildcardNas = $this->pdo->query("
+                SELECT n.id, n.shortname, n.router_id, z.id as zone_id, z.name as zone_name
+                FROM nas n
+                LEFT JOIN zones z ON n.zone_id = z.id
+                WHERE n.nasname = '0.0.0.0/0'
+                LIMIT 1
+            ")->fetch();
+        }
 
         $where = ["s.stop_time IS NULL"];
         $params = [];
