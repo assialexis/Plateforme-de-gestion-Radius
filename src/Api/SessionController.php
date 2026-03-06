@@ -267,27 +267,26 @@ class SessionController
         // Obtenir les infos du NAS (correspondance exacte ou wildcard)
         $nas = $this->findNasForSession($session);
 
-        if (!$nas) {
-            jsonError(__('api.nas_not_found'), 404);
-        }
-
         $username = $session['username'];
         $methods = [];
+        $disconnectedViaApi = false;
 
-        // 1. Essayer l'API MikroTik directe (instantané)
-        $disconnectedViaApi = $this->tryDirectApiDisconnect($nas, $session, $username);
-        if ($disconnectedViaApi) {
-            $methods[] = 'API MikroTik';
+        if ($nas) {
+            // 1. Essayer l'API MikroTik directe (instantané)
+            $disconnectedViaApi = $this->tryDirectApiDisconnect($nas, $session, $username);
+            if ($disconnectedViaApi) {
+                $methods[] = 'API MikroTik';
+            }
+
+            // 2. TOUJOURS envoyer aussi la commande polling (filet de sécurité)
+            $routerId = $nas['router_id'] ?? null;
+            if ($routerId) {
+                $this->commandSender->disconnectHotspotUser($routerId, $username);
+                $methods[] = 'commande polling';
+            }
         }
 
-        // 2. TOUJOURS envoyer aussi la commande polling (filet de sécurité)
-        $routerId = $nas['router_id'] ?? null;
-        if ($routerId) {
-            $this->commandSender->disconnectHotspotUser($routerId, $username);
-            $methods[] = 'commande polling';
-        }
-
-        // Marquer la session comme terminée
+        // Marquer la session comme terminée en base (toujours, même sans NAS)
         $pdo = $this->db->getPdo();
         $stmt = $pdo->prepare("
             UPDATE sessions SET stop_time = NOW(), terminate_cause = 'Admin-Reset'
