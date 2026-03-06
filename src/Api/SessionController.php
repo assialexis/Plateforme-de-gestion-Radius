@@ -75,13 +75,15 @@ class SessionController
                         session_time = ?,
                         input_octets = ?,
                         output_octets = ?,
-                        last_update = NOW()
+                        last_update = NOW(),
+                        admin_id = COALESCE(admin_id, ?)
                     WHERE id = ?
                 ");
                 $stmt->execute([
                     $this->parseUptime($session['uptime'] ?? '0s'),
                     $this->parseBytes($session['bytes-in'] ?? 0),
                     $this->parseBytes($session['bytes-out'] ?? 0),
+                    $voucher['admin_id'] ?? null,
                     $existing['id']
                 ]);
             } else {
@@ -89,8 +91,8 @@ class SessionController
                 $stmt = $pdo->prepare("
                     INSERT INTO sessions (
                         voucher_id, acct_session_id, nas_ip, username,
-                        client_ip, client_mac, start_time, last_update
-                    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        client_ip, client_mac, start_time, last_update, admin_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
                 ");
                 $stmt->execute([
                     $voucher['id'],
@@ -98,7 +100,8 @@ class SessionController
                     $nasIp,
                     $username,
                     $session['address'] ?? null,
-                    $session['mac-address'] ?? null
+                    $session['mac-address'] ?? null,
+                    $voucher['admin_id'] ?? null
                 ]);
             }
             $synced++;
@@ -264,14 +267,30 @@ class SessionController
             jsonError(__('api.session_already_terminated'), 400);
         }
 
+        // Résoudre l'admin_id : session -> voucher -> fallback
+        $adminId = $session['admin_id'] ?? null;
+        if (!$adminId && !empty($session['voucher_id'])) {
+            $pdo = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT admin_id FROM vouchers WHERE id = ?");
+            $stmt->execute([$session['voucher_id']]);
+            $v = $stmt->fetch();
+            $adminId = $v['admin_id'] ?? null;
+
+            // Mettre à jour la session pour les prochaines fois
+            if ($adminId) {
+                $pdo->prepare("UPDATE sessions SET admin_id = ? WHERE id = ? AND admin_id IS NULL")
+                    ->execute([$adminId, $id]);
+            }
+        }
+
         // Obtenir les infos du NAS (correspondance exacte ou wildcard)
-        $nas = $this->findNasForSession($session);
+        $nas = $this->findNasForSession($session, $adminId);
 
         $username = $session['username'] ?? $session['voucher_code'] ?? '';
         $methods = [];
         $disconnectedViaApi = false;
 
-        error_log("Disconnect session #{$id}: username={$username}, nas_ip=" . ($session['nas_ip'] ?? 'null') . ", nas_found=" . ($nas ? $nas['shortname'] . '/' . ($nas['router_id'] ?? 'no-router') : 'null'));
+        error_log("Disconnect session #{$id}: username={$username}, admin_id={$adminId}, nas_ip=" . ($session['nas_ip'] ?? 'null') . ", nas_found=" . ($nas ? $nas['shortname'] . '(admin=' . ($nas['admin_id'] ?? 'null') . ',router=' . ($nas['router_id'] ?? 'none') . ')' : 'null'));
 
         if ($nas) {
             // 1. Essayer l'API MikroTik directe (instantané)
@@ -347,22 +366,24 @@ class SessionController
 
     /**
      * Trouver le NAS correspondant à une session (match exact ou wildcard)
-     * Filtre par admin_id de la session pour cibler le bon routeur
+     * Filtre par admin_id pour cibler le bon routeur
      */
-    private function findNasForSession(array $session): ?array
+    private function findNasForSession(array $session, ?int $adminId = null): ?array
     {
         $nas = null;
         $mikrotikHostMatch = null;
         $wildcardNas = null;
         $sessionIp = $session['nas_ip'] ?? '';
-        $sessionAdminId = $session['admin_id'] ?? null;
+        $targetAdminId = $adminId ?? ($session['admin_id'] ?? null);
 
         foreach ($this->db->getAllNas() as $n) {
             $nasAdminId = $n['admin_id'] ?? null;
 
-            // Ignorer les NAS d'un autre admin
-            if ($sessionAdminId && $nasAdminId && (int)$nasAdminId !== (int)$sessionAdminId) {
-                continue;
+            // Si on connaît l'admin, STRICTEMENT filtrer : ne garder que les NAS de cet admin
+            if ($targetAdminId) {
+                if (!$nasAdminId || (int)$nasAdminId !== (int)$targetAdminId) {
+                    continue;
+                }
             }
 
             // Match exact sur nasname (priorité 1)
@@ -374,9 +395,9 @@ class SessionController
             if (!empty($n['mikrotik_host']) && $n['mikrotik_host'] === $sessionIp) {
                 $mikrotikHostMatch = $n;
             }
-            // Wildcard (priorité 3 - préférer celui qui poll activement)
+            // Wildcard (priorité 3 - préférer celui avec router_id actif)
             if ($n['nasname'] === '0.0.0.0/0') {
-                if (!$wildcardNas || (!empty($n['last_seen']) && empty($wildcardNas['last_seen']))) {
+                if (!$wildcardNas || (!empty($n['router_id']) && empty($wildcardNas['router_id'])) || (!empty($n['last_seen']) && empty($wildcardNas['last_seen']))) {
                     $wildcardNas = $n;
                 }
             }

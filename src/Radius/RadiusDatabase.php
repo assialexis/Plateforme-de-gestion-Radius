@@ -6676,7 +6676,8 @@ class RadiusDatabase
                                 output_packets = VALUES(output_packets),
                                 last_update = IF(VALUES(stop_time) IS NULL, NOW(), VALUES(last_update)),
                                 stop_time = VALUES(stop_time),
-                                terminate_cause = VALUES(terminate_cause)
+                                terminate_cause = VALUES(terminate_cause),
+                                admin_id = COALESCE(VALUES(admin_id), admin_id)
                         ");
                         $stmt->execute([
                             $voucherId,
