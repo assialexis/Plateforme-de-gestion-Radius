@@ -347,6 +347,7 @@ class SessionController
 
     /**
      * Trouver le NAS correspondant à une session (match exact ou wildcard)
+     * Filtre par admin_id de la session pour cibler le bon routeur
      */
     private function findNasForSession(array $session): ?array
     {
@@ -354,8 +355,16 @@ class SessionController
         $mikrotikHostMatch = null;
         $wildcardNas = null;
         $sessionIp = $session['nas_ip'] ?? '';
+        $sessionAdminId = $session['admin_id'] ?? null;
 
         foreach ($this->db->getAllNas() as $n) {
+            $nasAdminId = $n['admin_id'] ?? null;
+
+            // Ignorer les NAS d'un autre admin
+            if ($sessionAdminId && $nasAdminId && (int)$nasAdminId !== (int)$sessionAdminId) {
+                continue;
+            }
+
             // Match exact sur nasname (priorité 1)
             if ($n['nasname'] === $sessionIp) {
                 $nas = $n;
