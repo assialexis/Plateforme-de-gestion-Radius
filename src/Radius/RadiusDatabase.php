@@ -5391,10 +5391,14 @@ class RadiusDatabase
                 $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN fup_data_offset BIGINT DEFAULT 0 AFTER fup_data_used");
             }
 
-            // Colonnes pour stocker le dernier NAS IP et session ID (pour CoA FUP fiable)
+            // Colonnes pour stocker le dernier NAS info (pour push disconnect FUP)
             $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'last_nas_ip'");
             if (!$stmt->fetch()) {
                 $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN last_nas_ip VARCHAR(45) NULL AFTER fup_override, ADD COLUMN last_acct_session_id VARCHAR(100) NULL AFTER last_nas_ip");
+            }
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'last_nas_identifier'");
+            if (!$stmt->fetch()) {
+                $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN last_nas_identifier VARCHAR(100) NULL AFTER last_acct_session_id");
             }
 
             // Créer table des logs FUP si n'existe pas
@@ -7004,6 +7008,7 @@ class RadiusDatabase
                             time_used = GREATEST(time_used, ?),
                             last_nas_ip = COALESCE(?, last_nas_ip),
                             last_acct_session_id = COALESCE(?, last_acct_session_id),
+                            last_nas_identifier = COALESCE(?, last_nas_identifier),
                             fup_data_used = CASE
                                 WHEN ? >= COALESCE(fup_last_reset, '1970-01-01') THEN ?
                                 ELSE fup_data_used
@@ -7031,6 +7036,7 @@ class RadiusDatabase
                         $update['time_used'] ?? 0,
                         $update['last_nas_ip'] ?? null,
                         $update['last_acct_session_id'] ?? null,
+                        $update['last_nas_identifier'] ?? null,
                         $nodeLastReset ?? '1970-01-01', $update['fup_data_used'] ?? 0,
                         $nodeLastReset ?? '1970-01-01', $update['fup_data_offset'] ?? 0,
                         $nodeLastReset ?? '1970-01-01', $update['fup_triggered'] ?? 0,

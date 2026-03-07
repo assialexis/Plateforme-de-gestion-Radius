@@ -4077,10 +4077,16 @@ class RadiusDatabase
         }
 
         if ($pppoeUserId) {
-            // Stocker le NAS IP et session ID sur l'utilisateur pour le CoA FUP
-            $this->pdo->prepare("
-                UPDATE pppoe_users SET last_nas_ip = ?, last_acct_session_id = ? WHERE id = ?
-            ")->execute([$nasIp, $acctSessionId, $pppoeUserId]);
+            $nasIdentifier = $data['nas_identifier'] ?? '';
+
+            // Stocker le NAS identifier et session ID sur l'utilisateur pour le disconnect FUP
+            try {
+                $this->pdo->prepare("
+                    UPDATE pppoe_users SET last_nas_ip = ?, last_acct_session_id = ?, last_nas_identifier = ? WHERE id = ?
+                ")->execute([$nasIp, $acctSessionId, $nasIdentifier, $pppoeUserId]);
+            } catch (PDOException $e) {
+                // Colonnes pas encore créées, ignorer
+            }
 
             // Calculer le total des données utilisées (toutes sessions)
             $stmt = $this->pdo->prepare("
@@ -4111,8 +4117,8 @@ class RadiusDatabase
                 UPDATE pppoe_users SET data_used = ?, time_used = ?, fup_data_used = ? WHERE id = ?
             ")->execute([$totalData, $totalTime, $fupDataUsed, $pppoeUserId]);
 
-            // Vérifier et déclencher le FUP si nécessaire (passer NAS info pour le CoA)
-            $this->checkAndTriggerFup($pppoeUserId, $nasIp, $acctSessionId);
+            // Vérifier et déclencher le FUP si nécessaire (passer NAS identifier pour le push disconnect)
+            $this->checkAndTriggerFup($pppoeUserId, $nasIdentifier, $username);
         }
 
         return $result;
@@ -6068,10 +6074,14 @@ class RadiusDatabase
                 $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN fup_data_offset BIGINT DEFAULT 0 AFTER fup_data_used");
             }
 
-            // Colonnes pour stocker le dernier NAS IP et session ID (pour CoA FUP fiable)
+            // Colonnes pour stocker le dernier NAS info (pour push disconnect FUP)
             $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'last_nas_ip'");
             if (!$stmt->fetch()) {
                 $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN last_nas_ip VARCHAR(45) NULL AFTER fup_override, ADD COLUMN last_acct_session_id VARCHAR(100) NULL AFTER last_nas_ip");
+            }
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'last_nas_identifier'");
+            if (!$stmt->fetch()) {
+                $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN last_nas_identifier VARCHAR(100) NULL AFTER last_acct_session_id");
             }
 
             // Créer table des logs FUP si n'existe pas
@@ -6158,10 +6168,10 @@ class RadiusDatabase
 
     /**
      * Vérifier et déclencher FUP si nécessaire
-     * @param string|null $nasIp NAS IP from accounting packet (for reliable CoA)
-     * @param string|null $acctSessionId Session ID from accounting packet
+     * @param string|null $nasIdentifier NAS-Identifier (router_id) for push disconnect
+     * @param string|null $username PPPoE username for disconnect command
      */
-    public function checkAndTriggerFup(int $userId, ?string $nasIp = null, ?string $acctSessionId = null): array
+    public function checkAndTriggerFup(int $userId, ?string $nasIdentifier = null, ?string $username = null): array
     {
         $this->ensureFupColumnsExist();
 
@@ -6188,7 +6198,7 @@ class RadiusDatabase
         // Vérifier si le quota est atteint
         if ($status['fup_quota'] > 0 && $status['fup_data_used'] >= $status['fup_quota']) {
             // Déclencher le FUP
-            $this->triggerFup($userId, $status, $nasIp, $acctSessionId);
+            $this->triggerFup($userId, $status, $nasIdentifier, $username);
             return [
                 'triggered' => true,
                 'reason' => 'Quota exceeded',
@@ -6204,10 +6214,10 @@ class RadiusDatabase
 
     /**
      * Déclencher le FUP pour un utilisateur
-     * @param string|null $nasIp NAS IP from accounting packet (for reliable CoA)
-     * @param string|null $acctSessionId Session ID from accounting packet
+     * @param string|null $nasIdentifier NAS-Identifier (router_id) for push disconnect
+     * @param string|null $username PPPoE username for disconnect command
      */
-    public function triggerFup(int $userId, ?array $status = null, ?string $nasIp = null, ?string $acctSessionId = null): bool
+    public function triggerFup(int $userId, ?array $status = null, ?string $nasIdentifier = null, ?string $username = null): bool
     {
         $this->ensureFupColumnsExist();
 
@@ -6236,106 +6246,86 @@ class RadiusDatabase
             'new_speed_up' => $status['fup_upload_speed']
         ]);
 
-        // D'abord déconnecter du MikroTik (besoin de la session active pour le CoA)
-        $this->applyFupSpeedToMikrotik($userId, $status, $nasIp, $acctSessionId);
+        // Déconnecter du MikroTik via push command (le routeur poll fetch_cmd.php)
+        $pppoeUsername = $username ?: $status['username'];
+        $this->pushDisconnectPPPoEUser($userId, $pppoeUsername, $nasIdentifier, 'FUP trigger');
 
-        // Puis fermer les sessions en DB pour éviter le rejet "Too many simultaneous connections"
+        // Fermer les sessions en DB pour éviter le rejet "Too many simultaneous connections"
         $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
 
         return true;
     }
 
     /**
-     * Appliquer le débit FUP sur MikroTik en temps réel
-     * Envoie un Disconnect-Request CoA directement au NAS (instantané)
+     * Déconnecter un utilisateur PPPoE via push command (le routeur poll fetch_cmd.php)
+     * Utilise le NAS-Identifier (router_id) pour router la commande vers le bon routeur
      */
-    private function applyFupSpeedToMikrotik(int $userId, array $status, ?string $nasIp = null, ?string $acctSessionId = null): bool
+    private function pushDisconnectPPPoEUser(int $userId, string $username, ?string $nasIdentifier = null, string $reason = 'FUP'): bool
     {
-        return $this->disconnectPPPoEUserFromNas($userId, $status['username'], 'FUP trigger', $nasIp, $acctSessionId);
+        // Trouver le router_id : paramètre direct > last_nas_identifier stocké > zone
+        $routerId = null;
+
+        // 1. NAS-Identifier passé directement depuis le paquet accounting
+        if ($nasIdentifier) {
+            $routerId = $this->resolveRouterId($nasIdentifier);
+        }
+
+        // 2. last_nas_identifier stocké sur pppoe_users
+        if (!$routerId) {
+            try {
+                $stmt = $this->pdo->prepare("SELECT last_nas_identifier FROM pppoe_users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $user = $stmt->fetch();
+                if ($user && !empty($user['last_nas_identifier'])) {
+                    $routerId = $this->resolveRouterId($user['last_nas_identifier']);
+                }
+            } catch (PDOException $e) {
+                // Colonne pas encore créée
+            }
+        }
+
+        // 3. NAS de la zone de l'utilisateur
+        if (!$routerId) {
+            $stmt = $this->pdo->prepare("
+                SELECT n.router_id FROM pppoe_users pu
+                JOIN nas n ON n.zone_id = pu.zone_id
+                WHERE pu.id = ? AND n.router_id IS NOT NULL AND n.router_id != ''
+                LIMIT 1
+            ");
+            $stmt->execute([$userId]);
+            $nas = $stmt->fetch();
+            if ($nas) {
+                $routerId = $nas['router_id'];
+            }
+        }
+
+        if (!$routerId) {
+            error_log("FUP {$reason}: Aucun router_id trouvé pour user #{$userId} ({$username})");
+            return false;
+        }
+
+        // Générer la commande MikroTik de déconnexion
+        $escapedUsername = addslashes($username);
+        $command = ":foreach i in=[/ppp active find name=\"{$escapedUsername}\"] do={ /ppp active remove \$i }";
+
+        $result = $this->pushCommandToPlatform($routerId, $command, "FUP {$reason}: Déconnexion PPPoE {$username}", 'disconnect_pppoe');
+        error_log("FUP {$reason}: Push disconnect → " . ($result ? 'QUEUED' : 'FAILED') . " (user={$username}, router={$routerId})");
+        return $result;
     }
 
     /**
-     * Appliquer le débit normal sur MikroTik (restauration FUP)
-     * Envoie un Disconnect-Request CoA directement au NAS (instantané)
+     * Résoudre un NAS-Identifier vers un router_id dans la table nas
      */
-    private function applyNormalSpeedToMikrotik(int $userId, array $status): bool
+    private function resolveRouterId(string $identifier): ?string
     {
-        return $this->disconnectPPPoEUserFromNas($userId, $status['username'], 'FUP reset');
-    }
-
-    /**
-     * Déconnecter un utilisateur PPPoE du NAS via Disconnect-Request CoA
-     * Priorité: NAS IP passé directement > last_nas_ip stocké > session active > zone
-     */
-    private function disconnectPPPoEUserFromNas(int $userId, string $username, string $reason, ?string $nasIp = null, ?string $acctSessionId = null): bool
-    {
-        require_once __DIR__ . '/RadiusServer.php';
-        require_once __DIR__ . '/RadiusPacket.php';
-
-        $configFile = __DIR__ . '/../config/config.php';
-        $config = file_exists($configFile) ? require $configFile : [];
-        $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
-
-        // Stratégie 1: NAS IP passé directement depuis le paquet accounting (le plus fiable)
-        if ($nasIp) {
-            $secret = $this->getNasSecret($nasIp);
-            if ($secret) {
-                $result = RadiusServer::sendDisconnect($nasIp, $disconnectPort, $secret, $acctSessionId ?? '', $username);
-                error_log("FUP {$reason}: CoA via accounting NAS → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$nasIp})");
-                return $result;
-            }
-        }
-
-        // Stratégie 2: last_nas_ip stocké sur pppoe_users (depuis le dernier accounting)
-        $stmt = $this->pdo->prepare("SELECT last_nas_ip, last_acct_session_id FROM pppoe_users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $userNas = $stmt->fetch();
-
-        if ($userNas && $userNas['last_nas_ip']) {
-            $secret = $this->getNasSecret($userNas['last_nas_ip']);
-            if ($secret) {
-                $result = RadiusServer::sendDisconnect($userNas['last_nas_ip'], $disconnectPort, $secret, $userNas['last_acct_session_id'] ?? '', $username);
-                error_log("FUP {$reason}: CoA via stored NAS → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$userNas['last_nas_ip']})");
-                return $result;
-            }
-        }
-
-        // Stratégie 3: Session active en DB
         $stmt = $this->pdo->prepare("
-            SELECT acct_session_id, nas_ip FROM pppoe_sessions
-            WHERE pppoe_user_id = ? AND stop_time IS NULL
-            ORDER BY start_time DESC LIMIT 1
-        ");
-        $stmt->execute([$userId]);
-        $session = $stmt->fetch();
-
-        if ($session && $session['nas_ip']) {
-            $secret = $this->getNasSecret($session['nas_ip']);
-            if ($secret) {
-                $result = RadiusServer::sendDisconnect($session['nas_ip'], $disconnectPort, $secret, $session['acct_session_id'], $username);
-                error_log("FUP {$reason}: CoA via session → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$session['nas_ip']})");
-                return $result;
-            }
-        }
-
-        // Stratégie 4: Zone de l'utilisateur → NAS de la zone
-        $stmt = $this->pdo->prepare("
-            SELECT n.nasname, n.secret FROM pppoe_users pu
-            JOIN nas n ON n.zone_id = pu.zone_id
-            WHERE pu.id = ? AND n.nasname IS NOT NULL AND n.nasname != ''
+            SELECT router_id FROM nas
+            WHERE router_id = ? OR shortname = ? OR nasname = ?
             LIMIT 1
         ");
-        $stmt->execute([$userId]);
-        $nas = $stmt->fetch();
-
-        if ($nas && $nas['secret']) {
-            $result = RadiusServer::sendDisconnect($nas['nasname'], $disconnectPort, $nas['secret'], '', $username);
-            error_log("FUP {$reason}: CoA via zone NAS → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$nas['nasname']})");
-            return $result;
-        }
-
-        error_log("FUP {$reason}: Aucun NAS trouvé pour user #{$userId} ({$username})");
-        return false;
+        $stmt->execute([$identifier, $identifier, $identifier]);
+        $row = $stmt->fetch();
+        return $row ? $row['router_id'] : null;
     }
 
     /**
@@ -6690,9 +6680,7 @@ class RadiusDatabase
 
             // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
             if ($status['fup_triggered']) {
-                // D'abord déconnecter (besoin de la session active pour le CoA)
-                $this->applyNormalSpeedToMikrotik($userId, $status);
-                // Puis fermer les sessions en DB
+                $this->pushDisconnectPPPoEUser($userId, $status['username'], null, 'FUP reset');
                 $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
             }
         }
