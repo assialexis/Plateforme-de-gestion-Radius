@@ -558,6 +558,23 @@ $currentPage = 'profiles'; ?>
                                     class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                             </div>
                         </div>
+
+                        <!-- Verrouillage MAC -->
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-[#21262d] border border-gray-200 dark:border-[#30363d] rounded-lg">
+                            <input type="checkbox" x-model="form.lock_to_mac" id="lock_to_mac"
+                                class="mt-0.5 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                            <div>
+                                <label for="lock_to_mac" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <svg class="w-4 h-4 inline mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    <?= __('profile.lock_to_mac') ?? 'Verrouiller l\'appareil (MAC)' ?>
+                                </label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <?= __('profile.lock_to_mac_hint') ?? 'Le voucher sera lié au premier appareil connecté' ?>
+                                </p>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -801,6 +818,7 @@ $currentPage = 'profiles'; ?>
                 upload_speed_mbps: '',
                 price: 0,
                 simultaneous_use: 1,
+                lock_to_mac: false,
                 zone_id: '',
                 is_active: true
             },
@@ -866,6 +884,7 @@ $currentPage = 'profiles'; ?>
                     upload_speed_mbps: '',
                     price: 0,
                     simultaneous_use: 1,
+                    lock_to_mac: false,
                     zone_id: '',
                     is_active: true
                 };
@@ -918,6 +937,7 @@ $currentPage = 'profiles'; ?>
                     upload_speed_mbps: profile.upload_speed ? profile.upload_speed / 1000000 : '',
                     price: profile.price || 0,
                     simultaneous_use: profile.simultaneous_use || 1,
+                    lock_to_mac: profile.lock_to_mac == 1,
                     zone_id: profile.zone_id || '',
                     is_active: profile.is_active == 1
                 };
@@ -947,6 +967,7 @@ $currentPage = 'profiles'; ?>
                         upload_speed: this.form.upload_speed_mbps ? this.form.upload_speed_mbps * 1000000 : null,
                         price: this.form.price || 0,
                         simultaneous_use: this.form.simultaneous_use || 1,
+                        lock_to_mac: this.form.lock_to_mac ? 1 : 0,
                         zone_id: this.form.zone_id || null,
                         is_active: this.form.is_active ? 1 : 0
                     };

@@ -574,7 +574,7 @@ class RadiusDatabase
      * @param string|null $nasIp L'IP du NAS (pour vérifier la zone)
      * @param string|null $nasIdentifier Le NAS-Identifier (attr 32) - identité système du MikroTik (/system/identity/print)
      */
-    public function authenticateVoucher(string $username, string $password, ?string $nasIp = null, ?string $nasIdentifier = null): array
+    public function authenticateVoucher(string $username, string $password, ?string $nasIp = null, ?string $nasIdentifier = null, ?string $clientMac = null): array
     {
         $stmt = $this->pdo->prepare("SELECT * FROM vouchers WHERE username = ?");
         $stmt->execute([$username]);
@@ -649,6 +649,25 @@ class RadiusDatabase
         $activeSessions = $this->countActiveSessions($voucher['id']);
         if ($activeSessions >= $voucher['simultaneous_use']) {
             return ['success' => false, 'reason' => 'Too many simultaneous connections'];
+        }
+
+        // Vérification du verrouillage MAC
+        if ($clientMac && !empty($voucher['locked_mac'])) {
+            if (strtoupper($voucher['locked_mac']) !== strtoupper($clientMac)) {
+                return ['success' => false, 'reason' => 'Device not authorized (MAC mismatch)'];
+            }
+        }
+
+        // Verrouiller le MAC à la première connexion si le profil l'exige
+        if ($clientMac && empty($voucher['locked_mac']) && $voucher['profile_id']) {
+            $profileStmt = $this->pdo->prepare("SELECT lock_to_mac FROM profiles WHERE id = ?");
+            $profileStmt->execute([$voucher['profile_id']]);
+            $profile = $profileStmt->fetch();
+            if ($profile && $profile['lock_to_mac']) {
+                $this->pdo->prepare("UPDATE vouchers SET locked_mac = ? WHERE id = ?")
+                    ->execute([strtoupper($clientMac), $voucher['id']]);
+                $voucher['locked_mac'] = strtoupper($clientMac);
+            }
         }
 
         if ($voucher['status'] === 'unused') {
@@ -1977,8 +1996,8 @@ class RadiusDatabase
         $stmt = $this->pdo->prepare("
             INSERT INTO profiles (
                 name, description, time_limit, data_limit, upload_speed, download_speed,
-                price, validity, validity_unit, simultaneous_use, zone_id, is_active, admin_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                price, validity, validity_unit, simultaneous_use, lock_to_mac, zone_id, is_active, admin_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $data['name'],
@@ -1991,6 +2010,7 @@ class RadiusDatabase
             $data['validity'] ?? null,
             $data['validity_unit'] ?? 'days',
             $data['simultaneous_use'] ?? 1,
+            $data['lock_to_mac'] ?? 0,
             $data['zone_id'] ?? null,
             $data['is_active'] ?? 1,
             $data['admin_id'] ?? null,
@@ -2016,6 +2036,7 @@ class RadiusDatabase
                 validity = ?,
                 validity_unit = ?,
                 simultaneous_use = ?,
+                lock_to_mac = ?,
                 zone_id = ?,
                 is_active = ?
             WHERE id = ?
@@ -2031,6 +2052,7 @@ class RadiusDatabase
             $data['validity'] ?? null,
             $data['validity_unit'] ?? 'days',
             $data['simultaneous_use'] ?? 1,
+            $data['lock_to_mac'] ?? 0,
             $data['zone_id'] ?? null,
             $data['is_active'] ?? 1,
             $id

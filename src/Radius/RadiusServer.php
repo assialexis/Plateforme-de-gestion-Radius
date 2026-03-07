@@ -247,7 +247,7 @@ class RadiusServer
 
         // Authentifier: d'abord essayer comme voucher, puis comme utilisateur PPPoE
         // On utilise NAS-Identifier (attr 32) car c'est l'identité système du MikroTik (/system/identity/print)
-        $result = $this->db->authenticateVoucher($username, $password, $nasIp, $nasIdentifier);
+        $result = $this->db->authenticateVoucher($username, $password, $nasIp, $nasIdentifier, $clientMac);
 
         // Si le voucher n'est pas trouvé, essayer l'authentification PPPoE
         if (!$result['success'] && $result['reason'] === 'Voucher not found') {

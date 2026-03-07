@@ -563,6 +563,8 @@ return [
     'profile.validity_hint' => 'Durée calendaire après la première connexion...',
     'profile.usage_time_hint' => 'Temps de connexion effectif...',
     'profile.data_limit_hint' => 'Volume de données autorisé pour ce profil',
+    'profile.lock_to_mac' => 'Verrouiller l\'appareil (MAC)',
+    'profile.lock_to_mac_hint' => 'Le voucher sera lié au premier appareil connecté',
 
     'profile.empty' => 'Aucun profil configuré',
     'profile.create_first' => 'Créez votre premier profil',

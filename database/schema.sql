@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     validity INT DEFAULT NULL COMMENT 'Validité du voucher en secondes (durée de vie après première connexion)',
     validity_unit ENUM('minutes', 'hours', 'days') DEFAULT 'days' COMMENT 'Unité pour affichage',
     simultaneous_use INT DEFAULT 1,
+    lock_to_mac TINYINT(1) NOT NULL DEFAULT 0,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS vouchers (
     -- Statut
     status ENUM('unused', 'active', 'expired', 'disabled') DEFAULT 'unused',
     simultaneous_use INT DEFAULT 1 COMMENT 'Connexions simultanées',
+    locked_mac VARCHAR(17) DEFAULT NULL COMMENT 'MAC verrouillé (lock user)',
 
     -- Prix
     price DECIMAL(10,2) DEFAULT 0.00,
