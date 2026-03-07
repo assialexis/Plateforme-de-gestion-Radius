@@ -5391,6 +5391,12 @@ class RadiusDatabase
                 $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN fup_data_offset BIGINT DEFAULT 0 AFTER fup_data_used");
             }
 
+            // Colonnes pour stocker le dernier NAS IP et session ID (pour CoA FUP fiable)
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'last_nas_ip'");
+            if (!$stmt->fetch()) {
+                $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN last_nas_ip VARCHAR(45) NULL AFTER fup_override, ADD COLUMN last_acct_session_id VARCHAR(100) NULL AFTER last_nas_ip");
+            }
+
             // Créer table des logs FUP si n'existe pas
             $this->pdo->exec("
                 CREATE TABLE IF NOT EXISTS pppoe_fup_logs (
@@ -6996,6 +7002,8 @@ class RadiusDatabase
                         UPDATE pppoe_users SET
                             data_used = GREATEST(data_used, ?),
                             time_used = GREATEST(time_used, ?),
+                            last_nas_ip = COALESCE(?, last_nas_ip),
+                            last_acct_session_id = COALESCE(?, last_acct_session_id),
                             fup_data_used = CASE
                                 WHEN ? >= COALESCE(fup_last_reset, '1970-01-01') THEN ?
                                 ELSE fup_data_used
@@ -7021,6 +7029,8 @@ class RadiusDatabase
                     $stmt->execute([
                         $update['data_used'] ?? 0,
                         $update['time_used'] ?? 0,
+                        $update['last_nas_ip'] ?? null,
+                        $update['last_acct_session_id'] ?? null,
                         $nodeLastReset ?? '1970-01-01', $update['fup_data_used'] ?? 0,
                         $nodeLastReset ?? '1970-01-01', $update['fup_data_offset'] ?? 0,
                         $nodeLastReset ?? '1970-01-01', $update['fup_triggered'] ?? 0,

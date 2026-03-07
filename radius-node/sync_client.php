@@ -346,25 +346,43 @@ function applyPullData(PDO $pdo, array $data): array
                             $config = file_exists($configFile) ? require $configFile : [];
                             $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
 
-                            // Chercher NAS: d'abord via session active, sinon via zone, sinon n'importe quel NAS
+                            // Chercher NAS: last_nas_ip > session active > zone
                             $nasIp = null;
                             $nasSecret = null;
                             $sessId = '';
 
-                            $sessStmt = $pdo->prepare("SELECT acct_session_id, nas_ip FROM pppoe_sessions WHERE pppoe_user_id = ? AND stop_time IS NULL ORDER BY start_time DESC LIMIT 1");
-                            $sessStmt->execute([$user['id']]);
-                            $sess = $sessStmt->fetch();
-                            if ($sess) {
-                                $nasIp = $sess['nas_ip'];
-                                $sessId = $sess['acct_session_id'];
+                            // Priorité 1: last_nas_ip stocké depuis le dernier accounting
+                            $lnStmt = $pdo->prepare("SELECT last_nas_ip, last_acct_session_id FROM pppoe_users WHERE id = ?");
+                            $lnStmt->execute([$user['id']]);
+                            $lastNas = $lnStmt->fetch();
+                            if ($lastNas && $lastNas['last_nas_ip']) {
                                 $secStmt = $pdo->prepare("SELECT secret FROM nas WHERE nasname = ? LIMIT 1");
-                                $secStmt->execute([$nasIp]);
+                                $secStmt->execute([$lastNas['last_nas_ip']]);
                                 $sec = $secStmt->fetch();
-                                $nasSecret = $sec ? $sec['secret'] : null;
+                                if ($sec) {
+                                    $nasIp = $lastNas['last_nas_ip'];
+                                    $nasSecret = $sec['secret'];
+                                    $sessId = $lastNas['last_acct_session_id'] ?? '';
+                                }
                             }
 
+                            // Priorité 2: Session active en DB
                             if (!$nasIp || !$nasSecret) {
-                                // Fallback: NAS de la zone de l'utilisateur
+                                $sessStmt = $pdo->prepare("SELECT acct_session_id, nas_ip FROM pppoe_sessions WHERE pppoe_user_id = ? AND stop_time IS NULL ORDER BY start_time DESC LIMIT 1");
+                                $sessStmt->execute([$user['id']]);
+                                $sess = $sessStmt->fetch();
+                                if ($sess) {
+                                    $nasIp = $sess['nas_ip'];
+                                    $sessId = $sess['acct_session_id'];
+                                    $secStmt = $pdo->prepare("SELECT secret FROM nas WHERE nasname = ? LIMIT 1");
+                                    $secStmt->execute([$nasIp]);
+                                    $sec = $secStmt->fetch();
+                                    $nasSecret = $sec ? $sec['secret'] : null;
+                                }
+                            }
+
+                            // Priorité 3: NAS de la zone de l'utilisateur
+                            if (!$nasIp || !$nasSecret) {
                                 $nasStmt = $pdo->prepare("SELECT n.nasname, n.secret FROM pppoe_users pu JOIN nas n ON n.zone_id = pu.zone_id WHERE pu.id = ? AND n.nasname IS NOT NULL AND n.nasname != '' AND n.nasname != '0.0.0.0/0' LIMIT 1");
                                 $nasStmt->execute([$user['id']]);
                                 $nasRow = $nasStmt->fetch();
@@ -445,7 +463,8 @@ function collectPushData(PDO $pdo): array
     try {
         $stmt = $pdo->query("
             SELECT id, data_used, time_used, fup_data_used, fup_data_offset,
-                   fup_triggered, fup_triggered_at, fup_last_reset
+                   fup_triggered, fup_triggered_at, fup_last_reset,
+                   last_nas_ip, last_acct_session_id
             FROM pppoe_users
             WHERE data_used > 0 OR fup_data_used > 0 OR fup_triggered = 1
         ");
