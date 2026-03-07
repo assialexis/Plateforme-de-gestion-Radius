@@ -596,10 +596,10 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                 <!-- Menu PPPoE -->
                 <?php if ($isModuleActive('pppoe')): ?>
                 <div
-                    x-data="{ open: <?= in_array($currentPage ?? '', ['pppoe', 'network', 'billing', 'pppoe-transactions', 'pppoe-reminders']) ? 'true' : 'false' ?> }">
+                    x-data="{ open: <?= in_array($currentPage ?? '', ['pppoe', 'network', 'pppoe-reminders']) ? 'true' : 'false' ?> }">
                     <button
                         @click="if(sidebarCollapsed) { sidebarCollapsed = false; open = true; } else { open = !open; }"
-                        class="sidebar-link w-full justify-between <?= in_array($currentPage ?? '', ['pppoe', 'network', 'billing', 'pppoe-transactions', 'pppoe-reminders']) ? 'active' : '' ?>"
+                        class="sidebar-link w-full justify-between <?= in_array($currentPage ?? '', ['pppoe', 'network', 'pppoe-reminders']) ? 'active' : '' ?>"
                         :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
                         :title="sidebarCollapsed ? 'PPPoE' : ''">
                         <div class="flex items-center">
@@ -636,28 +636,6 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                             </svg>
                             <?= __('nav.ip_pools') ?>
                         </a>
-                        <?php if ($canAccess('billing')): ?>
-                        <a href="index.php?page=billing"
-                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'billing' ? 'active' : '' ?>">
-                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <?= __('nav.billing') ?>
-                        </a>
-                        <?php endif; ?>
-                        <?php if ($canAccess('pppoe-transactions')): ?>
-                        <a href="index.php?page=pppoe-transactions"
-                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'pppoe-transactions' ? 'active' : '' ?>">
-                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <?= __('nav.transactions') ?>
-                        </a>
-                        <?php endif; ?>
                         <?php if ($canAccess('pppoe-reminders')): ?>
                         <a href="index.php?page=pppoe-reminders"
                             class="sidebar-link text-xs <?= ($currentPage ?? '') === 'pppoe-reminders' ? 'active' : '' ?>">
@@ -757,6 +735,57 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                 <div class="sidebar-section-title" :class="sidebarCollapsed && 'lg:hidden'">
                     <?= __('nav.section.payments') ?>
                 </div>
+
+                <!-- Menu Paiement PPPoE -->
+                <?php if ($isModuleActive('pppoe') && ($canAccess('billing') || $canAccess('pppoe-transactions'))): ?>
+                <div
+                    x-data="{ open: <?= in_array($currentPage ?? '', ['billing', 'pppoe-transactions']) ? 'true' : 'false' ?> }">
+                    <button
+                        @click="if(sidebarCollapsed) { sidebarCollapsed = false; open = true; } else { open = !open; }"
+                        class="sidebar-link w-full justify-between <?= in_array($currentPage ?? '', ['billing', 'pppoe-transactions']) ? 'active' : '' ?>"
+                        :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
+                        :title="sidebarCollapsed ? 'Paiement PPPoE' : ''">
+                        <div class="flex items-center">
+                            <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span :class="sidebarCollapsed && 'lg:hidden'">Paiement PPPoE</span>
+                        </div>
+                        <svg class="w-3.5 h-3.5 transition-transform duration-200"
+                            :class="[open ? 'rotate-180' : '', sidebarCollapsed && 'lg:hidden']" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div x-show="open && !sidebarCollapsed" x-collapse
+                        class="ml-3.5 mt-0.5 space-y-0.5 border-l border-gray-200 dark:border-white/[0.06] pl-2.5">
+                        <?php if ($canAccess('billing')): ?>
+                        <a href="index.php?page=billing"
+                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'billing' ? 'active' : '' ?>">
+                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <?= __('nav.billing') ?>
+                        </a>
+                        <?php endif; ?>
+                        <?php if ($canAccess('pppoe-transactions')): ?>
+                        <a href="index.php?page=pppoe-transactions"
+                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'pppoe-transactions' ? 'active' : '' ?>">
+                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <?= __('nav.transactions') ?>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <?php if ($isModuleActive('hotspot') && $canAccess('transactions')): ?>
                 <a href="index.php?page=transactions"
