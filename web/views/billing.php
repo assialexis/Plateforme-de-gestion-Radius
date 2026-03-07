@@ -139,7 +139,7 @@ $currentPage = 'billing'; ?>
                         <?= __('billing.monthly_revenue')?>
                     </p>
                     <p class="text-3xl font-black text-green-600 dark:text-green-400"
-                        x-text="formatCurrency(stats.monthly_revenue || 0)"></p>
+                        x-text="formatCurrency(stats.pppoe_monthly_revenue || 0)"></p>
                 </div>
                 <div
                     class="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)] group-hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] flex items-center justify-center text-white transition-all duration-300 group-hover:scale-110">
