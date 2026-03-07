@@ -293,6 +293,14 @@ function handleFupReset(PDO $pdo, array $data): string
     $userId = $data['id'] ?? 0;
     if (!$userId) return 'missing_id';
 
+    // Utiliser le total LOCAL des sessions (pas celui du central)
+    // pour que fup_data_used = totalLocal - offset = 0
+    $stmtTotal = $pdo->prepare("
+        SELECT COALESCE(SUM(input_octets + output_octets), 0) FROM pppoe_sessions WHERE pppoe_user_id = ?
+    ");
+    $stmtTotal->execute([$userId]);
+    $localTotal = (int)$stmtTotal->fetchColumn();
+
     $stmt = $pdo->prepare("
         UPDATE pppoe_users SET
             fup_triggered = 0,
@@ -303,7 +311,7 @@ function handleFupReset(PDO $pdo, array $data): string
         WHERE id = ?
     ");
     $stmt->execute([
-        $data['fup_data_offset'] ?? 0,
+        $localTotal,
         $data['fup_last_reset'] ?? date('Y-m-d H:i:s'),
         $userId
     ]);
