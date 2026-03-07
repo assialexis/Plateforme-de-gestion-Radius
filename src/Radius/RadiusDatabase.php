@@ -4020,7 +4020,15 @@ class RadiusDatabase
         $params[] = $id;
         $sql = "UPDATE pppoe_users SET " . implode(', ', $sets) . " WHERE id = ?";
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute($params);
+        $result = $stmt->execute($params);
+
+        // Si valid_until a changé, supprimer les logs de rappel du jour pour permettre un renvoi
+        if ($result && array_key_exists('valid_until', $data)) {
+            $this->pdo->prepare("DELETE FROM pppoe_reminder_log WHERE pppoe_user_id = ? AND notification_date = CURDATE()")
+                ->execute([$id]);
+        }
+
+        return $result;
     }
 
     /**
@@ -4060,7 +4068,15 @@ class RadiusDatabase
                 data_used = 0
             WHERE id = ?
         ");
-        return $stmt->execute([$newValidUntil, $id]);
+        $result = $stmt->execute([$newValidUntil, $id]);
+
+        // Supprimer les logs de rappel du jour pour permettre un renvoi après renouvellement
+        if ($result) {
+            $this->pdo->prepare("DELETE FROM pppoe_reminder_log WHERE pppoe_user_id = ? AND notification_date = CURDATE()")
+                ->execute([$id]);
+        }
+
+        return $result;
     }
 
     /**
