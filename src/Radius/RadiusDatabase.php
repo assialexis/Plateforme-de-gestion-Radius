@@ -5536,7 +5536,11 @@ class RadiusDatabase
         $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
 
         // Appliquer le nouveau débit en temps réel sur MikroTik
-        $this->applyFupSpeedToMikrotik($userId, $status);
+        try {
+            $this->applyFupSpeedToMikrotik($userId, $status);
+        } catch (\Throwable $e) {
+            error_log("FUP trigger: disconnect failed (non-blocking): " . $e->getMessage());
+        }
 
         return true;
     }
@@ -5817,7 +5821,13 @@ class RadiusDatabase
             // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
             if ($status['fup_triggered']) {
                 $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
-                $this->applyNormalSpeedToMikrotik($userId, $status);
+                try {
+                    $this->applyNormalSpeedToMikrotik($userId, $status);
+                } catch (\Throwable $e) {
+                    // Ne pas bloquer le reset si la déconnexion MikroTik échoue
+                    // Le controller gère la déconnexion séparément
+                    error_log("FUP reset: disconnect failed (non-blocking): " . $e->getMessage());
+                }
             }
         }
 
