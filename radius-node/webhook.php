@@ -308,6 +308,7 @@ function handleFupReset(PDO $pdo, array $data): string
         $userId
     ]);
 
-    error_log("[Webhook] FUP reset for user #{$userId} ({$data['username'] ?? '?'}) - fup_triggered=0");
+    $username = $data['username'] ?? '?';
+    error_log("[Webhook] FUP reset for user #{$userId} ({$username}) - fup_triggered=0");
     return 'fup_reset_applied';
 }
