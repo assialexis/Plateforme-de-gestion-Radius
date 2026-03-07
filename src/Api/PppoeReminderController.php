@@ -635,8 +635,16 @@ class PppoeReminderController
      */
     public function updateSettings(): void
     {
+        $adminId = $this->getAdminId();
         $data = getJsonBody();
-        $this->db->setSetting('pppoe_reminders_enabled', !empty($data['enabled']) ? '1' : '0');
+        $value = !empty($data['enabled']) ? '1' : '0';
+
+        $stmt = $this->db->getPdo()->prepare("
+            INSERT INTO settings (setting_key, setting_value, admin_id) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), admin_id = VALUES(admin_id)
+        ");
+        $stmt->execute(['pppoe_reminders_enabled', $value, $adminId]);
+
         jsonSuccess(null, __('pppoe_reminders.settings_saved') ?? 'Paramètres enregistrés');
     }
 
