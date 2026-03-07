@@ -257,12 +257,33 @@ function applyPullData(PDO $pdo, array $data): array
             }
         }
 
-        // Sync PPPoE users
+        // Sync PPPoE users (UPSERT: maj config sans écraser les compteurs FUP locaux)
         if (!empty($data['pppoe_users'])) {
-            $pdo->exec("DELETE FROM pppoe_users");
+            // Supprimer les users qui ne sont plus dans le pull (supprimés sur le central)
+            $remoteIds = array_column($data['pppoe_users'], 'id');
+            if ($remoteIds) {
+                $ph = implode(',', array_fill(0, count($remoteIds), '?'));
+                $pdo->prepare("DELETE FROM pppoe_users WHERE id NOT IN ($ph)")->execute($remoteIds);
+            }
+
             $stmt = $pdo->prepare("
-                INSERT INTO pppoe_users (id, username, password, profile_id, profile_name, customer_name, customer_phone, status, upload_speed, download_speed, ip_mode, static_ip, pool_ip, ip_pool_name, mikrotik_group, valid_until, burst_upload, burst_download, burst_threshold, burst_time, simultaneous_use)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pppoe_users (id, username, password, profile_id, profile_name, customer_name, customer_phone, status,
+                    upload_speed, download_speed, ip_mode, static_ip, pool_ip, ip_pool_name, mikrotik_group, valid_until,
+                    burst_upload, burst_download, burst_threshold, burst_time, simultaneous_use,
+                    zone_id, nas_id, admin_id, fup_override)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    username = VALUES(username), password = VALUES(password),
+                    profile_id = VALUES(profile_id), profile_name = VALUES(profile_name),
+                    customer_name = VALUES(customer_name), customer_phone = VALUES(customer_phone),
+                    status = VALUES(status), upload_speed = VALUES(upload_speed), download_speed = VALUES(download_speed),
+                    ip_mode = VALUES(ip_mode), static_ip = VALUES(static_ip), pool_ip = VALUES(pool_ip),
+                    ip_pool_name = VALUES(ip_pool_name), mikrotik_group = VALUES(mikrotik_group),
+                    valid_until = VALUES(valid_until), burst_upload = VALUES(burst_upload),
+                    burst_download = VALUES(burst_download), burst_threshold = VALUES(burst_threshold),
+                    burst_time = VALUES(burst_time), simultaneous_use = VALUES(simultaneous_use),
+                    zone_id = VALUES(zone_id), nas_id = VALUES(nas_id), admin_id = VALUES(admin_id),
+                    fup_override = VALUES(fup_override)
             ");
             foreach ($data['pppoe_users'] as $user) {
                 $stmt->execute([
@@ -272,7 +293,9 @@ function applyPullData(PDO $pdo, array $data): array
                     $user['ip_mode'] ?? 'router', $user['static_ip'] ?? null, $user['pool_ip'] ?? null,
                     $user['ip_pool_name'] ?? null, $user['mikrotik_group'] ?? null,
                     $user['valid_until'] ?? null, $user['burst_upload'] ?? null, $user['burst_download'] ?? null,
-                    $user['burst_threshold'] ?? null, $user['burst_time'] ?? null, $user['simultaneous_use'] ?? 1
+                    $user['burst_threshold'] ?? null, $user['burst_time'] ?? null, $user['simultaneous_use'] ?? 1,
+                    $user['zone_id'] ?? null, $user['nas_id'] ?? null, $user['admin_id'] ?? null,
+                    $user['fup_override'] ?? 0
                 ]);
                 $stats['pppoe_users']++;
             }
@@ -320,6 +343,23 @@ function collectPushData(PDO $pdo): array
         $pppoe = $stmt->fetchAll();
         if (!empty($pppoe)) {
             $data['pppoe_sessions'] = $pppoe;
+            $data['has_data'] = true;
+        }
+    } catch (PDOException $e) {
+        // Table peut ne pas exister
+    }
+
+    // Compteurs FUP PPPoE (remonter vers le central)
+    try {
+        $stmt = $pdo->query("
+            SELECT id, data_used, time_used, fup_data_used, fup_data_offset,
+                   fup_triggered, fup_triggered_at, fup_last_reset
+            FROM pppoe_users
+            WHERE data_used > 0 OR fup_data_used > 0 OR fup_triggered = 1
+        ");
+        $fupUpdates = $stmt->fetchAll();
+        if (!empty($fupUpdates)) {
+            $data['pppoe_user_updates'] = $fupUpdates;
             $data['has_data'] = true;
         }
     } catch (PDOException $e) {

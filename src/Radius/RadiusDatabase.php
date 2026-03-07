@@ -6936,6 +6936,45 @@ class RadiusDatabase
             file_put_contents($debugLog, "  Imported {$imported['pppoe_sessions']} pppoe_sessions\n", FILE_APPEND);
         }
 
+        // Importer les compteurs FUP PPPoE depuis le nœud
+        if (!empty($data['pppoe_user_updates'])) {
+            $imported['pppoe_user_updates'] = 0;
+            foreach ($data['pppoe_user_updates'] as $update) {
+                try {
+                    $userId = $update['id'] ?? 0;
+                    if (!$userId) continue;
+
+                    $stmt = $this->pdo->prepare("
+                        UPDATE pppoe_users SET
+                            data_used = GREATEST(data_used, ?),
+                            time_used = GREATEST(time_used, ?),
+                            fup_data_used = GREATEST(fup_data_used, ?),
+                            fup_data_offset = GREATEST(fup_data_offset, ?),
+                            fup_triggered = GREATEST(fup_triggered, ?),
+                            fup_triggered_at = COALESCE(?, fup_triggered_at),
+                            fup_last_reset = COALESCE(?, fup_last_reset)
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        $update['data_used'] ?? 0,
+                        $update['time_used'] ?? 0,
+                        $update['fup_data_used'] ?? 0,
+                        $update['fup_data_offset'] ?? 0,
+                        $update['fup_triggered'] ?? 0,
+                        $update['fup_triggered_at'] ?? null,
+                        $update['fup_last_reset'] ?? null,
+                        $userId,
+                    ]);
+                    if ($stmt->rowCount() > 0) {
+                        $imported['pppoe_user_updates']++;
+                    }
+                } catch (PDOException $e) {
+                    file_put_contents($debugLog, "  ERROR pppoe_user_update: " . $e->getMessage() . "\n", FILE_APPEND);
+                }
+            }
+            file_put_contents($debugLog, "  Imported {$imported['pppoe_user_updates']} pppoe_user_updates (FUP)\n", FILE_APPEND);
+        }
+
         file_put_contents($debugLog, date('Y-m-d H:i:s') . " importNodeSyncData done - imported: " . json_encode($imported) . "\n\n", FILE_APPEND);
 
         return $imported;
