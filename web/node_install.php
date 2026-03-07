@@ -214,7 +214,9 @@ return [
     ],
 ];
 PHPEOF
-chmod 600 \$INSTALL_DIR/config/config.php
+chmod 640 \$INSTALL_DIR/config/config.php
+chown root:www-data \$INSTALL_DIR/config/config.php
+chmod 755 \$INSTALL_DIR \$INSTALL_DIR/config \$INSTALL_DIR/src \$INSTALL_DIR/database \$INSTALL_DIR/logs
 success "Configuration créée"
 
 # ========================
@@ -274,34 +276,63 @@ success "Cron sync configuré (toutes les minutes)"
 # 8. Nginx webhook
 # ========================
 info "8/8 - Configuration Nginx (webhook)..."
+
+# Détecter le socket PHP-FPM
 PHP_FPM_SOCK="/var/run/php/php\${PHP_VERSION}-fpm.sock"
+if [ ! -S "\$PHP_FPM_SOCK" ]; then
+    PHP_FPM_SOCK=\$(find /run/php/ -name "php*-fpm.sock" 2>/dev/null | head -1)
+fi
+if [ -z "\$PHP_FPM_SOCK" ]; then
+    systemctl start "php\${PHP_VERSION}-fpm" 2>/dev/null || true
+    sleep 1
+    PHP_FPM_SOCK="/var/run/php/php\${PHP_VERSION}-fpm.sock"
+fi
+
+# Détecter l'IP du central depuis l'URL
+CENTRAL_HOST=\$(echo "\$PLATFORM_URL" | sed -E 's|https?://||' | sed 's|[:/].*||')
+CENTRAL_IP=\$(getent hosts "\$CENTRAL_HOST" 2>/dev/null | awk '{print \$1}' | head -1)
+if [ -z "\$CENTRAL_IP" ]; then
+    CENTRAL_IP="\$CENTRAL_HOST"
+fi
 
 cat > /etc/nginx/sites-available/radius-node << EOF
 server {
-    listen 443 ssl;
+    listen 80;
     server_name _;
-
-    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
-
     root \$INSTALL_DIR;
 
+    # Sécurité: uniquement l'IP du central
+    allow \$CENTRAL_IP;
+    deny all;
+
+    # Uniquement webhook.php accessible
     location = /webhook.php {
         fastcgi_pass unix:\$PHP_FPM_SOCK;
-        fastcgi_param SCRIPT_FILENAME \$INSTALL_DIR/webhook.php;
+        fastcgi_param SCRIPT_FILENAME \\\$document_root\\\$fastcgi_script_name;
         include fastcgi_params;
     }
 
+    # Bloquer tout le reste
     location / {
-        return 403;
+        return 404;
     }
 }
 EOF
 
 ln -sf /etc/nginx/sites-available/radius-node /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-nginx -t 2>/dev/null && systemctl restart nginx
-success "Nginx configuré"
+
+# S'assurer que PHP-FPM tourne
+systemctl enable "php\${PHP_VERSION}-fpm" 2>/dev/null || true
+systemctl start "php\${PHP_VERSION}-fpm" 2>/dev/null || true
+
+if nginx -t 2>/dev/null; then
+    systemctl enable nginx
+    systemctl restart nginx
+    success "Nginx configuré (HTTP port 80, IP whitelist: \$CENTRAL_IP)"
+else
+    echo -e "\${RED}  Nginx config test failed - vérifier /etc/nginx/sites-available/radius-node\${NC}"
+fi
 
 # ========================
 # Pare-feu
@@ -309,10 +340,10 @@ success "Nginx configuré"
 if command -v ufw &>/dev/null; then
     info "Configuration du pare-feu..."
     ufw allow 22/tcp >/dev/null 2>&1
+    ufw allow 80/tcp >/dev/null 2>&1
     ufw allow 1812/udp >/dev/null 2>&1
     ufw allow 1813/udp >/dev/null 2>&1
-    ufw allow 443/tcp >/dev/null 2>&1
-    success "Ports ouverts: 22/tcp, 1812/udp, 1813/udp, 443/tcp"
+    success "Ports ouverts: 22/tcp, 80/tcp, 1812/udp, 1813/udp"
 fi
 
 # ========================
@@ -343,7 +374,7 @@ echo ""
 echo -e "  \${BOLD}Serveur:\${NC}     {$serverName} ({$serverCode})"
 echo -e "  \${BOLD}Répertoire:\${NC}  \$INSTALL_DIR"
 echo -e "  \${BOLD}RADIUS:\${NC}      Ports 1812/1813 UDP"
-echo -e "  \${BOLD}Webhook:\${NC}     Port 443 HTTPS"
+echo -e "  \${BOLD}Webhook:\${NC}     Port 80 HTTP (IP whitelist: \$CENTRAL_IP)"
 echo -e "  \${BOLD}Plateforme:\${NC}  \$PLATFORM_URL"
 echo ""
 echo -e "  \${BOLD}Commandes utiles:\${NC}"

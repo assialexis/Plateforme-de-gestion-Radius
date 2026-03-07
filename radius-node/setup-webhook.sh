@@ -97,20 +97,30 @@ server {
 }
 NGINX_EOF
 
-# Activer le site
+# Activer le site, supprimer les configs parasites
 ln -sf /etc/nginx/sites-available/radius-webhook /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/radius-node 2>/dev/null
 echo -e "${GREEN}  OK${NC}"
 
-# 4. Tester et recharger Nginx
-echo -e "${YELLOW}[3/5] Demarrage Nginx...${NC}"
+# 4. Permissions (www-data doit pouvoir lire les fichiers)
+echo -e "${YELLOW}[3/6] Permissions...${NC}"
+chmod 755 "${NODE_DIR}" "${NODE_DIR}/config" "${NODE_DIR}/src" 2>/dev/null || true
+if [ -f "${NODE_DIR}/config/config.php" ]; then
+    chmod 640 "${NODE_DIR}/config/config.php"
+    chown root:www-data "${NODE_DIR}/config/config.php"
+fi
+echo -e "${GREEN}  OK${NC}"
+
+# 5. Tester et demarrer Nginx
+echo -e "${YELLOW}[4/6] Demarrage Nginx...${NC}"
+systemctl start "php${PHP_VERSION}-fpm" 2>/dev/null || systemctl start php-fpm 2>/dev/null || true
 nginx -t
 systemctl enable nginx
-systemctl reload nginx
+systemctl start nginx 2>/dev/null || systemctl reload nginx
 echo -e "${GREEN}  OK${NC}"
 
-# 5. Firewall
-echo -e "${YELLOW}[4/5] Firewall...${NC}"
+# 6. Firewall
+echo -e "${YELLOW}[5/6] Firewall...${NC}"
 if command -v ufw &> /dev/null; then
     ufw allow 80/tcp > /dev/null 2>&1 || true
     echo -e "${GREEN}  Port 80 ouvert (ufw)${NC}"
@@ -118,8 +128,8 @@ else
     echo -e "${YELLOW}  ufw non installe, verifier manuellement que le port 80 est ouvert${NC}"
 fi
 
-# 6. Test local
-echo -e "${YELLOW}[5/5] Test local...${NC}"
+# 7. Test local
+echo -e "${YELLOW}[6/6] Test local...${NC}"
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/webhook.php 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "403" ] || [ "$RESPONSE" = "200" ]; then
     echo -e "${GREEN}  Webhook repond (HTTP ${RESPONSE})${NC}"
