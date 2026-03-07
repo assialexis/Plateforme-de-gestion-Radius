@@ -41,6 +41,11 @@ class WhatsAppController
                 $config['api_token_masked'] = substr($token, 0, 8) . '...' . substr($token, -4);
             }
 
+            // Convertir is_enabled en boolean pour Alpine.js
+            if ($config) {
+                $config['is_enabled'] = (bool)$config['is_enabled'];
+            }
+
             jsonSuccess($config ?: [
                 'id_instance' => '',
                 'api_token_instance' => '',
