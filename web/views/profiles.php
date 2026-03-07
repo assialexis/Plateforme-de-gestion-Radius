@@ -260,6 +260,17 @@ $currentPage = 'profiles'; ?>
                                 </svg>
                                 <span x-text="'x' + profile.simultaneous_use"></span>
                             </span>
+                            <!-- Tickets disponibles -->
+                            <span
+                                class="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                                :class="(profile.unused_vouchers || 0) > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-800/50' : 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800/50'"
+                                :title="__('profile.available_vouchers')">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                <span x-text="profile.unused_vouchers || 0"></span>
+                            </span>
                         </div>
                         <div class="flex gap-1 shrink-0">
                             <button @click="showPaymentLink(profile)"
@@ -334,6 +345,10 @@ $currentPage = 'profiles'; ?>
                         <?= __('common.status')?>
                     </th>
                     <th scope="col"
+                        class="px-4 py-3 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        <?= __('profile.available_vouchers')?>
+                    </th>
+                    <th scope="col"
                         class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         <?= __('common.actions')?>
                     </th>
@@ -370,6 +385,16 @@ $currentPage = 'profiles'; ?>
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                 :class="profile.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-[#21262d] dark:text-gray-400'"
                                 x-text="profile.is_active ? __('common.active') : __('common.inactive')"></span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                                :class="(profile.unused_vouchers || 0) > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                <span x-text="profile.unused_vouchers || 0"></span>
+                            </span>
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">

@@ -1972,21 +1972,23 @@ class RadiusDatabase
      */
     public function getAllProfiles(bool $activeOnly = false, ?int $adminId = null): array
     {
-        $sql = "SELECT * FROM profiles";
+        $sql = "SELECT p.*,
+                (SELECT COUNT(*) FROM vouchers v WHERE v.profile_id = p.id AND v.status = 'unused' AND v.deleted_at IS NULL) as unused_vouchers
+                FROM profiles p";
         $conditions = [];
         $params = [];
 
         if ($activeOnly) {
-            $conditions[] = "is_active = 1";
+            $conditions[] = "p.is_active = 1";
         }
         if ($adminId !== null) {
-            $conditions[] = "admin_id = ?";
+            $conditions[] = "p.admin_id = ?";
             $params[] = $adminId;
         }
         if (!empty($conditions)) {
             $sql .= " WHERE " . implode(" AND ", $conditions);
         }
-        $sql .= " ORDER BY name";
+        $sql .= " ORDER BY p.name";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);

@@ -568,6 +568,7 @@ return [
     'profile.data_limit_hint' => 'Data volume allowed for this profile',
     'profile.lock_to_mac' => 'Lock device (MAC)',
     'profile.lock_to_mac_hint' => 'Voucher will be bound to the first connected device',
+    'profile.available_vouchers' => 'Available',
 
     'profile.empty' => 'No profiles configured',
     'profile.create_first' => 'Create your first profile',

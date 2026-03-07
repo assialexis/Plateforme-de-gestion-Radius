@@ -568,6 +568,7 @@ return [
     'profile.data_limit_hint' => 'Volume de données autorisé pour ce profil',
     'profile.lock_to_mac' => 'Verrouiller l\'appareil (MAC)',
     'profile.lock_to_mac_hint' => 'Le voucher sera lié au premier appareil connecté',
+    'profile.available_vouchers' => 'Tickets dispo.',
 
     'profile.empty' => 'Aucun profil configuré',
     'profile.create_first' => 'Créez votre premier profil',
