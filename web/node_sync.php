@@ -102,6 +102,10 @@ switch ($action) {
         handleQueueCommand($db, $server);
         break;
 
+    case 'check_fup':
+        handleCheckFup($db);
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'INVALID_ACTION']);
@@ -279,4 +283,37 @@ function handleQueueCommand(RadiusDatabase $db, array $server): void
         http_response_code(500);
         echo json_encode(['error' => 'QUEUE_ERROR', 'message' => $e->getMessage()]);
     }
+}
+
+/**
+ * Check FUP - Vérification rapide du statut FUP d'un utilisateur
+ * Appelé par le nœud RADIUS pendant l'auth quand fup_triggered=1
+ * pour savoir si le FUP a été réinitialisé sur le central
+ */
+function handleCheckFup(RadiusDatabase $db): void
+{
+    $userId = (int)($_GET['user_id'] ?? 0);
+
+    if (!$userId) {
+        http_response_code(400);
+        echo json_encode(['error' => 'MISSING_USER_ID']);
+        return;
+    }
+
+    $status = $db->getPPPoEUserFupStatus($userId);
+
+    if (!$status) {
+        http_response_code(404);
+        echo json_encode(['error' => 'USER_NOT_FOUND']);
+        return;
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'fup_triggered' => (int)$status['fup_triggered'],
+        'fup_triggered_at' => $status['fup_triggered_at'],
+        'fup_last_reset' => $status['fup_last_reset'],
+        'fup_data_used' => (int)$status['fup_data_used'],
+        'fup_data_offset' => (int)($status['fup_data_offset'] ?? 0),
+    ]);
 }

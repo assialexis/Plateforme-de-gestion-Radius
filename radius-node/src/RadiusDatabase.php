@@ -6765,6 +6765,17 @@ class RadiusDatabase
                 ];
             }
 
+            // Vérifier en temps réel auprès du central si le FUP a été réinitialisé
+            // (le sync 60s peut être en retard, cette vérification est instantanée)
+            if ($this->checkFupResetWithCentral($userId)) {
+                error_log("FUP auth: central confirmed reset for user #{$userId} - applying normal speed");
+                return [
+                    'download' => $status['normal_download_speed'],
+                    'upload' => $status['normal_upload_speed'],
+                    'fup_active' => false
+                ];
+            }
+
             return [
                 'download' => $status['fup_download_speed'],
                 'upload' => $status['fup_upload_speed'],
@@ -6777,6 +6788,80 @@ class RadiusDatabase
             'upload' => $status['normal_upload_speed'],
             'fup_active' => false
         ];
+    }
+
+    /**
+     * Vérifier auprès du central si le FUP a été réinitialisé
+     * Appel HTTP léger, uniquement quand fup_triggered=1 (cas rare)
+     * Si le central confirme le reset, met à jour la DB locale immédiatement
+     */
+    private function checkFupResetWithCentral(int $userId): bool
+    {
+        $configFile = __DIR__ . '/../config/config.php';
+        if (!file_exists($configFile)) {
+            return false;
+        }
+
+        $config = require $configFile;
+        $platformUrl = rtrim($config['platform']['url'] ?? '', '/');
+        $serverCode = $config['platform']['server_code'] ?? '';
+        $syncToken = $config['platform']['sync_token'] ?? '';
+
+        if (empty($platformUrl) || empty($syncToken)) {
+            return false;
+        }
+
+        $url = "{$platformUrl}/node_sync.php?action=check_fup&server={$serverCode}&user_id={$userId}";
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['X-Node-Token: ' . $syncToken],
+            CURLOPT_TIMEOUT => 3,
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            error_log("FUP check_fup: HTTP {$httpCode} for user #{$userId}");
+            return false;
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || ($data['status'] ?? '') !== 'ok') {
+            return false;
+        }
+
+        // Le central dit que le FUP n'est pas déclenché → reset confirmé
+        if (empty($data['fup_triggered'])) {
+            // Mettre à jour la DB locale immédiatement
+            try {
+                $stmt = $this->pdo->prepare("
+                    UPDATE pppoe_users SET
+                        fup_triggered = 0,
+                        fup_triggered_at = NULL,
+                        fup_data_used = 0,
+                        fup_data_offset = ?,
+                        fup_last_reset = ?
+                    WHERE id = ? AND fup_triggered = 1
+                ");
+                $stmt->execute([
+                    $data['fup_data_offset'] ?? 0,
+                    $data['fup_last_reset'] ?? date('Y-m-d H:i:s'),
+                    $userId
+                ]);
+                error_log("FUP check_fup: local DB updated for user #{$userId} - fup_triggered=0");
+            } catch (\PDOException $e) {
+                error_log("FUP check_fup: DB update failed: " . $e->getMessage());
+            }
+            return true;
+        }
+
+        return false;
     }
 
     /**
