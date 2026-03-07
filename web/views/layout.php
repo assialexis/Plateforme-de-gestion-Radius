@@ -787,36 +787,54 @@ $canAccess = function(string $page) use ($allPages, $currentUser): bool {
                 </div>
                 <?php endif; ?>
 
-                <?php if ($isModuleActive('hotspot') && $canAccess('transactions')): ?>
-                <a href="index.php?page=transactions"
-                    class="sidebar-link <?= ($currentPage ?? '') === 'transactions' ? 'active' : '' ?>"
-                    :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
-                    :title="sidebarCollapsed ? 'Transactions' : ''">
-                    <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span :class="sidebarCollapsed && 'lg:hidden'">
-                        <?= __('nav.transactions') ?>
-                    </span>
-                </a>
-
-                <?php if ($canAccess('sales')): ?>
-                <a href="index.php?page=sales"
-                    class="sidebar-link <?= ($currentPage ?? '') === 'sales' ? 'active' : '' ?>"
-                    :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
-                    :title="sidebarCollapsed ? '<?= __('nav.sales_report') ?>' : ''">
-                    <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span :class="sidebarCollapsed && 'lg:hidden'">
-                        <?= __('nav.sales_report') ?>
-                    </span>
-                </a>
-                <?php endif; ?>
+                <?php if ($isModuleActive('hotspot') && ($canAccess('transactions') || $canAccess('sales'))): ?>
+                <div
+                    x-data="{ open: <?= in_array($currentPage ?? '', ['transactions', 'sales']) ? 'true' : 'false' ?> }">
+                    <button
+                        @click="if(sidebarCollapsed) { sidebarCollapsed = false; open = true; } else { open = !open; }"
+                        class="sidebar-link w-full justify-between <?= in_array($currentPage ?? '', ['transactions', 'sales']) ? 'active' : '' ?>"
+                        :class="sidebarCollapsed && 'lg:justify-center lg:mx-1 lg:px-0'"
+                        :title="sidebarCollapsed ? 'Paiement Hotspot' : ''">
+                        <div class="flex items-center">
+                            <svg class="w-[18px] h-[18px] flex-shrink-0" :class="!sidebarCollapsed && 'mr-2.5'"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span :class="sidebarCollapsed && 'lg:hidden'">Paiement Hotspot</span>
+                        </div>
+                        <svg class="w-3.5 h-3.5 transition-transform duration-200"
+                            :class="[open ? 'rotate-180' : '', sidebarCollapsed && 'lg:hidden']" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div x-show="open && !sidebarCollapsed" x-collapse
+                        class="ml-3.5 mt-0.5 space-y-0.5 border-l border-gray-200 dark:border-white/[0.06] pl-2.5">
+                        <?php if ($canAccess('sales')): ?>
+                        <a href="index.php?page=sales"
+                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'sales' ? 'active' : '' ?>">
+                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <?= __('nav.sales_report') ?>
+                        </a>
+                        <?php endif; ?>
+                        <?php if ($canAccess('transactions')): ?>
+                        <a href="index.php?page=transactions"
+                            class="sidebar-link text-xs <?= ($currentPage ?? '') === 'transactions' ? 'active' : '' ?>">
+                            <svg class="w-4 h-4 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <?= __('nav.transactions') ?>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <?php endif; ?>
 
                 <?php if ($canAccess('payments')): ?>
