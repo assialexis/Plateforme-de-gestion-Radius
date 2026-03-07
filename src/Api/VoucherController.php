@@ -478,6 +478,27 @@ class VoucherController
     }
 
     /**
+     * DELETE /api/vouchers/by-notes
+     */
+    public function deleteByNotes(): void
+    {
+        $data = getJsonBody();
+        $notes = $data['notes'] ?? null;
+
+        if (empty($notes)) {
+            jsonError('Notes parameter required', 400);
+        }
+
+        try {
+            $adminId = $this->getAdminId();
+            $count = $this->db->deleteVouchersByNotes($notes, $adminId);
+            jsonSuccess(['deleted' => $count], $count . ' voucher(s) supprimé(s)');
+        } catch (Exception $e) {
+            jsonError(__('api.vouchers_delete_failed') . ': ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * POST /api/vouchers/import
      */
     public function import(): void

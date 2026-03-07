@@ -1024,6 +1024,21 @@ class RadiusDatabase
         return $stmt->rowCount();
     }
 
+    public function deleteVouchersByNotes(string $notes, ?int $adminId = null): int
+    {
+        $sql = "DELETE FROM vouchers WHERE notes = ?";
+        $params = [$notes];
+
+        if ($adminId !== null) {
+            $sql .= " AND admin_id = ?";
+            $params[] = $adminId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->rowCount();
+    }
+
     /**
      * Marquer la première utilisation et calculer la date d'expiration
      * La date d'expiration (valid_until) est basée sur la VALIDITÉ du profil (durée de vie)

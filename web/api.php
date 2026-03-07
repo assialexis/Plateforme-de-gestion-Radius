@@ -247,6 +247,7 @@ $router->post('/vouchers/{id}/reset', fn($p) => $voucherController->reset($p));
 $router->post('/vouchers/{id}/disable', fn($p) => $voucherController->disable($p));
 $router->post('/vouchers/{id}/enable', fn($p) => $voucherController->enable($p));
 $router->delete('/vouchers/batch/{batchId}', fn($p) => $voucherController->deleteBatch($p));
+$router->delete('/vouchers/by-notes', fn($p) => $voucherController->deleteByNotes());
 
 // Routes Zones
 $router->get('/zones', fn($p) => $zoneController->index());

@@ -514,6 +514,8 @@ return [
 
     'voucher.msg_created' => 'Voucher created successfully',
     'voucher.msg_deleted' => 'Voucher deleted successfully',
+    'voucher.delete_by_notes' => 'Delete this batch',
+    'voucher.confirm_delete_by_notes' => 'Delete all vouchers with this comment?',
     'voucher.msg_enabled' => 'Voucher enabled',
     'voucher.msg_disabled' => 'Voucher disabled',
     'voucher.msg_generate_success' => 'Vouchers generated successfully',

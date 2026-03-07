@@ -514,6 +514,8 @@ return [
 
     'voucher.msg_created' => 'Voucher créé avec succès',
     'voucher.msg_deleted' => 'Voucher supprimé avec succès',
+    'voucher.delete_by_notes' => 'Supprimer ce lot',
+    'voucher.confirm_delete_by_notes' => 'Supprimer tous les vouchers avec ce commentaire ?',
     'voucher.msg_enabled' => 'Voucher activé',
     'voucher.msg_disabled' => 'Voucher désactivé',
     'voucher.msg_generate_success' => 'Vouchers générés avec succès',

@@ -193,6 +193,15 @@ $currentPage = 'vouchers'; ?>
                         class="hover:text-purple-900 dark:hover:text-purple-100">&times;</button>
                 </span>
             </template>
+            <template x-if="notesFilter">
+                <button @click="deleteByNotes()"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <?= __('voucher.delete_by_notes') ?? 'Supprimer ce lot' ?>
+                </button>
+            </template>
             <button
                 @click="search = ''; statusFilter = ''; typeFilter = ''; zoneFilter = ''; notesFilter = ''; loadVouchers()"
                 class="ml-auto text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium">
@@ -1262,6 +1271,21 @@ $currentPage = 'vouchers'; ?>
                     this.loadVouchers();
                 } catch (error) {
                     showToast(__('api.error_deleting'), 'error');
+                }
+            },
+
+            async deleteByNotes() {
+                if (!this.notesFilter) return;
+                if (!confirmAction(`<?= __('voucher.confirm_delete_by_notes') ?? 'Supprimer tous les vouchers avec ce commentaire ?' ?>`)) return;
+
+                try {
+                    const response = await API.delete('/vouchers/by-notes', { notes: this.notesFilter });
+                    showToast(response.message || '<?= __('voucher.msg_deleted') ?>');
+                    this.notesFilter = '';
+                    this.loadVouchers();
+                    this.loadNotes();
+                } catch (error) {
+                    showToast(error.message, 'error');
                 }
             },
 
