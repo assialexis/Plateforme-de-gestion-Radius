@@ -690,7 +690,7 @@ class WhatsAppNotifier
                 SELECT pu.id, pu.whatsapp_phone, pu.customer_phone, pu.whatsapp_notifications
                 FROM pppoe_users pu
                 WHERE DATE(pu.valid_until) = ?
-                AND pu.status = 'active'
+                AND pu.status IN ('active', 'expired')
                 AND pu.whatsapp_notifications = 1
                 AND NOT EXISTS (
                     SELECT 1 FROM whatsapp_notification_log wnl
