@@ -4004,7 +4004,11 @@ class RadiusDatabase
             $pppoeUser = $stmt->fetch();
 
             if ($pppoeUser && empty($pppoeUser['sold_on_nas_id'])) {
-                $this->trackPPPoEUserSale($pppoeUser, $data['nas_ip'], $data['nas_identifier'] ?? null);
+                try {
+                    $this->trackPPPoEUserSale($pppoeUser, $data['nas_ip'], $data['nas_identifier'] ?? null);
+                } catch (PDOException $e) {
+                    // Tables user_nas/users n'existent pas sur le nœud — ignoré
+                }
             }
 
             // Mettre à jour last_mac et last_ip
