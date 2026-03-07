@@ -6231,13 +6231,18 @@ class RadiusDatabase
 
     /**
      * Déconnecter un utilisateur PPPoE du NAS via Disconnect-Request CoA
-     * Utilise le même mécanisme que les limites de vouchers (direct, fiable)
+     * Cherche le NAS par session active, puis par zone, puis par n'importe quel NAS
      */
     private function disconnectPPPoEUserFromNas(int $userId, string $username, string $reason): bool
     {
         require_once __DIR__ . '/RadiusServer.php';
+        require_once __DIR__ . '/RadiusPacket.php';
 
-        // Trouver la session active pour obtenir le NAS IP et session ID
+        $configFile = __DIR__ . '/../config/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
+
+        // Stratégie 1: Session active → NAS IP + session ID
         $stmt = $this->pdo->prepare("
             SELECT acct_session_id, nas_ip FROM pppoe_sessions
             WHERE pppoe_user_id = ? AND stop_time IS NULL
@@ -6246,34 +6251,40 @@ class RadiusDatabase
         $stmt->execute([$userId]);
         $session = $stmt->fetch();
 
-        if (!$session) {
-            error_log("FUP {$reason}: Pas de session active pour user #{$userId}");
+        if ($session) {
+            $secret = $this->getNasSecret($session['nas_ip']);
+            if ($secret) {
+                $result = RadiusServer::sendDisconnect($session['nas_ip'], $disconnectPort, $secret, $session['acct_session_id'], $username);
+                error_log("FUP {$reason}: CoA via session → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$session['nas_ip']})");
+                return $result;
+            }
+        }
+
+        // Stratégie 2: Zone de l'utilisateur → NAS de la zone
+        $stmt = $this->pdo->prepare("
+            SELECT n.nasname, n.secret FROM pppoe_users pu
+            JOIN nas n ON n.zone_id = pu.zone_id
+            WHERE pu.id = ? AND n.nasname IS NOT NULL AND n.nasname != ''
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $nas = $stmt->fetch();
+
+        // Stratégie 3: N'importe quel NAS connu
+        if (!$nas) {
+            $stmt = $this->pdo->query("SELECT nasname, secret FROM nas WHERE nasname IS NOT NULL AND nasname != '' AND nasname != '0.0.0.0/0' LIMIT 1");
+            $nas = $stmt->fetch();
+        }
+
+        if (!$nas || !$nas['secret']) {
+            error_log("FUP {$reason}: Aucun NAS trouvé pour user #{$userId}");
             return false;
         }
 
-        $nasIp = $session['nas_ip'];
-        $sessionId = $session['acct_session_id'];
-
-        // Récupérer le secret RADIUS du NAS
-        $secret = $this->getNasSecret($nasIp);
-        if (!$secret) {
-            error_log("FUP {$reason}: Secret NAS introuvable pour {$nasIp}");
-            return false;
-        }
-
-        $configFile = __DIR__ . '/../config/config.php';
-        $config = file_exists($configFile) ? require $configFile : [];
-        $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
-
-        $disconnected = RadiusServer::sendDisconnect($nasIp, $disconnectPort, $secret, $sessionId, $username);
-
-        if ($disconnected) {
-            error_log("FUP {$reason}: Disconnect-ACK reçu pour {$username} (session {$sessionId}, NAS {$nasIp})");
-        } else {
-            error_log("FUP {$reason}: Disconnect FAILED pour {$username} (session {$sessionId}, NAS {$nasIp})");
-        }
-
-        return $disconnected;
+        // Envoyer Disconnect-Request avec username uniquement (pas de session ID)
+        $result = RadiusServer::sendDisconnect($nas['nasname'], $disconnectPort, $nas['secret'], '', $username);
+        error_log("FUP {$reason}: CoA via NAS zone → " . ($result ? 'ACK' : 'FAILED') . " (user={$username}, NAS={$nas['nasname']})");
+        return $result;
     }
 
     /**

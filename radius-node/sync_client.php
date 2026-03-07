@@ -340,20 +340,48 @@ function applyPullData(PDO $pdo, array $data): array
                     if ($isNewReset && $localUser && $localUser['fup_triggered']) {
                         try {
                             require_once __DIR__ . '/src/RadiusServer.php';
-                            require_once __DIR__ . '/src/RadiusDatabase.php';
-                            $nodeDb = new \RadiusDatabase($pdo);
-                            $session = $pdo->prepare("SELECT acct_session_id, nas_ip FROM pppoe_sessions WHERE pppoe_user_id = ? AND stop_time IS NULL ORDER BY start_time DESC LIMIT 1");
-                            $session->execute([$user['id']]);
-                            $sess = $session->fetch();
+                            require_once __DIR__ . '/src/RadiusPacket.php';
+
+                            $configFile = __DIR__ . '/config/config.php';
+                            $config = file_exists($configFile) ? require $configFile : [];
+                            $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
+
+                            // Chercher NAS: d'abord via session active, sinon via zone, sinon n'importe quel NAS
+                            $nasIp = null;
+                            $nasSecret = null;
+                            $sessId = '';
+
+                            $sessStmt = $pdo->prepare("SELECT acct_session_id, nas_ip FROM pppoe_sessions WHERE pppoe_user_id = ? AND stop_time IS NULL ORDER BY start_time DESC LIMIT 1");
+                            $sessStmt->execute([$user['id']]);
+                            $sess = $sessStmt->fetch();
                             if ($sess) {
-                                $secret = $nodeDb->getNasSecret($sess['nas_ip']);
-                                $configFile = __DIR__ . '/config/config.php';
-                                $config = file_exists($configFile) ? require $configFile : [];
-                                $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
-                                \RadiusServer::sendDisconnect($sess['nas_ip'], $disconnectPort, $secret, $sess['acct_session_id'], $user['username']);
-                                // Fermer la session en DB
-                                $pdo->prepare("UPDATE pppoe_sessions SET stop_time = NOW(), terminate_cause = 'FUP-Reset-Sync' WHERE acct_session_id = ? AND nas_ip = ? AND stop_time IS NULL")->execute([$sess['acct_session_id'], $sess['nas_ip']]);
-                                echo "    FUP reset: disconnected {$user['username']} from NAS {$sess['nas_ip']}\n";
+                                $nasIp = $sess['nas_ip'];
+                                $sessId = $sess['acct_session_id'];
+                                $secStmt = $pdo->prepare("SELECT secret FROM nas WHERE nasname = ? LIMIT 1");
+                                $secStmt->execute([$nasIp]);
+                                $sec = $secStmt->fetch();
+                                $nasSecret = $sec ? $sec['secret'] : null;
+                            }
+
+                            if (!$nasIp || !$nasSecret) {
+                                // Fallback: NAS de la zone de l'utilisateur
+                                $nasStmt = $pdo->prepare("SELECT n.nasname, n.secret FROM pppoe_users pu JOIN nas n ON n.zone_id = pu.zone_id WHERE pu.id = ? AND n.nasname IS NOT NULL AND n.nasname != '' AND n.nasname != '0.0.0.0/0' LIMIT 1");
+                                $nasStmt->execute([$user['id']]);
+                                $nasRow = $nasStmt->fetch();
+                                if ($nasRow) {
+                                    $nasIp = $nasRow['nasname'];
+                                    $nasSecret = $nasRow['secret'];
+                                }
+                            }
+
+                            if ($nasIp && $nasSecret) {
+                                $disconnected = \RadiusServer::sendDisconnect($nasIp, $disconnectPort, $nasSecret, $sessId, $user['username']);
+                                if ($sess) {
+                                    $pdo->prepare("UPDATE pppoe_sessions SET stop_time = NOW(), terminate_cause = 'FUP-Reset-Sync' WHERE acct_session_id = ? AND nas_ip = ? AND stop_time IS NULL")->execute([$sess['acct_session_id'], $sess['nas_ip']]);
+                                }
+                                echo "    FUP reset: " . ($disconnected ? 'disconnected' : 'disconnect FAILED') . " {$user['username']} from NAS {$nasIp}\n";
+                            } else {
+                                echo "    FUP reset: no NAS found for user {$user['username']}\n";
                             }
                         } catch (\Throwable $e) {
                             echo "    FUP reset disconnect error: " . $e->getMessage() . "\n";
