@@ -229,11 +229,10 @@ class PppoeReminderController
                        pp.name as profile_name, pp.price as profile_price,
                        pp.download_speed, pp.upload_speed, pp.data_limit,
                        z.name as zone_name,
-                       n.shortname as nas_name
+                       (SELECT n.shortname FROM pppoe_user_nas pun JOIN nas n ON pun.nas_id = n.id WHERE pun.pppoe_user_id = pu.id LIMIT 1) as nas_name
                 FROM pppoe_users pu
                 LEFT JOIN pppoe_profiles pp ON pu.profile_id = pp.id
                 LEFT JOIN zones z ON pu.zone_id = z.id
-                LEFT JOIN nas n ON pu.nas_id = n.id
                 WHERE pu.admin_id = ?
                 AND DATE(pu.valid_until) = DATE_ADD(CURDATE(), INTERVAL ? DAY)
                 AND pu.status IN ('active', 'expired')
