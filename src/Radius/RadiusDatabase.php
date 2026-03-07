@@ -3997,7 +3997,7 @@ class RadiusDatabase
         $params = [];
 
         $allowedFields = [
-            'zone_id', 'nas_id', 'profile_id', 'username', 'password',
+            'zone_id', 'profile_id', 'username', 'password',
             'customer_name', 'customer_phone', 'customer_secondary_phone', 'customer_email',
             'customer_id_type', 'customer_id_number', 'customer_address',
             'latitude', 'longitude', 'location_description',
