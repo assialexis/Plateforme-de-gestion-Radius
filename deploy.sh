@@ -374,6 +374,11 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CRON
 
 chmod 644 "${CRON_FILE}"
+
+# Créer le fichier log avec les bons droits pour www-data
+touch /var/log/nas-cron.log
+chown www-data:www-data /var/log/nas-cron.log
+
 success "Cron jobs configurés"
 
 # ========================
