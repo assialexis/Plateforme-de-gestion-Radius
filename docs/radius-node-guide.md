@@ -13,6 +13,7 @@
 9. [Supervision et monitoring](#9-supervision-et-monitoring)
 10. [Dépannage](#10-dépannage)
 11. [Structure des fichiers](#11-structure-des-fichiers)
+12. [Mise à jour du code](#12-mise-à-jour-du-code)
 
 ---
 
@@ -700,6 +701,92 @@ sudo systemctl restart mariadb
 | Colonne | Type | Description |
 |---|---|---|
 | `radius_server_id` | INT FK NULL | Serveur RADIUS hébergeant cette zone |
+
+---
+
+## 12. Mise à jour du code
+
+Quand le code source du noeud est modifié (bugfix, nouvelle fonctionnalité), il faut mettre à jour les fichiers sur le VPS. La **sync automatique** (`sync_client.php`) ne synchronise que les **données** (zones, vouchers, profils), pas le **code source**.
+
+### Méthode 1 : Git Pull (recommandée)
+
+#### Installation initiale (une seule fois)
+
+```bash
+apt install -y git
+
+# Sauvegarder la config
+cp /opt/radius-node/config/config.php /tmp/config-backup.php
+
+# Cloner le dépôt
+cd /opt
+rm -rf radius-node
+git clone https://github.com/assialexis/Plateforme-de-gestion-Radius.git radius-node-repo
+
+# Lien symbolique vers le sous-dossier radius-node/
+ln -sf /opt/radius-node-repo/radius-node /opt/radius-node
+
+# Restaurer la config
+cp /tmp/config-backup.php /opt/radius-node/config/config.php
+```
+
+#### Mise à jour courante
+
+```bash
+cd /opt/radius-node-repo && git pull origin main && systemctl restart radius-node
+```
+
+### Méthode 2 : Download package via API
+
+```bash
+# Lire la config automatiquement
+eval $(php -r "\$c=require'/opt/radius-node/config/config.php'; echo \"TOKEN={\$c['platform']['sync_token']}\nURL={\$c['platform']['url']}\nSERVER={\$c['platform']['server_code']}\";")
+
+# Télécharger et extraire
+curl -k -H "X-Node-Token: $TOKEN" \
+  "$URL/node_sync.php?action=download&server=$SERVER" \
+  -o /tmp/radius-node.tar.gz
+
+cd /opt/radius-node && tar xzf /tmp/radius-node.tar.gz && rm /tmp/radius-node.tar.gz
+
+# Redémarrer
+systemctl restart radius-node
+```
+
+### Script de mise à jour automatique
+
+Créer `/opt/radius-node/update.sh` :
+
+```bash
+#!/bin/bash
+set -e
+LOG="/var/log/radius-node-update.log"
+echo "[$(date)] Mise à jour..." >> $LOG
+cd /opt/radius-node-repo && git pull origin main >> $LOG 2>&1
+systemctl restart radius-node
+echo "[$(date)] OK" >> $LOG
+```
+
+```bash
+chmod +x /opt/radius-node/update.sh
+```
+
+#### Cron : mise à jour automatique toutes les heures
+
+```bash
+(crontab -l 2>/dev/null; echo "0 * * * * /opt/radius-node/update.sh") | crontab -
+```
+
+### Commandes utiles
+
+| Action | Commande |
+|--------|----------|
+| Mettre à jour | `cd /opt/radius-node-repo && git pull origin main` |
+| Redémarrer | `systemctl restart radius-node` |
+| Voir la version | `cd /opt/radius-node-repo && git log --oneline -5` |
+| Revenir en arrière | `cd /opt/radius-node-repo && git checkout HEAD~1` |
+
+> **Note** : La config `config/config.php` est dans `.gitignore` et n'est jamais écrasée par `git pull`.
 
 ---
 
