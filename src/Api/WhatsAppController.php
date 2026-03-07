@@ -197,16 +197,6 @@ class WhatsAppController
         }
 
         $defaults = [
-            ['Rappel 7 jours', 'Notification 7 jours avant expiration', 'expiration_warning', 7,
-             "🔔 *Rappel d'expiration*\n\nBonjour {{customer_name}},\n\nVotre abonnement Internet expire dans *{{days_remaining}} jours* (le {{expiration_date}}).\n\n📋 *Détails:*\n• Compte: {{username}}\n• Forfait: {{profile_name}}\n• Prix: {{profile_price}} FCFA\n\n💳 Pensez à renouveler pour éviter toute interruption de service.\n\n_{{company_name}}_"],
-            ['Rappel 3 jours', 'Notification 3 jours avant expiration', 'expiration_warning', 3,
-             "⚠️ *Expiration imminente!*\n\nBonjour {{customer_name}},\n\nVotre abonnement expire dans *{{days_remaining}} jours* seulement!\n\n📅 Date d'expiration: {{expiration_date}}\n👤 Compte: {{username}}\n📦 Forfait: {{profile_name}}\n\n💰 Montant à payer: *{{profile_price}} FCFA*\n\nContactez-nous rapidement pour renouveler.\n\n_{{company_name}}_"],
-            ['Rappel 1 jour', 'Notification 1 jour avant expiration', 'expiration_warning', 1,
-             "🚨 *URGENT - Expiration demain!*\n\nBonjour {{customer_name}},\n\nVotre abonnement expire *DEMAIN* ({{expiration_date}})!\n\n👤 Compte: {{username}}\n📦 Forfait: {{profile_name}}\n💰 Renouvellement: *{{profile_price}} FCFA*\n\n⚡ Renouvelez aujourd'hui pour éviter la coupure!\n\n📞 Contact: {{support_phone}}\n\n_{{company_name}}_"],
-            ['Jour d\'expiration', 'Notification le jour de l\'expiration', 'expiration_warning', 0,
-             "❌ *Expiration aujourd'hui!*\n\nBonjour {{customer_name}},\n\nVotre abonnement Internet expire *AUJOURD'HUI*!\n\n👤 Compte: {{username}}\n📦 Forfait: {{profile_name}}\n\n🔴 Votre connexion sera coupée si vous ne renouvelez pas.\n\n💳 Montant: *{{profile_price}} FCFA*\n📞 Contact: {{support_phone}}\n\n_{{company_name}}_"],
-            ['Compte expiré', 'Notification après expiration', 'expired', -1,
-             "🔴 *Compte expiré*\n\nBonjour {{customer_name}},\n\nVotre abonnement Internet a expiré le {{expiration_date}}.\n\n👤 Compte: {{username}}\n📦 Forfait: {{profile_name}}\n\n🔄 Pour réactiver votre connexion:\n💰 Montant: *{{profile_price}} FCFA*\n📞 Contact: {{support_phone}}\n\n_{{company_name}}_"],
             ['Bienvenue', 'Message de bienvenue pour nouveau client', 'welcome', 0,
              "🎉 *Bienvenue chez {{company_name}}!*\n\nBonjour {{customer_name}},\n\nVotre compte Internet est maintenant actif!\n\n📋 *Vos informations:*\n• Identifiant: {{username}}\n• Mot de passe: {{password}}\n• Forfait: {{profile_name}}\n• Vitesse: {{download_speed}} / {{upload_speed}}\n• Valide jusqu'au: {{expiration_date}}\n\n📞 Support: {{support_phone}}\n\nMerci de votre confiance!"],
             ['Compte suspendu', 'Notification de suspension', 'suspended', 0,
