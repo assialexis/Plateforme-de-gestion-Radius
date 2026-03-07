@@ -63,7 +63,8 @@ class MikroTikCommandSender
         ?string $description = null,
         int $priority = 50,
         string $commandType = 'raw',
-        int $expiresIn = 600
+        int $expiresIn = 600,
+        ?int $forceAdminId = null
         ): int|false
     {
         $routerId = preg_replace('/[^a-zA-Z0-9_-]/', '', $routerId);
@@ -80,7 +81,7 @@ class MikroTikCommandSender
             $nas = $stmt->fetch();
 
             $nasId = $nas['id'] ?? null;
-            $adminId = $nas['admin_id'] ?? null;
+            $adminId = $forceAdminId ?? $nas['admin_id'] ?? null;
 
             $stmt = $pdo->prepare("
                 INSERT INTO router_commands

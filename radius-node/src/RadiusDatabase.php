@@ -6262,8 +6262,17 @@ class RadiusDatabase
      */
     private function pushDisconnectPPPoEUser(int $userId, string $username, ?string $nasIdentifier = null, string $reason = 'FUP'): bool
     {
-        // Trouver le router_id : paramètre direct > last_nas_identifier stocké > zone
+        // Trouver le router_id et admin_id du client PPPoE
         $routerId = null;
+        $adminId = null;
+
+        // Récupérer l'admin_id du client PPPoE (pour isoler la commande)
+        $stmt = $this->pdo->prepare("SELECT admin_id FROM pppoe_users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $puRow = $stmt->fetch();
+        if ($puRow) {
+            $adminId = $puRow['admin_id'] ? (int)$puRow['admin_id'] : null;
+        }
 
         // 1. NAS-Identifier passé directement depuis le paquet accounting
         if ($nasIdentifier) {
@@ -6308,8 +6317,8 @@ class RadiusDatabase
         $escapedUsername = addslashes($username);
         $command = ":foreach i in=[/ppp active find name=\"{$escapedUsername}\"] do={ /ppp active remove \$i }";
 
-        $result = $this->pushCommandToPlatform($routerId, $command, "FUP {$reason}: Déconnexion PPPoE {$username}", 'disconnect_pppoe');
-        error_log("FUP {$reason}: Push disconnect → " . ($result ? 'QUEUED' : 'FAILED') . " (user={$username}, router={$routerId})");
+        $result = $this->pushCommandToPlatform($routerId, $command, "FUP {$reason}: Déconnexion PPPoE {$username}", 'disconnect_pppoe', $adminId);
+        error_log("FUP {$reason}: Push disconnect → " . ($result ? 'QUEUED' : 'FAILED') . " (user={$username}, router={$routerId}, admin={$adminId})");
         return $result;
     }
 
@@ -6349,7 +6358,7 @@ class RadiusDatabase
     /**
      * Envoyer une commande MikroTik au serveur central pour exécution
      */
-    private function pushCommandToPlatform(string $routerId, string $command, string $description, string $commandType = 'raw'): bool
+    private function pushCommandToPlatform(string $routerId, string $command, string $description, string $commandType = 'raw', ?int $adminId = null): bool
     {
         $configFile = __DIR__ . '/../config/config.php';
         if (!file_exists($configFile)) {
@@ -6368,13 +6377,17 @@ class RadiusDatabase
         }
 
         $url = "{$platformUrl}/node_sync.php?action=queue_command&server={$serverCode}";
-        $data = json_encode([
+        $payload = [
             'router_id' => $routerId,
             'command' => $command,
             'description' => $description,
             'command_type' => $commandType,
             'priority' => 5,
-        ]);
+        ];
+        if ($adminId) {
+            $payload['admin_id'] = $adminId;
+        }
+        $data = json_encode($payload);
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [

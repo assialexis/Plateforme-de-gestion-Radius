@@ -254,6 +254,7 @@ function handleQueueCommand(RadiusDatabase $db, array $server): void
     $description = $input['description'] ?? null;
     $priority = (int)($input['priority'] ?? 10);
     $commandType = $input['command_type'] ?? 'raw';
+    $adminId = isset($input['admin_id']) ? (int)$input['admin_id'] : null;
 
     if (empty($routerId) || empty($command)) {
         http_response_code(400);
@@ -265,7 +266,7 @@ function handleQueueCommand(RadiusDatabase $db, array $server): void
         require_once __DIR__ . '/../src/MikroTik/CommandSender.php';
         $commandSender = new MikroTikCommandSender($db->getPdo());
 
-        $cmdId = $commandSender->send($routerId, $command, $description, $priority, $commandType);
+        $cmdId = $commandSender->send($routerId, $command, $description, $priority, $commandType, 600, $adminId);
 
         if ($cmdId) {
             echo json_encode(['status' => 'ok', 'command_id' => $cmdId]);

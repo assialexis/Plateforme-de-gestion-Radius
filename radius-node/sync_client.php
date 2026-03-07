@@ -366,6 +366,13 @@ function applyPullData(PDO $pdo, array $data): array
                             }
 
                             if ($routerId) {
+                                // Récupérer l'admin_id du client PPPoE (isolation multi-tenant)
+                                $adminIdForCmd = null;
+                                $aiStmt = $pdo->prepare("SELECT admin_id FROM pppoe_users WHERE id = ?");
+                                $aiStmt->execute([$user['id']]);
+                                $aiRow = $aiStmt->fetch();
+                                if ($aiRow && $aiRow['admin_id']) $adminIdForCmd = (int)$aiRow['admin_id'];
+
                                 // Envoyer la commande de déconnexion via push (le routeur poll fetch_cmd.php)
                                 $configFile = __DIR__ . '/config/config.php';
                                 $config = file_exists($configFile) ? require $configFile : [];
@@ -377,13 +384,15 @@ function applyPullData(PDO $pdo, array $data): array
                                 $command = ":foreach i in=[/ppp active find name=\"{$escapedUsername}\"] do={ /ppp active remove \$i }";
 
                                 $url = "{$platformUrl}/node_sync.php?action=queue_command&server={$serverCode}";
-                                $postData = json_encode([
+                                $payload = [
                                     'router_id' => $routerId,
                                     'command' => $command,
                                     'description' => "FUP reset sync: Déconnexion PPPoE {$user['username']}",
                                     'command_type' => 'disconnect_pppoe',
                                     'priority' => 5,
-                                ]);
+                                ];
+                                if ($adminIdForCmd) $payload['admin_id'] = $adminIdForCmd;
+                                $postData = json_encode($payload);
 
                                 $ch = curl_init($url);
                                 curl_setopt_array($ch, [
