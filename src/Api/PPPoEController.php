@@ -523,12 +523,13 @@ class PPPoEController
         $sent = false;
         $adminId = $this->getAdminId();
 
-        // 1. D'abord chercher le NAS exact via la session active
+        // 1. Chercher le NAS exact via la session active (nas_ip OU nas_identifier)
         $stmt = $pdo->prepare("
-            SELECT ps.nas_ip, n.router_id
+            SELECT n.router_id
             FROM pppoe_sessions ps
-            LEFT JOIN nas n ON ps.nas_ip = n.nasname
-            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL AND n.router_id IS NOT NULL
+            JOIN nas n ON (ps.nas_ip = n.nasname OR ps.nas_identifier = n.router_id)
+            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL
+            AND n.router_id IS NOT NULL AND n.router_id != ''
             LIMIT 1
         ");
         $stmt->execute([$user['id']]);
@@ -538,20 +539,51 @@ class PPPoEController
             $sent = $this->commandSender->disconnectPPPoEUser($session['router_id'], $user['username'], $adminId);
         }
 
-        // 2. Sinon essayer via la zone (un seul NAS de la zone)
+        // 2. Chercher via last_nas_identifier de l'utilisateur
+        if (!$sent && !empty($user['last_nas_identifier'])) {
+            $stmt = $pdo->prepare("
+                SELECT router_id FROM nas
+                WHERE router_id = ? AND router_id IS NOT NULL AND router_id != ''
+                LIMIT 1
+            ");
+            $stmt->execute([$user['last_nas_identifier']]);
+            $nas = $stmt->fetch();
+            if ($nas) {
+                $sent = $this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId);
+            }
+        }
+
+        // 3. Chercher via la zone de l'utilisateur
         if (!$sent) {
             $zoneId = $user['zone_id'] ?? null;
             if ($zoneId) {
                 $stmt = $pdo->prepare("
                     SELECT router_id FROM nas
                     WHERE zone_id = ? AND router_id IS NOT NULL AND router_id != ''
+                    LIMIT 1
                 ");
                 $stmt->execute([$zoneId]);
-                while ($nas = $stmt->fetch()) {
-                    if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
-                        $sent = true;
-                    }
+                $nas = $stmt->fetch();
+                if ($nas) {
+                    $sent = $this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId);
                 }
+            }
+        }
+
+        // 4. Dernier recours: NAS de l'admin avec router_id
+        if (!$sent) {
+            $sql = "SELECT router_id FROM nas WHERE router_id IS NOT NULL AND router_id != ''";
+            $params = [];
+            if ($adminId) {
+                $sql .= " AND admin_id = ?";
+                $params[] = $adminId;
+            }
+            $sql .= " LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $nas = $stmt->fetch();
+            if ($nas) {
+                $sent = $this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId);
             }
         }
 
@@ -1095,7 +1127,7 @@ class PPPoEController
 
         // Vérifier que la session existe et est active, avec les infos utilisateur (scoped par admin)
         $sql = "
-            SELECT s.*, u.id as user_id, u.username, u.zone_id
+            SELECT s.*, u.id as user_id, u.username, u.zone_id, u.last_nas_identifier
             FROM pppoe_sessions s
             JOIN pppoe_users u ON s.pppoe_user_id = u.id
             WHERE s.id = ?";
@@ -1120,7 +1152,8 @@ class PPPoEController
         $user = [
             'id' => $session['user_id'],
             'username' => $session['username'],
-            'zone_id' => $session['zone_id']
+            'zone_id' => $session['zone_id'],
+            'last_nas_identifier' => $session['last_nas_identifier'] ?? $session['nas_identifier'] ?? null,
         ];
         $disconnectSent = $this->disconnectPPPoEUserFromRouter($user);
 
