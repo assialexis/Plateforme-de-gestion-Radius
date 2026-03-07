@@ -5810,6 +5810,11 @@ class RadiusDatabase
                 'quota' => $status['fup_quota'],
                 'triggered_by' => $triggeredBy
             ]);
+
+            // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
+            if ($status['fup_triggered']) {
+                $this->applyNormalSpeedToMikrotik($userId, $status);
+            }
         }
 
         return $result;
