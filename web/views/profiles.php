@@ -454,8 +454,28 @@ $currentPage = 'profiles'; ?>
                             <input type="text" x-model="form.description"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                         </div>
-                        <!-- Temps d'utilisation -->
-                        <div
+                        <!-- Switch Type de profil -->
+                        <div class="flex items-center bg-gray-100 dark:bg-[#21262d] rounded-lg p-1">
+                            <button type="button" @click="form.profile_type = 'time'"
+                                :class="form.profile_type === 'time' ? 'bg-white dark:bg-[#30363d] shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <?= __('profile.type_time') ?? 'Temps' ?>
+                            </button>
+                            <button type="button" @click="form.profile_type = 'data'"
+                                :class="form.profile_type === 'data' ? 'bg-white dark:bg-[#30363d] shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <?= __('profile.type_data') ?? 'Donn\u00e9es' ?>
+                            </button>
+                        </div>
+
+                        <!-- Temps d'utilisation (mode TEMPS uniquement) -->
+                        <div x-show="form.profile_type === 'time'" x-transition
                             class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <label class="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
                                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,19 +486,13 @@ $currentPage = 'profiles'; ?>
                             </label>
                             <div class="flex gap-2">
                                 <input type="number" x-model="form.time_limit_value" min="1"
-                                    placeholder="Ex: 1" required
+                                    placeholder="Ex: 1" :required="form.profile_type === 'time'"
                                     class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                                 <select x-model="form.time_limit_unit"
                                     class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                                    <option value="minutes">
-                                        <?= __('time.minutes')?>
-                                    </option>
-                                    <option value="hours">
-                                        <?= __('time.hours')?>
-                                    </option>
-                                    <option value="days">
-                                        <?= __('time.days')?>
-                                    </option>
+                                    <option value="minutes"><?= __('time.minutes')?></option>
+                                    <option value="hours"><?= __('time.hours')?></option>
+                                    <option value="days"><?= __('time.days')?></option>
                                 </select>
                             </div>
                             <p class="mt-1 text-xs text-blue-700 dark:text-blue-300">
@@ -486,7 +500,31 @@ $currentPage = 'profiles'; ?>
                             </p>
                         </div>
 
-                        <!-- Validité du voucher (durée de vie calendaire) -->
+                        <!-- Limite de donn\u00e9es (mode DATA uniquement) -->
+                        <div x-show="form.profile_type === 'data'" x-transition
+                            class="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                            <label class="block text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-2">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <?= __('profile.form_data_limit') ?? 'Limite de donn\u00e9es' ?> *
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="number" x-model="form.data_limit_value" min="1"
+                                    placeholder="Ex: 500" :required="form.profile_type === 'data'"
+                                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
+                                <select x-model="form.data_limit_unit"
+                                    class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
+                                    <option value="MB">Mo</option>
+                                    <option value="GB">Go</option>
+                                </select>
+                            </div>
+                            <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+                                <?= __('profile.data_limit_hint') ?? 'Volume de donn\u00e9es autoris\u00e9 pour ce profil' ?>
+                            </p>
+                        </div>
+
+                        <!-- Validit\u00e9 du voucher (dur\u00e9e de vie calendaire) - toujours visible -->
                         <div
                             class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                             <label class="block text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
@@ -501,15 +539,9 @@ $currentPage = 'profiles'; ?>
                                     class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
                                 <select x-model="form.validity_unit"
                                     class="px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                                    <option value="minutes">
-                                        <?= __('time.minutes')?>
-                                    </option>
-                                    <option value="hours">
-                                        <?= __('time.hours')?>
-                                    </option>
-                                    <option value="days">
-                                        <?= __('time.days')?>
-                                    </option>
+                                    <option value="minutes"><?= __('time.minutes')?></option>
+                                    <option value="hours"><?= __('time.hours')?></option>
+                                    <option value="days"><?= __('time.days')?></option>
                                 </select>
                             </div>
                             <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
@@ -518,13 +550,6 @@ $currentPage = 'profiles'; ?>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    <?= __('profile.form_data_mb')?>
-                                </label>
-                                <input type="number" x-model="form.data_limit_mb" :placeholder="__('common.unlimited')"
-                                    class="w-full px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#21262d] text-gray-900 dark:text-white">
-                            </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     <?= __('profile.form_max_connections')?>
@@ -763,13 +788,15 @@ $currentPage = 'profiles'; ?>
             paymentLink: '',
             deleting: false,
             form: {
+                profile_type: 'time',
                 name: '',
                 description: '',
                 validity_value: '',
                 validity_unit: 'hours',
                 time_limit_value: '',
                 time_limit_unit: 'hours',
-                data_limit_mb: '',
+                data_limit_value: '',
+                data_limit_unit: 'MB',
                 download_speed_mbps: '',
                 upload_speed_mbps: '',
                 price: 0,
@@ -826,13 +853,15 @@ $currentPage = 'profiles'; ?>
 
             resetForm() {
                 this.form = {
+                    profile_type: 'time',
                     name: '',
                     description: '',
                     validity_value: '',
                     validity_unit: 'hours',
                     time_limit_value: '',
                     time_limit_unit: 'hours',
-                    data_limit_mb: '',
+                    data_limit_value: '',
+                    data_limit_unit: 'MB',
                     download_speed_mbps: '',
                     upload_speed_mbps: '',
                     price: 0,
@@ -867,15 +896,24 @@ $currentPage = 'profiles'; ?>
 
                 const validity = this.secondsToValueUnit(profile.validity);
                 const timeLimit = this.secondsToValueUnit(profile.time_limit);
+                const dataLimitMb = profile.data_limit ? profile.data_limit / (1024 * 1024) : '';
+                let dataValue = dataLimitMb;
+                let dataUnit = 'MB';
+                if (dataLimitMb && dataLimitMb >= 1024 && dataLimitMb % 1024 === 0) {
+                    dataValue = dataLimitMb / 1024;
+                    dataUnit = 'GB';
+                }
 
                 this.form = {
+                    profile_type: profile.data_limit ? 'data' : 'time',
                     name: profile.name,
                     description: profile.description || '',
                     validity_value: validity.value,
                     validity_unit: profile.validity_unit || validity.unit,
                     time_limit_value: timeLimit.value,
                     time_limit_unit: timeLimit.unit,
-                    data_limit_mb: profile.data_limit ? profile.data_limit / (1024 * 1024) : '',
+                    data_limit_value: dataValue,
+                    data_limit_unit: dataUnit,
                     download_speed_mbps: profile.download_speed ? profile.download_speed / 1000000 : '',
                     upload_speed_mbps: profile.upload_speed ? profile.upload_speed / 1000000 : '',
                     price: profile.price || 0,
@@ -888,13 +926,23 @@ $currentPage = 'profiles'; ?>
 
             async saveProfile() {
                 try {
+                    let dataLimitBytes = null;
+                    if (this.form.profile_type === 'data' && this.form.data_limit_value) {
+                        const mb = this.form.data_limit_unit === 'GB'
+                            ? this.form.data_limit_value * 1024
+                            : parseFloat(this.form.data_limit_value);
+                        dataLimitBytes = mb * 1024 * 1024;
+                    }
+
                     const data = {
                         name: this.form.name,
                         description: this.form.description || null,
                         validity: this.valueUnitToSeconds(this.form.validity_value, this.form.validity_unit),
                         validity_unit: this.form.validity_unit,
-                        time_limit: this.valueUnitToSeconds(this.form.time_limit_value, this.form.time_limit_unit),
-                        data_limit: this.form.data_limit_mb ? this.form.data_limit_mb * 1024 * 1024 : null,
+                        time_limit: this.form.profile_type === 'time'
+                            ? this.valueUnitToSeconds(this.form.time_limit_value, this.form.time_limit_unit)
+                            : null,
+                        data_limit: dataLimitBytes,
                         download_speed: this.form.download_speed_mbps ? this.form.download_speed_mbps * 1000000 : null,
                         upload_speed: this.form.upload_speed_mbps ? this.form.upload_speed_mbps * 1000000 : null,
                         price: this.form.price || 0,
