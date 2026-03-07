@@ -6202,11 +6202,11 @@ class RadiusDatabase
             'new_speed_up' => $status['fup_upload_speed']
         ]);
 
-        // Fermer les sessions actives en DB pour éviter le rejet "Too many simultaneous connections"
-        $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
-
-        // Appliquer le nouveau débit en temps réel sur MikroTik
+        // D'abord déconnecter du MikroTik (besoin de la session active pour le CoA)
         $this->applyFupSpeedToMikrotik($userId, $status);
+
+        // Puis fermer les sessions en DB pour éviter le rejet "Too many simultaneous connections"
+        $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
 
         return true;
     }
@@ -6628,8 +6628,10 @@ class RadiusDatabase
 
             // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
             if ($status['fup_triggered']) {
-                $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
+                // D'abord déconnecter (besoin de la session active pour le CoA)
                 $this->applyNormalSpeedToMikrotik($userId, $status);
+                // Puis fermer les sessions en DB
+                $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
             }
         }
 
