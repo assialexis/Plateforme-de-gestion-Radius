@@ -676,7 +676,7 @@ class PppoeReminderController
 
         $stmt = $pdo->prepare("
             INSERT IGNORE INTO pppoe_reminder_rules (admin_id, name, days_before, channel, message_template, is_active)
-            VALUES (?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, 0)
         ");
 
         foreach ($defaults as $d) {

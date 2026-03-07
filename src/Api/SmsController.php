@@ -631,7 +631,7 @@ class SmsController
             if ($hasDefaults && $adminId !== 1) {
                 $stmt = $pdo->prepare(
                     "INSERT INTO sms_templates (name, description, category, event_type, message_template, days_before, is_active, admin_id)
-                     SELECT name, description, category, event_type, message_template, days_before, is_active, ?
+                     SELECT name, description, category, event_type, message_template, days_before, 0, ?
                      FROM sms_templates WHERE admin_id = 1"
                 );
                 $stmt->execute([$adminId]);

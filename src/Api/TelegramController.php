@@ -202,7 +202,7 @@ class TelegramController
 
         $stmt = $pdo->prepare("
             INSERT IGNORE INTO telegram_templates (name, description, event_type, days_before, message_template, is_active, send_time, admin_id)
-            VALUES (?, ?, ?, ?, ?, 1, '09:00:00', ?)
+            VALUES (?, ?, ?, ?, ?, 0, '09:00:00', ?)
         ");
 
         foreach ($defaults as $t) {
