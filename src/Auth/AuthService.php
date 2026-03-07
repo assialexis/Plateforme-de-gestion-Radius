@@ -929,7 +929,7 @@ class AuthService
 
         // Admin voit ses sous-utilisateurs directs + ceux créés par ses gérants
         $sql = "SELECT u.*,
-                (SELECT COUNT(*) FROM vouchers v WHERE v.created_by = u.id) as vouchers_count
+                (SELECT COUNT(*) FROM vouchers v WHERE v.created_by = u.id AND v.deleted_at IS NULL) as vouchers_count
                 FROM users u
                 WHERE (u.parent_id = ? OR u.parent_id IN (
                     SELECT id FROM users WHERE parent_id = ? AND role IN ('gerant')

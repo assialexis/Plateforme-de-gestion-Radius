@@ -89,6 +89,7 @@ class RadiusDatabase
                 WHERE status = 'active'
                   AND valid_until IS NOT NULL
                   AND valid_until < NOW()
+                  AND deleted_at IS NULL
             ");
             $stmt->execute();
             return $stmt->rowCount();
@@ -129,7 +130,7 @@ class RadiusDatabase
         $sql = "SELECT z.*,
                        (SELECT COUNT(*) FROM nas WHERE zone_id = z.id) as nas_count,
                        (SELECT COUNT(*) FROM profiles WHERE zone_id = z.id) as profiles_count,
-                       (SELECT COUNT(*) FROM vouchers WHERE zone_id = z.id) as vouchers_count
+                       (SELECT COUNT(*) FROM vouchers WHERE zone_id = z.id AND deleted_at IS NULL) as vouchers_count
                 FROM zones z";
         $conditions = [];
         $params = [];
@@ -158,7 +159,7 @@ class RadiusDatabase
             SELECT z.*,
                    (SELECT COUNT(*) FROM nas WHERE zone_id = z.id) as nas_count,
                    (SELECT COUNT(*) FROM profiles WHERE zone_id = z.id) as profiles_count,
-                   (SELECT COUNT(*) FROM vouchers WHERE zone_id = z.id) as vouchers_count
+                   (SELECT COUNT(*) FROM vouchers WHERE zone_id = z.id AND deleted_at IS NULL) as vouchers_count
             FROM zones z WHERE z.id = ?
         ";
         $params = [$id];
@@ -576,7 +577,7 @@ class RadiusDatabase
      */
     public function authenticateVoucher(string $username, string $password, ?string $nasIp = null, ?string $nasIdentifier = null, ?string $clientMac = null): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM vouchers WHERE username = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM vouchers WHERE username = ? AND deleted_at IS NULL");
         $stmt->execute([$username]);
         $voucher = $stmt->fetch();
 
@@ -715,7 +716,7 @@ class RadiusDatabase
         // Mettre à jour les vouchers expirés avant de récupérer la liste
         $this->updateExpiredVouchers();
 
-        $where = [];
+        $where = ['v.deleted_at IS NULL'];
         $params = [];
 
         if ($adminId !== null) {
@@ -816,7 +817,7 @@ class RadiusDatabase
             LEFT JOIN profiles p ON v.profile_id = p.id
             LEFT JOIN users uv ON v.vendeur_id = uv.id
             LEFT JOIN users ug ON v.gerant_id = ug.id
-            WHERE v.id = ?
+            WHERE v.id = ? AND v.deleted_at IS NULL
         ");
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
@@ -827,7 +828,7 @@ class RadiusDatabase
      */
     public function getVoucherByUsername(string $username): ?array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM vouchers WHERE username = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM vouchers WHERE username = ? AND deleted_at IS NULL");
         $stmt->execute([$username]);
         return $stmt->fetch() ?: null;
     }
@@ -965,7 +966,7 @@ class RadiusDatabase
         }
 
         $params[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE vouchers SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare("UPDATE vouchers SET " . implode(', ', $fields) . " WHERE id = ? AND deleted_at IS NULL");
         return $stmt->execute($params);
     }
 
@@ -974,7 +975,7 @@ class RadiusDatabase
      */
     public function updateVoucherStatus(int $id, string $status): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE vouchers SET status = ? WHERE id = ?");
+        $stmt = $this->pdo->prepare("UPDATE vouchers SET status = ? WHERE id = ? AND deleted_at IS NULL");
         return $stmt->execute([$status, $id]);
     }
 
@@ -992,26 +993,26 @@ class RadiusDatabase
                 download_used = 0,
                 first_use = NULL,
                 valid_until = NULL
-            WHERE id = ?
+            WHERE id = ? AND deleted_at IS NULL
         ");
         return $stmt->execute([$id]);
     }
 
     /**
-     * Supprimer un voucher
+     * Supprimer un voucher (soft delete)
      */
     public function deleteVoucher(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM vouchers WHERE id = ?");
+        $stmt = $this->pdo->prepare("UPDATE vouchers SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL");
         return $stmt->execute([$id]);
     }
 
     /**
-     * Supprimer des vouchers par lot
+     * Supprimer des vouchers par lot (soft delete)
      */
     public function deleteVouchersByBatch(string $batchId, ?int $adminId = null): int
     {
-        $sql = "DELETE FROM vouchers WHERE batch_id = ?";
+        $sql = "UPDATE vouchers SET deleted_at = NOW() WHERE batch_id = ? AND deleted_at IS NULL";
         $params = [$batchId];
 
         if ($adminId !== null) {
@@ -1026,7 +1027,7 @@ class RadiusDatabase
 
     public function deleteVouchersByNotes(string $notes, ?int $adminId = null): int
     {
-        $sql = "DELETE FROM vouchers WHERE notes = ?";
+        $sql = "UPDATE vouchers SET deleted_at = NOW() WHERE notes = ? AND deleted_at IS NULL";
         $params = [$notes];
 
         if ($adminId !== null) {
@@ -1051,7 +1052,7 @@ class RadiusDatabase
             SELECT v.time_limit, v.profile_id, p.validity, p.validity_unit
             FROM vouchers v
             LEFT JOIN profiles p ON v.profile_id = p.id
-            WHERE v.id = ?
+            WHERE v.id = ? AND v.deleted_at IS NULL
         ");
         $stmt->execute([$voucherId]);
         $voucher = $stmt->fetch();
@@ -1071,13 +1072,13 @@ class RadiusDatabase
 
         if ($validUntil) {
             $stmt = $this->pdo->prepare("
-                UPDATE vouchers SET status = 'active', first_use = NOW(), valid_until = ? WHERE id = ?
+                UPDATE vouchers SET status = 'active', first_use = NOW(), valid_until = ? WHERE id = ? AND deleted_at IS NULL
             ");
             $stmt->execute([$validUntil, $voucherId]);
         }
         else {
             $stmt = $this->pdo->prepare("
-                UPDATE vouchers SET status = 'active', first_use = NOW() WHERE id = ?
+                UPDATE vouchers SET status = 'active', first_use = NOW() WHERE id = ? AND deleted_at IS NULL
             ");
             $stmt->execute([$voucherId]);
         }
@@ -1756,7 +1757,7 @@ class RadiusDatabase
                    s.acct_session_id, s.username
             FROM sessions s
             JOIN vouchers v ON s.voucher_id = v.id
-            WHERE s.acct_session_id = ? AND s.nas_ip = ?
+            WHERE s.acct_session_id = ? AND s.nas_ip = ? AND v.deleted_at IS NULL
         ");
         $stmt->execute([$data['session_id'], $data['nas_ip']]);
         $session = $stmt->fetch();
@@ -1775,7 +1776,7 @@ class RadiusDatabase
                     upload_used = upload_used + ?,
                     download_used = download_used + ?,
                     data_used = data_used + ?
-                WHERE id = ?
+                WHERE id = ? AND deleted_at IS NULL
             ");
             $stmt->execute([
                 max(0, $deltaTime),
@@ -1835,7 +1836,7 @@ class RadiusDatabase
             SELECT v.id, v.time_limit, v.time_used, v.data_limit, v.data_used, v.valid_until
             FROM vouchers v
             JOIN sessions s ON v.id = s.voucher_id
-            WHERE s.acct_session_id = ? AND s.nas_ip = ?
+            WHERE s.acct_session_id = ? AND s.nas_ip = ? AND v.deleted_at IS NULL
         ");
         $stmt->execute([$data['session_id'], $data['nas_ip']]);
         $voucher = $stmt->fetch();
@@ -1882,7 +1883,7 @@ class RadiusDatabase
 
         // Fallback: résoudre admin_id depuis le voucher (username)
         if ($adminId === null) {
-            $stmtVoucher = $this->pdo->prepare("SELECT admin_id FROM vouchers WHERE username = ? LIMIT 1");
+            $stmtVoucher = $this->pdo->prepare("SELECT admin_id FROM vouchers WHERE username = ? AND deleted_at IS NULL LIMIT 1");
             $stmtVoucher->execute([$username]);
             $voucherAdmin = $stmtVoucher->fetchColumn();
             if ($voucherAdmin) {
@@ -2107,9 +2108,9 @@ class RadiusDatabase
         $activeSessions = (int)$stmt->fetch()['count'];
 
         // Vouchers par statut
-        $sql = "SELECT status, COUNT(*) as count FROM vouchers";
+        $sql = "SELECT status, COUNT(*) as count FROM vouchers WHERE deleted_at IS NULL";
         if ($adminFilter) {
-            $sql .= " WHERE admin_id = ?";
+            $sql .= " AND admin_id = ?";
         }
         $sql .= " GROUP BY status";
         if ($adminFilter) {
@@ -2152,7 +2153,7 @@ class RadiusDatabase
         $connectionsToday = (int)$stmt->fetch()['count'];
 
         // Revenus du jour (nouveaux vouchers utilisés)
-        $sql = "SELECT COALESCE(SUM(price), 0) as total FROM vouchers WHERE DATE(first_use) = CURDATE()";
+        $sql = "SELECT COALESCE(SUM(price), 0) as total FROM vouchers WHERE DATE(first_use) = CURDATE() AND deleted_at IS NULL";
         if ($adminFilter) {
             $sql .= " AND admin_id = ?";
             $stmt = $this->pdo->prepare($sql);
@@ -6702,6 +6703,7 @@ class RadiusDatabase
             SELECT * FROM vouchers
             WHERE (zone_id IN ($placeholders) OR zone_id IS NULL)
             AND status IN ('unused', 'active')
+            AND deleted_at IS NULL
         ");
         $stmt->execute($zoneIds);
         $vouchers = $stmt->fetchAll();
@@ -6774,7 +6776,7 @@ class RadiusDatabase
                     }
 
                     // Trouver le voucher_id dans la base centrale
-                    $stmt = $this->pdo->prepare("SELECT id, admin_id FROM vouchers WHERE username = ?");
+                    $stmt = $this->pdo->prepare("SELECT id, admin_id FROM vouchers WHERE username = ? AND deleted_at IS NULL");
                     $stmt->execute([$username]);
                     $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
 

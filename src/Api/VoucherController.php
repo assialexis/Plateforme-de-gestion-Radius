@@ -52,7 +52,7 @@ class VoucherController
         $adminId = $this->getAdminId();
         $pdo = $this->db->getPdo();
 
-        $sql = "SELECT DISTINCT notes FROM vouchers WHERE notes IS NOT NULL AND notes != ''";
+        $sql = "SELECT DISTINCT notes FROM vouchers WHERE notes IS NOT NULL AND notes != '' AND deleted_at IS NULL";
         $params = [];
 
         if ($adminId !== null) {

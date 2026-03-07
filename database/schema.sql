@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS vouchers (
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
 
     UNIQUE KEY (username),
     INDEX idx_status (status),
@@ -122,6 +123,7 @@ CREATE TABLE IF NOT EXISTS vouchers (
     INDEX idx_batch (batch_id),
     INDEX idx_created (created_at),
     INDEX idx_zone (zone_id),
+    INDEX idx_deleted_at (deleted_at),
 
     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE SET NULL,
     FOREIGN KEY (zone_id) REFERENCES zones(id) ON DELETE SET NULL
@@ -132,7 +134,7 @@ CREATE TABLE IF NOT EXISTS vouchers (
 -- =====================================================
 CREATE TABLE IF NOT EXISTS sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    voucher_id INT NOT NULL,
+    voucher_id INT NULL,
     acct_session_id VARCHAR(64) NOT NULL COMMENT 'ID session RADIUS',
     nas_ip VARCHAR(45) NOT NULL,
     nas_port BIGINT DEFAULT NULL,
@@ -163,7 +165,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     INDEX idx_active (stop_time),
     INDEX idx_start (start_time),
 
-    FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE CASCADE
+    FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =====================================================

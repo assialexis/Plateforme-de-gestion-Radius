@@ -1375,12 +1375,12 @@ class LoyaltyController
 
         if ($adminId !== null) {
             // Supprimer uniquement les données de cet admin
-            $pdo->prepare("DELETE FROM vouchers WHERE (batch_id LIKE 'LOYALTY_%' OR notes LIKE '%[LOYALTY_BONUS]%') AND admin_id = ?")->execute([$adminId]);
+            $pdo->prepare("UPDATE vouchers SET deleted_at = NOW() WHERE (batch_id LIKE 'LOYALTY_%' OR notes LIKE '%[LOYALTY_BONUS]%') AND admin_id = ? AND deleted_at IS NULL")->execute([$adminId]);
             $pdo->prepare("DELETE FROM loyalty_rewards WHERE admin_id = ?")->execute([$adminId]);
             $pdo->prepare("DELETE FROM loyalty_purchases WHERE admin_id = ?")->execute([$adminId]);
             $pdo->prepare("DELETE FROM loyalty_customers WHERE admin_id = ?")->execute([$adminId]);
         } else {
-            $pdo->exec("DELETE FROM vouchers WHERE batch_id LIKE 'LOYALTY_%' OR notes LIKE '%[LOYALTY_BONUS]%'");
+            $pdo->exec("UPDATE vouchers SET deleted_at = NOW() WHERE (batch_id LIKE 'LOYALTY_%' OR notes LIKE '%[LOYALTY_BONUS]%') AND deleted_at IS NULL");
             $pdo->exec("DELETE FROM loyalty_rewards");
             $pdo->exec("DELETE FROM loyalty_purchases");
             $pdo->exec("DELETE FROM loyalty_customers");
