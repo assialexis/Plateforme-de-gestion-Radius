@@ -3,7 +3,8 @@
 <div x-data="chatPage()" x-init="init()" class="h-[calc(100vh-8rem)]">
     <div class="flex h-full bg-white dark:bg-[#161b22] rounded-xl shadow-sm dark:shadow-none border border-gray-200/60 dark:border-[#30363d] overflow-hidden">
         <!-- Liste des conversations -->
-        <div class="w-80 border-r border-gray-200 dark:border-[#30363d] flex flex-col">
+        <div :class="mobileView === 'chat' ? 'hidden md:flex' : 'flex'"
+             class="w-full md:w-80 border-r border-gray-200 dark:border-[#30363d] flex-col">
             <!-- En-tête -->
             <div class="p-4 border-b border-gray-200 dark:border-[#30363d]">
                 <div class="flex items-center justify-between">
@@ -85,7 +86,8 @@
         </div>
 
         <!-- Zone de chat -->
-        <div class="flex-1 flex flex-col h-full overflow-hidden">
+        <div :class="mobileView === 'list' ? 'hidden md:flex' : 'flex'"
+             class="flex-1 flex-col h-full overflow-hidden">
             <!-- Si aucune conversation selectionnee -->
             <template x-if="!selectedConversation">
                 <div class="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -102,17 +104,23 @@
             <!-- Conversation active -->
             <div x-show="selectedConversation" class="flex-1 flex flex-col h-full overflow-hidden">
                     <!-- Header de la conversation -->
-                    <div class="flex-shrink-0 p-4 border-b border-gray-200 dark:border-[#30363d] flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                    <div class="flex-shrink-0 p-3 md:p-4 border-b border-gray-200 dark:border-[#30363d] flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 md:gap-3 min-w-0">
+                            <!-- Back button (mobile only) -->
+                            <button @click="mobileView = 'list'" class="md:hidden p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#30363d] flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                                 <span x-text="(selectedConversation?.customer_name || selectedConversation?.phone || '?').charAt(0).toUpperCase()"></span>
                             </div>
-                            <div>
-                                <p class="font-semibold text-gray-900 dark:text-white" x-text="selectedConversation?.customer_name || '<?= __('chat.client_label') ?>'"></p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400" x-text="selectedConversation?.phone"></p>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-gray-900 dark:text-white truncate" x-text="selectedConversation?.customer_name || '<?= __('chat.client_label') ?>'"></p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 truncate" x-text="selectedConversation?.phone"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1 md:gap-2 flex-shrink-0">
                             <!-- Call status / button -->
                             <template x-if="callState === 'idle' && selectedConversation?.status === 'active'">
                                 <button @click="startCall()"
@@ -174,7 +182,7 @@
 
                     <!-- Incoming call overlay -->
                     <div x-show="callState === 'incoming'" x-transition
-                         class="flex-shrink-0 bg-gradient-to-r from-green-500 to-emerald-600 p-4 flex items-center justify-between">
+                         class="flex-shrink-0 bg-gradient-to-r from-green-500 to-emerald-600 p-3 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3">
                         <div class="flex items-center gap-3 text-white">
                             <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +270,7 @@
                                    placeholder="Ecrire un message..."
                                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-[#30363d] rounded-xl bg-white dark:bg-[#21262d] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed">
                             <button type="submit" :disabled="!newMessage.trim() || sending || selectedConversation?.status === 'closed'"
-                                    class="px-6 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                    class="px-3 md:px-6 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                                 <template x-if="sending">
                                     <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -274,7 +282,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                                     </svg>
                                 </template>
-                                Envoyer
+                                <span class="hidden md:inline">Envoyer</span>
                             </button>
                         </form>
                         <p x-show="selectedConversation?.status === 'closed'" class="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -418,6 +426,9 @@ function chatPage() {
         incomingOffer: null,
         _callHistorySent: false,
 
+        // Mobile
+        mobileView: 'list', // 'list' or 'chat'
+
         // Widget
         showWidgetPanel: false,
         widgetKey: '',
@@ -457,6 +468,7 @@ function chatPage() {
             if (this.callState !== 'idle') this.endCall();
 
             this.selectedConversation = conv;
+            this.mobileView = 'chat';
             this.messages = [];
             this.lastMessageId = 0;
             this.lastRtcMessageId = 0;
@@ -621,6 +633,7 @@ function chatPage() {
                 const data = await response.json();
                 if (data.success) {
                     this.selectedConversation = null;
+                    this.mobileView = 'list';
                     this.messages = [];
                     if (this.pollInterval) clearInterval(this.pollInterval);
                     this.loadConversations();
