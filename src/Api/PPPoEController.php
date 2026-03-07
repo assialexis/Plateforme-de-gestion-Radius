@@ -523,44 +523,34 @@ class PPPoEController
         $sent = false;
         $adminId = $this->getAdminId();
 
-        // 1. D'abord essayer via la zone de l'utilisateur
-        $zoneId = $user['zone_id'] ?? null;
-        if ($zoneId) {
-            $stmt = $pdo->prepare("
-                SELECT router_id FROM nas
-                WHERE zone_id = ? AND router_id IS NOT NULL AND router_id != ''
-            ");
-            $stmt->execute([$zoneId]);
-            while ($nas = $stmt->fetch()) {
-                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
-                    $sent = true;
-                }
-            }
+        // 1. D'abord chercher le NAS exact via la session active
+        $stmt = $pdo->prepare("
+            SELECT ps.nas_ip, n.router_id
+            FROM pppoe_sessions ps
+            LEFT JOIN nas n ON ps.nas_ip = n.nasname
+            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL AND n.router_id IS NOT NULL
+            LIMIT 1
+        ");
+        $stmt->execute([$user['id']]);
+        $session = $stmt->fetch();
+
+        if ($session && $session['router_id']) {
+            $sent = $this->commandSender->disconnectPPPoEUser($session['router_id'], $user['username'], $adminId);
         }
 
-        // 2. Si pas trouvé par zone, chercher via la session active
+        // 2. Sinon essayer via la zone (un seul NAS de la zone)
         if (!$sent) {
-            $stmt = $pdo->prepare("
-                SELECT ps.nas_ip, n.router_id
-                FROM pppoe_sessions ps
-                LEFT JOIN nas n ON ps.nas_ip = n.nasname
-                WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL AND n.router_id IS NOT NULL
-                LIMIT 1
-            ");
-            $stmt->execute([$user['id']]);
-            $session = $stmt->fetch();
-
-            if ($session && $session['router_id']) {
-                $sent = $this->commandSender->disconnectPPPoEUser($session['router_id'], $user['username'], $adminId);
-            }
-        }
-
-        // 3. En dernier recours, envoyer à tous les NAS avec router_id
-        if (!$sent) {
-            $stmt = $pdo->query("SELECT router_id FROM nas WHERE router_id IS NOT NULL AND router_id != ''");
-            while ($nas = $stmt->fetch()) {
-                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
-                    $sent = true;
+            $zoneId = $user['zone_id'] ?? null;
+            if ($zoneId) {
+                $stmt = $pdo->prepare("
+                    SELECT router_id FROM nas
+                    WHERE zone_id = ? AND router_id IS NOT NULL AND router_id != ''
+                ");
+                $stmt->execute([$zoneId]);
+                while ($nas = $stmt->fetch()) {
+                    if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
+                        $sent = true;
+                    }
                 }
             }
         }
