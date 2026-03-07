@@ -119,6 +119,16 @@ class BillingController
         try {
             $invoiceId = $this->db->createInvoice($data);
             $invoice = $this->db->getInvoiceById($invoiceId);
+
+            // WhatsApp: notification de facture créée
+            try {
+                require_once __DIR__ . '/../Services/WhatsAppNotifier.php';
+                $notifier = new \WhatsAppNotifier($this->db->getPdo());
+                $notifier->triggerEvent('invoice_created', (int)$data['pppoe_user_id']);
+            } catch (\Throwable $e) {
+                error_log('WhatsApp invoice_created notification failed: ' . $e->getMessage());
+            }
+
             jsonSuccess($invoice, __('api.billing_invoice_created'));
         } catch (Exception $e) {
             jsonError($e->getMessage(), 400);

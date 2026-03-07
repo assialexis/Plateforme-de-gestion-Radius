@@ -142,6 +142,10 @@ class PPPoEController
             $this->createInitialInvoice($id, $profile);
 
             $user = $this->db->getPPPoEUserById($id);
+
+            // WhatsApp: notification de bienvenue
+            $this->triggerWhatsAppEvent('welcome', $id);
+
             jsonSuccess($user, __('api.pppoe_user_created'));
         } catch (Exception $e) {
             jsonError(__('api.pppoe_user_create_failed') . ': ' . $e->getMessage(), 500);
@@ -467,6 +471,9 @@ class PPPoEController
             $this->db->renewPPPoEUser($id, $days);
             $updatedUser = $this->db->getPPPoEUserById($id);
 
+            // WhatsApp: notification de réactivation
+            $this->triggerWhatsAppEvent('reactivated', $id);
+
             $result = $updatedUser;
             if ($invoice) {
                 $result['invoice'] = $invoice;
@@ -501,6 +508,9 @@ class PPPoEController
 
             // Fermer la session dans la base RADIUS
             $this->closePPPoESession($id);
+
+            // WhatsApp: notification de suspension
+            $this->triggerWhatsAppEvent('suspended', $id);
 
             $message = __('api.pppoe_account_suspended');
             if ($disconnectSent) {
@@ -615,6 +625,20 @@ class PPPoEController
             while ($nas = $stmt->fetch()) {
                 $this->commandSender->removeFupQueue($nas['router_id'], $username, $adminId);
             }
+        }
+    }
+
+    /**
+     * Déclenche une notification WhatsApp pour un événement PPPoE
+     */
+    private function triggerWhatsAppEvent(string $eventType, int $userId): void
+    {
+        try {
+            require_once __DIR__ . '/../Services/WhatsAppNotifier.php';
+            $notifier = new \WhatsAppNotifier($this->db->getPdo());
+            $notifier->triggerEvent($eventType, $userId);
+        } catch (\Throwable $e) {
+            error_log("WhatsApp event '$eventType' failed for user $userId: " . $e->getMessage());
         }
     }
 

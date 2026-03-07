@@ -649,6 +649,31 @@ class WhatsAppNotifier
     }
 
     /**
+     * Déclencher un événement WhatsApp en temps réel (welcome, reactivated, suspended, invoice_created)
+     */
+    public function triggerEvent(string $eventType, int $userId): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'error' => 'WhatsApp not configured'];
+        }
+
+        // Chercher le template actif pour cet événement
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM whatsapp_templates
+            WHERE event_type = ? AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$eventType]);
+        $template = $stmt->fetch();
+
+        if (!$template) {
+            return ['success' => false, 'error' => 'No active template for event: ' . $eventType];
+        }
+
+        return $this->sendTemplateNotification($template['id'], $userId);
+    }
+
+    /**
      * Envoyer des notifications d'expiration programmées
      */
     public function processExpirationNotifications(): array
