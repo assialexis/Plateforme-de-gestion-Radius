@@ -5532,6 +5532,9 @@ class RadiusDatabase
             'new_speed_up' => $status['fup_upload_speed']
         ]);
 
+        // Fermer les sessions actives en DB pour éviter le rejet "Too many simultaneous connections"
+        $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
+
         // Appliquer le nouveau débit en temps réel sur MikroTik
         $this->applyFupSpeedToMikrotik($userId, $status);
 
@@ -5813,11 +5816,29 @@ class RadiusDatabase
 
             // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
             if ($status['fup_triggered']) {
+                $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
                 $this->applyNormalSpeedToMikrotik($userId, $status);
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Fermer les sessions PPPoE actives d'un utilisateur lors d'un trigger/reset FUP
+     */
+    private function closePPPoESessionsForFup(int $userId, string $cause): void
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE pppoe_sessions
+                SET stop_time = NOW(), terminate_cause = ?
+                WHERE pppoe_user_id = ? AND stop_time IS NULL
+            ");
+            $stmt->execute([$cause, $userId]);
+        } catch (PDOException $e) {
+            error_log("FUP closeSessions error: " . $e->getMessage());
+        }
     }
 
     /**

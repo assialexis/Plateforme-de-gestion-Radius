@@ -6059,6 +6059,23 @@ class RadiusDatabase
                     INDEX idx_fup_logs_action (action)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
+
+            // Table pppoe_auth_logs
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS pppoe_auth_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(100),
+                    nas_ip VARCHAR(45),
+                    nas_identifier VARCHAR(100),
+                    action VARCHAR(50),
+                    reason VARCHAR(255),
+                    client_mac VARCHAR(20),
+                    calling_station_id VARCHAR(50),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_pppoe_auth_user (username),
+                    INDEX idx_pppoe_auth_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
         }
         catch (PDOException $e) {
         // Ignorer les erreurs si colonnes existent déjà
@@ -6181,6 +6198,9 @@ class RadiusDatabase
             'new_speed_up' => $status['fup_upload_speed']
         ]);
 
+        // Fermer les sessions actives en DB pour éviter le rejet "Too many simultaneous connections"
+        $this->closePPPoESessionsForFup($userId, 'FUP-Triggered');
+
         // Appliquer le nouveau débit en temps réel sur MikroTik
         $this->applyFupSpeedToMikrotik($userId, $status);
 
@@ -6224,6 +6244,24 @@ class RadiusDatabase
                    ":foreach i in=[/ppp active find name=\"{$username}\"] do={ /ppp active remove \$i }";
 
         return $this->pushCommandToPlatform($routerId, $command, "FUP reset {$username}", 'fup_reset');
+    }
+
+    /**
+     * Fermer les sessions PPPoE actives d'un utilisateur lors d'un trigger/reset FUP
+     * Évite le rejet "Too many simultaneous connections" lors de la re-authentification
+     */
+    private function closePPPoESessionsForFup(int $userId, string $cause): void
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE pppoe_sessions
+                SET stop_time = NOW(), terminate_cause = ?
+                WHERE pppoe_user_id = ? AND stop_time IS NULL
+            ");
+            $stmt->execute([$cause, $userId]);
+        } catch (PDOException $e) {
+            error_log("FUP closeSessions error: " . $e->getMessage());
+        }
     }
 
     /**
@@ -6560,6 +6598,7 @@ class RadiusDatabase
 
             // Déconnecter l'utilisateur du MikroTik pour forcer re-auth avec débit normal
             if ($status['fup_triggered']) {
+                $this->closePPPoESessionsForFup($userId, 'FUP-Reset');
                 $this->applyNormalSpeedToMikrotik($userId, $status);
             }
         }
