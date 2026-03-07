@@ -288,6 +288,14 @@ function applyPullData(PDO $pdo, array $data): array
                     zone_id = VALUES(zone_id), nas_id = VALUES(nas_id), admin_id = VALUES(admin_id),
                     fup_override = VALUES(fup_override)
             ");
+            // Préparer la requête pour propager les resets FUP du central vers le nœud
+            $stmtFupSync = $pdo->prepare("
+                UPDATE pppoe_users
+                SET fup_data_used = ?, fup_data_offset = ?, fup_triggered = ?,
+                    fup_triggered_at = ?, fup_last_reset = ?
+                WHERE id = ? AND (fup_last_reset IS NULL OR fup_last_reset < ?)
+            ");
+
             foreach ($data['pppoe_users'] as $user) {
                 $stmt->execute([
                     $user['id'], $user['username'], $user['password'], $user['profile_id'] ?? null,
@@ -300,6 +308,21 @@ function applyPullData(PDO $pdo, array $data): array
                     $user['zone_id'] ?? null, $user['nas_id'] ?? null, $user['admin_id'] ?? null,
                     $user['fup_override'] ?? 0
                 ]);
+
+                // Propager le reset FUP si le central a un reset plus récent que le nœud
+                $centralLastReset = $user['fup_last_reset'] ?? null;
+                if ($centralLastReset) {
+                    $stmtFupSync->execute([
+                        $user['fup_data_used'] ?? 0,
+                        $user['fup_data_offset'] ?? 0,
+                        $user['fup_triggered'] ?? 0,
+                        $user['fup_triggered_at'] ?? null,
+                        $centralLastReset,
+                        $user['id'],
+                        $centralLastReset
+                    ]);
+                }
+
                 $stats['pppoe_users']++;
             }
         }
