@@ -123,12 +123,12 @@ class TelegramController
 
         // Si un chat_id est fourni, envoyer un message test
         if ($chatId) {
-            $testMessage = "✅ *Test de connexion réussi!*\n\n" .
-                "Bot: @" . $botInfo['username'] . "\n" .
+            $testMessage = "Test de connexion reussi\n\n" .
+                "Bot: " . $botInfo['username'] . "\n" .
                 "Date: " . date('d/m/Y H:i:s') . "\n\n" .
-                "Ce message confirme que le bot est correctement configuré.";
+                "Ce message confirme que le bot est correctement configure.";
 
-            $sendResult = $this->notifier->sendMessage($chatId, $testMessage);
+            $sendResult = $this->notifier->sendMessage($chatId, $testMessage, 'HTML');
 
             if (!$sendResult['success']) {
                 jsonError(__('api.send_message_failed') . ': ' . ($sendResult['error'] ?? 'Unknown error'), 400);
