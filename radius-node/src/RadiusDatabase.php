@@ -6752,6 +6752,19 @@ class RadiusDatabase
 
         // FUP déclenché et pas d'override
         if ($status['fup_triggered'] && !$status['fup_override'] && $status['fup_enabled']) {
+            // Vérifier si le FUP a été réinitialisé après le déclenchement
+            // (le reset peut arriver via webhook avant le sync, ou le sync peut être en retard)
+            if ($status['fup_last_reset'] && $status['fup_triggered_at']
+                && $status['fup_last_reset'] > $status['fup_triggered_at']) {
+                // Le reset est plus récent que le trigger → FUP n'est plus actif
+                error_log("FUP auth: reset detected for user #{$status['id']} (reset={$status['fup_last_reset']} > trigger={$status['fup_triggered_at']})");
+                return [
+                    'download' => $status['normal_download_speed'],
+                    'upload' => $status['normal_upload_speed'],
+                    'fup_active' => false
+                ];
+            }
+
             return [
                 'download' => $status['fup_download_speed'],
                 'upload' => $status['fup_upload_speed'],
