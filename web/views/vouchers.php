@@ -687,37 +687,29 @@ $currentPage = 'vouchers'; ?>
                                         class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 placeholder-gray-400">
                                 </div>
                             </div>
-                        </div>
 
-
-
-                        <!-- Password Specs -->
-                        <div x-show="generateForm.type === 'ticket'" x-transition class="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30 p-4 mb-5">
-                            <h4 class="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-3">Sécurité Mot de Passe</h4>
-                            <div class="grid grid-cols-2 gap-4">
+                            <!-- Type de caractères -->
+                            <div class="grid grid-cols-2 gap-4 mt-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-indigo-900 dark:text-indigo-300 mb-1">
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <?= __('voucher.code_type') ?? 'Type de caractères' ?>
+                                    </label>
+                                    <select x-model="generateForm.code_type"
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
+                                        <option value="number">Number (0-9)</option>
+                                        <option value="letter">Letter (a-z)</option>
+                                        <option value="capital">Capital (A-Z)</option>
+                                        <option value="mix">Mix (a-z + 0-9)</option>
+                                        <option value="mix_capital">Mix Capital (A-Z + 0-9)</option>
+                                        <option value="alphanumeric">Alphanumeric (a-z + A-Z + 0-9)</option>
+                                    </select>
+                                </div>
+                                <div x-show="generateForm.type === 'ticket'" x-transition>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         <?= __('voucher.password_length')?>
                                     </label>
                                     <input type="number" x-model="generateForm.password_length" min="4" max="16"
-                                        class="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-800/50 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-indigo-900 dark:text-indigo-300 mb-1">
-                                        <?= __('voucher.password_type')?>
-                                    </label>
-                                    <select x-model="generateForm.password_type"
-                                        class="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-800/50 rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
-                                        <option value="alphanumeric">
-                                            <?= __('voucher.password_alphanumeric')?>
-                                        </option>
-                                        <option value="numeric">
-                                            <?= __('voucher.password_numeric')?>
-                                        </option>
-                                        <option value="alpha">
-                                            <?= __('voucher.password_alpha')?>
-                                        </option>
-                                    </select>
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#30363d] rounded-lg bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
                                 </div>
                             </div>
                         </div>
@@ -1102,8 +1094,8 @@ $currentPage = 'vouchers'; ?>
                 count: 10,
                 prefix: '',
                 code_length: 8,
+                code_type: 'mix_capital',
                 password_length: 6,
-                password_type: 'alphanumeric',
                 profile_id: '',
                 zone_id: '',
                 notes: '',
@@ -1317,9 +1309,9 @@ $currentPage = 'vouchers'; ?>
                         type: this.generateForm.type,
                         count: parseInt(this.generateForm.count),
                         length: parseInt(this.generateForm.code_length) || 8,
-                        prefix: this.generateForm.type === 'ticket' ? this.generateForm.prefix : this.generateForm.prefix.toUpperCase(),
+                        prefix: this.generateForm.prefix,
+                        code_type: this.generateForm.code_type,
                         password_length: this.generateForm.type === 'ticket' ? parseInt(this.generateForm.password_length) : null,
-                        password_type: this.generateForm.type === 'ticket' ? this.generateForm.password_type : null,
                         profile_id: this.generateForm.profile_id,
                         zone_id: this.generateForm.zone_id,
                         notes: this.generateForm.notes || null,

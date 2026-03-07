@@ -225,7 +225,8 @@ class VoucherController
         $maxAttempts = $count * 3;
 
         while (count($vouchers) < $count && $attempts < $maxAttempts) {
-            $code = generateVoucherCode($prefix, $length, $type === 'ticket');
+            $codeType = $data['code_type'] ?? ($type === 'ticket' ? 'mix' : 'mix_capital');
+            $code = generateVoucherCode($prefix, $length, $codeType);
             $attempts++;
 
             // Vérifier si le code existe déjà
@@ -235,7 +236,7 @@ class VoucherController
 
             // Générer le password selon le type
             if ($type === 'ticket') {
-                $password = $this->generatePassword($passwordLength, $passwordType);
+                $password = $this->generatePassword($passwordLength, $codeType);
             }
             else {
                 $password = $code; // Pour les vouchers, password = username
@@ -297,18 +298,18 @@ class VoucherController
      */
     private function generatePassword(int $length, string $type): string
     {
-        switch ($type) {
-            case 'numeric':
-                $chars = '0123456789';
-                break;
-            case 'alpha':
-                $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-                break;
-            case 'alphanumeric':
-            default:
-                $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-                break;
-        }
+        $charSets = [
+            'number'       => '0123456789',
+            'letter'       => 'abcdefghjkmnpqrstuvwxyz',
+            'capital'      => 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+            'mix'          => 'abcdefghjkmnpqrstuvwxyz23456789',
+            'mix_capital'  => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+            'alphanumeric' => 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+            // Rétrocompatibilité anciens types
+            'numeric'      => '0123456789',
+            'alpha'        => 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+        ];
+        $chars = $charSets[$type] ?? $charSets['mix_capital'];
 
         $password = '';
         $charsLength = strlen($chars);

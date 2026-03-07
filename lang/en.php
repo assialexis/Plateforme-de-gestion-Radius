@@ -496,6 +496,7 @@ return [
     'voucher.password_alphanumeric' => 'Alphanumeric',
     'voucher.password_numeric' => 'Numeric',
     'voucher.password_alpha' => 'Alphabetic',
+    'voucher.code_type' => 'Character type',
     'voucher.zone_required' => 'Zone *',
     'voucher.profile_required' => 'Profile *',
 

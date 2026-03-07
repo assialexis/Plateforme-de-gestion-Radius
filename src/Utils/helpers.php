@@ -79,11 +79,17 @@ function formatTimeDetailed(int $seconds): string
 /**
  * Générer un code voucher aléatoire
  */
-function generateVoucherCode(string $prefix = '', int $length = 8, bool $lowercase = false): string
+function generateVoucherCode(string $prefix = '', int $length = 8, string $charType = 'mix_capital'): string
 {
-    $chars = $lowercase
-        ? 'abcdefghjkmnpqrstuvwxyz23456789'
-        : 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $charSets = [
+        'number'       => '0123456789',
+        'letter'       => 'abcdefghjkmnpqrstuvwxyz',
+        'capital'      => 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+        'mix'          => 'abcdefghjkmnpqrstuvwxyz23456789',
+        'mix_capital'  => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+        'alphanumeric' => 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+    ];
+    $chars = $charSets[$charType] ?? $charSets['mix_capital'];
     $code = $prefix;
     for ($i = 0; $i < $length; $i++) {
         $code .= $chars[random_int(0, strlen($chars) - 1)];
