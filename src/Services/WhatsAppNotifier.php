@@ -866,10 +866,15 @@ class WhatsAppNotifier
     private function logNotification(int $templateId, int $userId, string $phone, string $message, array $result): void
     {
         try {
+            // Récupérer l'admin_id du user PPPoE
+            $adminStmt = $this->pdo->prepare("SELECT admin_id FROM pppoe_users WHERE id = ?");
+            $adminStmt->execute([$userId]);
+            $adminId = $adminStmt->fetchColumn() ?: null;
+
             $stmt = $this->pdo->prepare("
                 INSERT INTO whatsapp_notifications
-                (template_id, pppoe_user_id, phone, message, status, error_message, wa_message_id, sent_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                (template_id, pppoe_user_id, phone, message, status, error_message, wa_message_id, admin_id, sent_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $templateId,
@@ -878,7 +883,8 @@ class WhatsAppNotifier
                 $message,
                 $result['success'] ? 'sent' : 'failed',
                 $result['error'] ?? null,
-                $result['message_id'] ?? null
+                $result['message_id'] ?? null,
+                $adminId
             ]);
         } catch (PDOException $e) {
             error_log("Failed to log WhatsApp notification: " . $e->getMessage());
