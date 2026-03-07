@@ -34,6 +34,25 @@ if (empty($expectedToken) || !hash_equals($expectedToken, $providedToken)) {
     exit;
 }
 
+// Connexion DB locale (nécessaire pour GET et POST)
+try {
+    $dsn = sprintf(
+        'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+        $config['database']['host'],
+        $config['database']['port'],
+        $config['database']['dbname'],
+        $config['database']['charset']
+    );
+    $pdo = new PDO($dsn, $config['database']['username'], $config['database']['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    http_response_code(503);
+    echo json_encode(['error' => 'DB_UNAVAILABLE']);
+    exit;
+}
+
 // GET : requêtes de lecture (ex: statut FUP en temps réel)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
@@ -90,25 +109,6 @@ $payload = json_decode($input, true);
 if (!$payload || empty($payload['event'])) {
     http_response_code(400);
     echo json_encode(['error' => 'INVALID_PAYLOAD']);
-    exit;
-}
-
-// Connexion DB locale
-try {
-    $dsn = sprintf(
-        'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-        $config['database']['host'],
-        $config['database']['port'],
-        $config['database']['dbname'],
-        $config['database']['charset']
-    );
-    $pdo = new PDO($dsn, $config['database']['username'], $config['database']['password'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (PDOException $e) {
-    http_response_code(503);
-    echo json_encode(['error' => 'DB_UNAVAILABLE']);
     exit;
 }
 
