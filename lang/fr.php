@@ -2980,6 +2980,12 @@ return [
     'pppoe_user.msg_fup_reset_error' => 'Erreur lors de la réinitialisation',
     'pppoe_user.msg_fup_disabled' => 'FUP désactivé pour ce client',
     'pppoe_user.msg_fup_enabled' => 'FUP réactivé pour ce client',
+    'pppoe_user.fup_sync_node' => 'Sync noeud',
+    'pppoe_user.fup_node_status' => 'État réel du noeud RADIUS',
+    'pppoe_user.fup_status' => 'Statut FUP',
+    'pppoe_user.fup_effective_speed' => 'Vitesse effective',
+    'pppoe_user.fup_node_sync_success' => 'Données du noeud récupérées',
+    'pppoe_user.fup_node_unreachable' => 'Noeud RADIUS injoignable',
 
     // =============================================
     // PPPOE TRANSACTIONS (pppoe_trans.*)

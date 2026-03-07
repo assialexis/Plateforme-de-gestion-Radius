@@ -1416,6 +1416,46 @@ class PPPoEController
     }
 
     /**
+     * GET /api/pppoe/users/{id}/fup/node
+     * Récupérer le statut FUP en temps réel depuis le nœud RADIUS
+     */
+    public function getUserFupNodeStatus(array $params): void
+    {
+        $id = (int)$params['id'];
+
+        $user = $this->db->getPPPoEUserById($id);
+        if (!$user) {
+            jsonError(__('api.pppoe_user_not_found'), 404);
+        }
+        $this->verifyOwnership($user, 'PPPoE user');
+
+        if (!$this->pushService) {
+            jsonError('NodePushService non disponible', 500);
+        }
+
+        $nodeData = $this->pushService->queryNodeFupStatus($id, $user['zone_id'] ?? null);
+
+        if ($nodeData === null) {
+            jsonError('Nœud RADIUS injoignable', 503);
+        }
+
+        // Formater pour l'affichage
+        $nodeData['source'] = 'node';
+        $nodeData['normal_speed'] = $this->formatSpeed((int)($nodeData['normal_download_speed'] ?? 0)) . ' / ' .
+                                    $this->formatSpeed((int)($nodeData['normal_upload_speed'] ?? 0));
+        $nodeData['fup_speed'] = $this->formatSpeed((int)($nodeData['fup_download_speed'] ?? 0)) . ' / ' .
+                                 $this->formatSpeed((int)($nodeData['fup_upload_speed'] ?? 0));
+
+        if ($nodeData['fup_triggered'] && !$nodeData['fup_override']) {
+            $nodeData['effective_speed'] = $nodeData['fup_speed'];
+        } else {
+            $nodeData['effective_speed'] = $nodeData['normal_speed'];
+        }
+
+        jsonSuccess($nodeData);
+    }
+
+    /**
      * Formater une vitesse en bps vers Mbps/Kbps
      */
     private function formatSpeed(int $bps): string

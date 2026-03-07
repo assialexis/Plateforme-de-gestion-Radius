@@ -173,4 +173,67 @@ class NodePushService
             error_log("[NodePush] Push failed to {$server['code']} ({$server['host']}): HTTP {$httpCode}, Error: {$error}");
         }
     }
+
+    /**
+     * Interroger le nœud RADIUS pour obtenir le statut FUP en temps réel
+     * Retourne les données du nœud ou null si injoignable
+     */
+    public function queryNodeFupStatus(int $userId, ?int $zoneId): ?array
+    {
+        $server = null;
+
+        if ($zoneId !== null) {
+            $server = $this->db->getRadiusServerForZone($zoneId);
+        }
+
+        // Fallback : chercher parmi tous les serveurs actifs
+        if (!$server) {
+            $servers = $this->db->getAllRadiusServers();
+            foreach ($servers as $s) {
+                if ($s['is_active']) {
+                    $server = $s;
+                    break;
+                }
+            }
+        }
+
+        if (!$server || !$server['is_active']) {
+            return null;
+        }
+
+        $url = 'https://' . $server['host'];
+        if (!empty($server['webhook_port']) && $server['webhook_port'] != 443) {
+            $url .= ':' . $server['webhook_port'];
+        }
+        $url .= ($server['webhook_path'] ?? '/webhook.php');
+        $url .= '?action=fup_status&user_id=' . $userId;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => [
+                'X-Platform-Token: ' . $server['platform_token'],
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || $error || !$response) {
+            error_log("[NodePush] FUP query failed to {$server['code']} ({$server['host']}): HTTP {$httpCode}, Error: {$error}");
+            return null;
+        }
+
+        $result = json_decode($response, true);
+        if (!$result || ($result['status'] ?? '') !== 'ok') {
+            return null;
+        }
+
+        return $result['data'] ?? null;
+    }
 }

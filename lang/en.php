@@ -2983,6 +2983,12 @@ return [
     'pppoe_user.msg_fup_reset_error' => 'Error resetting FUP',
     'pppoe_user.msg_fup_disabled' => 'FUP disabled for this client',
     'pppoe_user.msg_fup_enabled' => 'FUP re-enabled for this client',
+    'pppoe_user.fup_sync_node' => 'Sync node',
+    'pppoe_user.fup_node_status' => 'RADIUS node real-time status',
+    'pppoe_user.fup_status' => 'FUP Status',
+    'pppoe_user.fup_effective_speed' => 'Effective speed',
+    'pppoe_user.fup_node_sync_success' => 'Node data retrieved',
+    'pppoe_user.fup_node_unreachable' => 'RADIUS node unreachable',
 
     // =============================================
     // PPPOE TRANSACTIONS (pppoe_trans.*)

@@ -34,7 +34,49 @@ if (empty($expectedToken) || !hash_equals($expectedToken, $providedToken)) {
     exit;
 }
 
-// Uniquement POST
+// GET : requêtes de lecture (ex: statut FUP en temps réel)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $action = $_GET['action'] ?? '';
+
+    if ($action === 'fup_status') {
+        $userId = (int)($_GET['user_id'] ?? 0);
+        if (!$userId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'MISSING_USER_ID']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT pu.id, pu.username, pu.fup_data_used, pu.fup_data_offset,
+                   pu.fup_triggered, pu.fup_triggered_at, pu.fup_last_reset,
+                   pu.fup_override, pu.data_used, pu.time_used,
+                   pp.fup_enabled, pp.fup_quota,
+                   pp.fup_download_speed, pp.fup_upload_speed,
+                   pp.download_speed as normal_download_speed,
+                   pp.upload_speed as normal_upload_speed
+            FROM pppoe_users pu
+            LEFT JOIN pppoe_profiles pp ON pu.profile_id = pp.id
+            WHERE pu.id = ?
+        ");
+        $stmt->execute([$userId]);
+        $status = $stmt->fetch();
+
+        if (!$status) {
+            http_response_code(404);
+            echo json_encode(['error' => 'USER_NOT_FOUND']);
+            exit;
+        }
+
+        echo json_encode(['status' => 'ok', 'source' => 'node', 'data' => $status]);
+        exit;
+    }
+
+    http_response_code(400);
+    echo json_encode(['error' => 'INVALID_ACTION']);
+    exit;
+}
+
+// Uniquement POST à partir d'ici
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'METHOD_NOT_ALLOWED']);

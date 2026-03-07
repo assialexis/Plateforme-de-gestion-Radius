@@ -442,6 +442,7 @@ $router->post('/pppoe/users/{id}/disconnect', fn($p) => $pppoeController->discon
 
 // Routes PPPoE FUP (Fair Usage Policy)
 $router->get('/pppoe/users/{id}/fup', fn($p) => $pppoeController->getUserFupStatus($p));
+$router->get('/pppoe/users/{id}/fup/node', fn($p) => $pppoeController->getUserFupNodeStatus($p));
 $router->post('/pppoe/users/{id}/fup/reset', fn($p) => $pppoeController->resetUserFup($p));
 $router->post('/pppoe/users/{id}/fup/trigger', fn($p) => $pppoeController->triggerUserFup($p));
 $router->post('/pppoe/users/{id}/fup/toggle-override', fn($p) => $pppoeController->toggleUserFupOverride($p));

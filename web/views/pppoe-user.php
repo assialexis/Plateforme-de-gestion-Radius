@@ -641,6 +641,53 @@ $currentPage = 'pppoe';
                             </svg>
                             <?= __('common.refresh') ?>
                         </button>
+                        <button type="button" @click="loadFupNodeStatus()" :disabled="loadingNodeFup"
+                                class="inline-flex items-center px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                            <svg x-show="!loadingNodeFup" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                            </svg>
+                            <svg x-show="loadingNodeFup" class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <?= __js('pppoe_user.fup_sync_node') ?>
+                        </button>
+                    </div>
+
+                    <!-- Node FUP Status (real-time from RADIUS node) -->
+                    <div x-show="nodeStatus" x-cloak class="p-4 rounded-xl border-2"
+                         :class="nodeStatus?.fup_triggered ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-900/10' : 'border-green-400 bg-green-50/50 dark:bg-green-900/10'">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                                </svg>
+                                <?= __('pppoe_user.fup_node_status') ?>
+                            </h4>
+                            <button @click="nodeStatus = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400"><?= __('pppoe_user.fup_status') ?></p>
+                                <p class="font-semibold" :class="nodeStatus?.fup_triggered ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'"
+                                   x-text="nodeStatus?.fup_triggered == 1 ? '<?= __js('pppoe_user.fup_triggered') ?>' : '<?= __js('pppoe_user.fup_normal_speed') ?>'"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400"><?= __('pppoe_user.fup_data_used') ?></p>
+                                <p class="font-semibold text-gray-900 dark:text-white" x-text="formatBytes(nodeStatus?.fup_data_used || 0)"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400"><?= __('pppoe_user.fup_effective_speed') ?></p>
+                                <p class="font-semibold text-gray-900 dark:text-white" x-text="nodeStatus?.effective_speed || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400"><?= __('pppoe_user.fup_last_reset') ?></p>
+                                <p class="font-semibold text-gray-900 dark:text-white" x-text="formatDate(nodeStatus?.fup_last_reset) || '-'"></p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- FUP Logs -->
@@ -1073,6 +1120,8 @@ function pppoeUserPage() {
         loadingFup: false,
         resettingFup: false,
         togglingOverride: false,
+        loadingNodeFup: false,
+        nodeStatus: null,
 
         // Form data
         form: {
@@ -1715,6 +1764,28 @@ function pppoeUserPage() {
                 console.error('Error loading FUP status:', error);
             } finally {
                 this.loadingFup = false;
+            }
+        },
+
+        async loadFupNodeStatus() {
+            if (!this.userId) return;
+
+            this.loadingNodeFup = true;
+            try {
+                const response = await API.get(`/pppoe/users/${this.userId}/fup/node`);
+                if (response.success && response.data) {
+                    this.nodeStatus = response.data;
+                    showToast(__('pppoe_user.fup_node_sync_success'), 'success');
+                } else {
+                    showToast(response.message || __('pppoe_user.fup_node_unreachable'), 'error');
+                    this.nodeStatus = null;
+                }
+            } catch (error) {
+                console.error('Error loading node FUP status:', error);
+                showToast(__('pppoe_user.fup_node_unreachable'), 'error');
+                this.nodeStatus = null;
+            } finally {
+                this.loadingNodeFup = false;
             }
         },
 
