@@ -724,7 +724,7 @@ class NasController
 }
 RSC;
 
-            if ($this->commandSender->send($routerId, $command, "test-cmd-{$timestamp}.rsc", 10)) {
+            if ($this->commandSender->send($routerId, $command, "test-cmd-{$timestamp}.rsc", 10, 'raw', 600, $this->getAdminId())) {
                 $sentTo++;
             }
         }

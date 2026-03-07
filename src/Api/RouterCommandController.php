@@ -129,7 +129,7 @@ class RouterCommandController
         if ($commandType !== 'raw' && isset($input['params'])) {
             $cmdId = $this->handlePredefinedCommand($routerId, $commandType, $input['params']);
         } else {
-            $cmdId = $this->commandSender->send($routerId, $command, $description, $priority, $commandType);
+            $cmdId = $this->commandSender->send($routerId, $command, $description, $priority, $commandType, 600, $adminId);
         }
 
         if ($cmdId) {
@@ -346,25 +346,26 @@ class RouterCommandController
      */
     private function handlePredefinedCommand(string $routerId, string $type, array $params): int|false
     {
+        $adminId = $this->getAdminId();
         return match ($type) {
             'disconnect_hotspot' => $this->commandSender->disconnectHotspotUser(
-                $routerId, $params['username'] ?? ''
+                $routerId, $params['username'] ?? '', null, $adminId
             ),
             'disconnect_pppoe' => $this->commandSender->disconnectPPPoEUser(
-                $routerId, $params['username'] ?? ''
+                $routerId, $params['username'] ?? '', $adminId
             ),
-            'create_pppoe' => $this->commandSender->createPPPoEUser($routerId, $params),
+            'create_pppoe' => $this->commandSender->createPPPoEUser($routerId, $params, $adminId),
             'delete_pppoe' => $this->commandSender->deletePPPoEUser(
-                $routerId, $params['username'] ?? ''
+                $routerId, $params['username'] ?? '', $adminId
             ),
             'set_rate_limit' => $this->commandSender->setUserRateLimit(
-                $routerId, $params['username'] ?? '', $params['rate_limit'] ?? ''
+                $routerId, $params['username'] ?? '', $params['rate_limit'] ?? '', $adminId
             ),
             'toggle_user' => $this->commandSender->setUserDisabled(
-                $routerId, $params['username'] ?? '', $params['disabled'] ?? true
+                $routerId, $params['username'] ?? '', $params['disabled'] ?? true, $adminId
             ),
             'log' => $this->commandSender->sendLogMessage(
-                $routerId, $params['message'] ?? 'Test'
+                $routerId, $params['message'] ?? 'Test', $adminId
             ),
             default => false,
         };

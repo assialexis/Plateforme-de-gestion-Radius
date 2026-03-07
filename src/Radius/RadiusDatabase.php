@@ -5437,6 +5437,7 @@ class RadiusDatabase
             SELECT
                 pu.id,
                 pu.username,
+                pu.admin_id,
                 pu.fup_data_used,
                 pu.fup_data_offset,
                 pu.fup_triggered,
@@ -5571,11 +5572,13 @@ class RadiusDatabase
         }
 
         // Utiliser la nouvelle méthode qui modifie la queue en temps réel
+        $userAdminId = $status['admin_id'] ?? null;
         return $commandSender->setActiveQueueSpeed(
             $routerId,
             $status['username'],
             $status['fup_download_speed'],
-            $status['fup_upload_speed']
+            $status['fup_upload_speed'],
+            $userAdminId ? (int)$userAdminId : null
         );
     }
 
@@ -5875,9 +5878,11 @@ class RadiusDatabase
             return false;
         }
 
+        $userAdminId = $status['admin_id'] ?? null;
         return (bool)$commandSender->disconnectPPPoEUser(
             $routerId,
-            $status['username']
+            $status['username'],
+            $userAdminId ? (int)$userAdminId : null
         );
     }
 

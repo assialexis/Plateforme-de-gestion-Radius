@@ -308,7 +308,7 @@ class SessionController
             // 2. TOUJOURS envoyer aussi la commande polling (filet de sécurité)
             $routerId = $nas['router_id'] ?? null;
             if ($routerId) {
-                $this->commandSender->disconnectHotspotUser($routerId, $username);
+                $this->commandSender->disconnectHotspotUser($routerId, $username, null, $adminId);
                 $methods[] = 'commande polling';
             }
         }
@@ -479,7 +479,7 @@ class SessionController
 
                 // 2. TOUJOURS envoyer aussi la commande polling (filet de sécurité)
                 if ($routerId) {
-                    $this->commandSender->disconnectHotspotUser($routerId, $username);
+                    $this->commandSender->disconnectHotspotUser($routerId, $username, null, $this->getAdminId());
                 }
 
                 // Marquer comme terminé

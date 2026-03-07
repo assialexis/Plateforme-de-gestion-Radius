@@ -398,7 +398,7 @@ class MikroTikCommandSender
     /**
      * Déconnecter un utilisateur Hotspot
      */
-    public function disconnectHotspotUser(string $routerId, string $username, ?string $nasUrl = null): int|false
+    public function disconnectHotspotUser(string $routerId, string $username, ?string $nasUrl = null, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
 
@@ -427,13 +427,13 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, "Déconnexion hotspot {$username}", 10, 'disconnect_hotspot');
+        return $this->send($routerId, $command, "Déconnexion hotspot {$username}", 10, 'disconnect_hotspot', 600, $adminId);
     }
 
     /**
      * Déconnecter un utilisateur PPPoE
      */
-    public function disconnectPPPoEUser(string $routerId, string $username): int|false
+    public function disconnectPPPoEUser(string $routerId, string $username, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
         $command = <<<RSC
@@ -449,13 +449,13 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, "Déconnexion PPPoE {$username}", 10, 'disconnect_pppoe');
+        return $this->send($routerId, $command, "Déconnexion PPPoE {$username}", 10, 'disconnect_pppoe', 600, $adminId);
     }
 
     /**
      * Changer le débit d'un utilisateur PPPoE (FUP)
      */
-    public function setUserRateLimit(string $routerId, string $username, string $rateLimit): int|false
+    public function setUserRateLimit(string $routerId, string $username, string $rateLimit, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
         $rateLimit = addslashes($rateLimit);
@@ -479,13 +479,13 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, "Rate limit {$username} -> {$rateLimit}", 20, 'set_rate_limit');
+        return $this->send($routerId, $command, "Rate limit {$username} -> {$rateLimit}", 20, 'set_rate_limit', 600, $adminId);
     }
 
     /**
      * Déclencher le FUP : déconnecter le client du MikroTik
      */
-    public function setActiveQueueSpeed(string $routerId, string $username, int $downloadSpeed, int $uploadSpeed): int|false
+    public function setActiveQueueSpeed(string $routerId, string $username, int $downloadSpeed, int $uploadSpeed, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
         $rateLimit = $this->formatSpeed($uploadSpeed) . '/' . $this->formatSpeed($downloadSpeed);
@@ -494,13 +494,13 @@ RSC;
 :foreach i in=[/ppp active find name="{$username}"] do={ /ppp active remove \$i }
 RSC;
 
-        return $this->send($routerId, $command, "FUP declenchement {$username} ({$rateLimit})", 10, 'fup_trigger');
+        return $this->send($routerId, $command, "FUP declenchement {$username} ({$rateLimit})", 10, 'fup_trigger', 600, $adminId);
     }
 
     /**
      * Réinitialiser le FUP : déconnecter le client pour qu'il se reconnecte avec le débit normal
      */
-    public function removeFupQueue(string $routerId, string $username): int|false
+    public function removeFupQueue(string $routerId, string $username, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
         $command = <<<RSC
@@ -508,7 +508,7 @@ RSC;
 :foreach i in=[/ppp active find name="{$username}"] do={ /ppp active remove \$i }
 RSC;
 
-        return $this->send($routerId, $command, "FUP reset {$username}", 10, 'fup_reset');
+        return $this->send($routerId, $command, "FUP reset {$username}", 10, 'fup_reset', 600, $adminId);
     }
 
     /**
@@ -528,7 +528,7 @@ RSC;
     /**
      * Activer ou désactiver un utilisateur PPPoE
      */
-    public function setUserDisabled(string $routerId, string $username, bool $disabled): int|false
+    public function setUserDisabled(string $routerId, string $username, bool $disabled, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
         $state = $disabled ? 'yes' : 'no';
@@ -544,13 +544,13 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, ucfirst($action) . " {$username}", 15, 'toggle_user');
+        return $this->send($routerId, $command, ucfirst($action) . " {$username}", 15, 'toggle_user', 600, $adminId);
     }
 
     /**
      * Créer un utilisateur PPPoE sur le routeur
      */
-    public function createPPPoEUser(string $routerId, array $user): int|false
+    public function createPPPoEUser(string $routerId, array $user, ?int $adminId = null): int|false
     {
         $name = addslashes($user['name'] ?? '');
         $password = addslashes($user['password'] ?? '');
@@ -582,13 +582,13 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, "Création PPPoE {$name}", 30, 'create_pppoe');
+        return $this->send($routerId, $command, "Création PPPoE {$name}", 30, 'create_pppoe', 600, $adminId);
     }
 
     /**
      * Supprimer un utilisateur PPPoE du routeur
      */
-    public function deletePPPoEUser(string $routerId, string $username): int|false
+    public function deletePPPoEUser(string $routerId, string $username, ?int $adminId = null): int|false
     {
         $username = addslashes($username);
 
@@ -609,18 +609,18 @@ RSC;
 }
 RSC;
 
-        return $this->send($routerId, $command, "Suppression PPPoE {$username}", 25, 'delete_pppoe');
+        return $this->send($routerId, $command, "Suppression PPPoE {$username}", 25, 'delete_pppoe', 600, $adminId);
     }
 
     /**
      * Envoyer un message de log au routeur (pour test)
      */
-    public function sendLogMessage(string $routerId, string $message): int|false
+    public function sendLogMessage(string $routerId, string $message, ?int $adminId = null): int|false
     {
         $message = addslashes($message);
         $command = ":log info \"NAS: {$message}\"";
 
-        return $this->send($routerId, $command, "Log: {$message}", 99, 'log');
+        return $this->send($routerId, $command, "Log: {$message}", 99, 'log', 600, $adminId);
     }
 
     /**

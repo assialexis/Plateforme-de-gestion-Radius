@@ -521,6 +521,7 @@ class PPPoEController
     {
         $pdo = $this->db->getPdo();
         $sent = false;
+        $adminId = $this->getAdminId();
 
         // 1. D'abord essayer via la zone de l'utilisateur
         $zoneId = $user['zone_id'] ?? null;
@@ -531,7 +532,7 @@ class PPPoEController
             ");
             $stmt->execute([$zoneId]);
             while ($nas = $stmt->fetch()) {
-                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'])) {
+                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
                     $sent = true;
                 }
             }
@@ -550,7 +551,7 @@ class PPPoEController
             $session = $stmt->fetch();
 
             if ($session && $session['router_id']) {
-                $sent = $this->commandSender->disconnectPPPoEUser($session['router_id'], $user['username']);
+                $sent = $this->commandSender->disconnectPPPoEUser($session['router_id'], $user['username'], $adminId);
             }
         }
 
@@ -558,7 +559,7 @@ class PPPoEController
         if (!$sent) {
             $stmt = $pdo->query("SELECT router_id FROM nas WHERE router_id IS NOT NULL AND router_id != ''");
             while ($nas = $stmt->fetch()) {
-                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'])) {
+                if ($this->commandSender->disconnectPPPoEUser($nas['router_id'], $user['username'], $adminId)) {
                     $sent = true;
                 }
             }
@@ -575,6 +576,7 @@ class PPPoEController
         $pdo = $this->db->getPdo();
         $username = $user['username'] ?? '';
         if (empty($username)) return;
+        $adminId = $this->getAdminId();
 
         $zoneId = $user['zone_id'] ?? null;
         if ($zoneId) {
@@ -584,12 +586,12 @@ class PPPoEController
             ");
             $stmt->execute([$zoneId]);
             while ($nas = $stmt->fetch()) {
-                $this->commandSender->removeFupQueue($nas['router_id'], $username);
+                $this->commandSender->removeFupQueue($nas['router_id'], $username, $adminId);
             }
         } else {
             $stmt = $pdo->query("SELECT router_id FROM nas WHERE router_id IS NOT NULL AND router_id != ''");
             while ($nas = $stmt->fetch()) {
-                $this->commandSender->removeFupQueue($nas['router_id'], $username);
+                $this->commandSender->removeFupQueue($nas['router_id'], $username, $adminId);
             }
         }
     }
