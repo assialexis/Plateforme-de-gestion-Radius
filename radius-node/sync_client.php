@@ -237,12 +237,12 @@ function applyPullData(PDO $pdo, array $data): array
             }
         }
 
-        // Sync PPPoE profiles
+        // Sync PPPoE profiles (inclure colonnes FUP pour que le nœud applique les politiques)
         if (!empty($data['pppoe_profiles'])) {
             $pdo->exec("DELETE FROM pppoe_profiles");
             $stmt = $pdo->prepare("
-                INSERT INTO pppoe_profiles (id, zone_id, name, description, download_speed, upload_speed, data_limit, validity_days, price, ip_pool_name, local_address, simultaneous_use, burst_download, burst_upload, burst_threshold, burst_time, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pppoe_profiles (id, zone_id, name, description, download_speed, upload_speed, data_limit, validity_days, price, ip_pool_name, local_address, simultaneous_use, burst_download, burst_upload, burst_threshold, burst_time, is_active, fup_enabled, fup_quota, fup_download_speed, fup_upload_speed, fup_reset_day, fup_reset_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             foreach ($data['pppoe_profiles'] as $pp) {
                 $stmt->execute([
@@ -251,7 +251,10 @@ function applyPullData(PDO $pdo, array $data): array
                     $pp['data_limit'] ?? 0, $pp['validity_days'] ?? 30, $pp['price'] ?? 0,
                     $pp['ip_pool_name'] ?? null, $pp['local_address'] ?? null,
                     $pp['simultaneous_use'] ?? 1, $pp['burst_download'] ?? 0, $pp['burst_upload'] ?? 0,
-                    $pp['burst_threshold'] ?? 0, $pp['burst_time'] ?? 0, $pp['is_active'] ?? 1
+                    $pp['burst_threshold'] ?? 0, $pp['burst_time'] ?? 0, $pp['is_active'] ?? 1,
+                    $pp['fup_enabled'] ?? 0, $pp['fup_quota'] ?? 0,
+                    $pp['fup_download_speed'] ?? 0, $pp['fup_upload_speed'] ?? 0,
+                    $pp['fup_reset_day'] ?? 1, $pp['fup_reset_type'] ?? 'monthly'
                 ]);
                 $stats['pppoe_profiles'] = ($stats['pppoe_profiles'] ?? 0) + 1;
             }

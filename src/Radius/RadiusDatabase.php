@@ -5377,11 +5377,18 @@ class RadiusDatabase
                 $this->pdo->exec("
                     ALTER TABLE pppoe_users
                     ADD COLUMN fup_data_used BIGINT DEFAULT 0 AFTER data_used,
-                    ADD COLUMN fup_triggered TINYINT(1) DEFAULT 0 AFTER fup_data_used,
+                    ADD COLUMN fup_data_offset BIGINT DEFAULT 0 AFTER fup_data_used,
+                    ADD COLUMN fup_triggered TINYINT(1) DEFAULT 0 AFTER fup_data_offset,
                     ADD COLUMN fup_triggered_at TIMESTAMP NULL AFTER fup_triggered,
                     ADD COLUMN fup_last_reset TIMESTAMP NULL AFTER fup_triggered_at,
                     ADD COLUMN fup_override TINYINT(1) DEFAULT 0 AFTER fup_last_reset
                 ");
+            }
+
+            // S'assurer que fup_data_offset existe (ajouté après la création initiale)
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM pppoe_users LIKE 'fup_data_offset'");
+            if (!$stmt->fetch()) {
+                $this->pdo->exec("ALTER TABLE pppoe_users ADD COLUMN fup_data_offset BIGINT DEFAULT 0 AFTER fup_data_used");
             }
 
             // Créer table des logs FUP si n'existe pas
