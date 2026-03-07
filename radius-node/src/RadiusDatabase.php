@@ -6185,22 +6185,108 @@ class RadiusDatabase
      */
     private function applyFupSpeedToMikrotik(int $userId, array $status): bool
     {
-        require_once __DIR__ . '/../MikroTik/CommandSender.php';
-        $commandSender = new \MikroTikCommandSender();
+        $routerId = $this->getRouterIdForUser($userId);
+        if (!$routerId) {
+            error_log("FUP: Impossible de trouver le router_id pour l'utilisateur PPPoE #{$userId}");
+            return false;
+        }
 
-        // Récupérer le router_id du NAS
+        $username = addslashes($status['username']);
+        $upload = $this->formatSpeedForMikrotik($status['fup_upload_speed']);
+        $download = $this->formatSpeedForMikrotik($status['fup_download_speed']);
+        $rateLimit = "{$upload}/{$download}";
+
+        $command = ":log info \"NAS-FUP: Declenchement FUP {$username} ({$rateLimit})\"\n" .
+                   ":foreach i in=[/ppp active find name=\"{$username}\"] do={ /ppp active remove \$i }";
+
+        return $this->pushCommandToPlatform($routerId, $command, "FUP trigger {$username}", 'fup_trigger');
+    }
+
+    /**
+     * Appliquer le débit normal sur MikroTik (restauration FUP)
+     */
+    private function applyNormalSpeedToMikrotik(int $userId, array $status): bool
+    {
         $routerId = $this->getRouterIdForUser($userId);
         if (!$routerId) {
             return false;
         }
 
-        // Utiliser la nouvelle méthode qui modifie la queue en temps réel
-        return $commandSender->setActiveQueueSpeed(
-            $routerId,
-            $status['username'],
-            $status['fup_download_speed'],
-            $status['fup_upload_speed']
-        );
+        $username = addslashes($status['username']);
+        $command = ":log info \"NAS-FUP: Reset FUP {$username}\"\n" .
+                   ":foreach i in=[/ppp active find name=\"{$username}\"] do={ /ppp active remove \$i }";
+
+        return $this->pushCommandToPlatform($routerId, $command, "FUP reset {$username}", 'fup_reset');
+    }
+
+    /**
+     * Envoyer une commande MikroTik au serveur central pour exécution
+     */
+    private function pushCommandToPlatform(string $routerId, string $command, string $description, string $commandType = 'raw'): bool
+    {
+        $configFile = __DIR__ . '/../config/config.php';
+        if (!file_exists($configFile)) {
+            error_log("FUP pushCommand: config manquante");
+            return false;
+        }
+
+        $config = require $configFile;
+        $platformUrl = rtrim($config['platform']['url'] ?? '', '/');
+        $serverCode = $config['platform']['server_code'] ?? '';
+        $syncToken = $config['platform']['sync_token'] ?? '';
+
+        if (empty($platformUrl) || empty($syncToken) || empty($serverCode)) {
+            error_log("FUP pushCommand: config plateforme incomplète");
+            return false;
+        }
+
+        $url = "{$platformUrl}/node_sync.php?action=queue_command&server={$serverCode}";
+        $data = json_encode([
+            'router_id' => $routerId,
+            'command' => $command,
+            'description' => $description,
+            'command_type' => $commandType,
+            'priority' => 5,
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $data,
+            CURLOPT_HTTPHEADER => [
+                'X-Node-Token: ' . $syncToken,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            error_log("FUP pushCommand OK: {$description} (router={$routerId})");
+            return true;
+        }
+
+        error_log("FUP pushCommand FAILED (HTTP {$httpCode}): {$description} - response: {$response}");
+        return false;
+    }
+
+    /**
+     * Formater vitesse en bps pour MikroTik
+     */
+    private function formatSpeedForMikrotik(int $bps): string
+    {
+        if ($bps >= 1000000) {
+            return round($bps / 1000000) . 'M';
+        } elseif ($bps >= 1000) {
+            return round($bps / 1000) . 'k';
+        }
+        return $bps . '';
     }
 
     /**
@@ -6235,15 +6321,29 @@ class RadiusDatabase
             return $result['router_id'];
         }
 
-        // 3. Essayer via la session active
+        // 3. Essayer via la session active (wildcard NAS fallback)
         $stmt = $this->pdo->prepare("
             SELECT n.router_id
             FROM pppoe_sessions ps
-            JOIN nas n ON ps.nas_ip = n.nasname
-            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL AND n.router_id IS NOT NULL
+            JOIN pppoe_users pu ON ps.pppoe_user_id = pu.id
+            JOIN nas n ON n.zone_id = pu.zone_id
+            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL
+              AND n.router_id IS NOT NULL AND n.router_id != ''
             LIMIT 1
         ");
         $stmt->execute([$userId]);
+        $result = $stmt->fetch();
+        if ($result && $result['router_id']) {
+            return $result['router_id'];
+        }
+
+        // 4. Dernier recours : n'importe quel NAS avec router_id
+        $stmt = $this->pdo->prepare("
+            SELECT n.router_id FROM nas n
+            WHERE n.router_id IS NOT NULL AND n.router_id != ''
+            ORDER BY n.last_seen DESC LIMIT 1
+        ");
+        $stmt->execute();
         $result = $stmt->fetch();
         if ($result && $result['router_id']) {
             return $result['router_id'];
@@ -6453,25 +6553,6 @@ class RadiusDatabase
         }
 
         return $result;
-    }
-
-    /**
-     * Appliquer le débit normal sur MikroTik (restauration FUP)
-     */
-    private function applyNormalSpeedToMikrotik(int $userId, array $status): bool
-    {
-        require_once __DIR__ . '/../MikroTik/CommandSender.php';
-        $commandSender = new \MikroTikCommandSender();
-
-        $routerId = $this->getRouterIdForUser($userId);
-        if (!$routerId) {
-            return false;
-        }
-
-        return $commandSender->restoreUserNormalSpeed(
-            $routerId,
-            $status['username']
-        );
     }
 
     /**

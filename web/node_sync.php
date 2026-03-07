@@ -98,6 +98,10 @@ switch ($action) {
         handleDownload($server);
         break;
 
+    case 'queue_command':
+        handleQueueCommand($db, $server);
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'INVALID_ACTION']);
@@ -235,4 +239,43 @@ function handleDownload(array $server): void
 
     readfile($tmpFile);
     unlink($tmpFile);
+}
+
+/**
+ * Queue Command - Le nœud envoie une commande MikroTik à exécuter via le central
+ * Utilisé pour FUP trigger/reset (déconnexion PPPoE)
+ */
+function handleQueueCommand(RadiusDatabase $db, array $server): void
+{
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $routerId = $input['router_id'] ?? '';
+    $command = $input['command'] ?? '';
+    $description = $input['description'] ?? null;
+    $priority = (int)($input['priority'] ?? 10);
+    $commandType = $input['command_type'] ?? 'raw';
+
+    if (empty($routerId) || empty($command)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'MISSING_PARAMS', 'message' => 'router_id et command requis']);
+        return;
+    }
+
+    try {
+        require_once __DIR__ . '/../src/MikroTik/CommandSender.php';
+        $commandSender = new MikroTikCommandSender($db->getPdo());
+
+        $cmdId = $commandSender->send($routerId, $command, $description, $priority, $commandType);
+
+        if ($cmdId) {
+            echo json_encode(['status' => 'ok', 'command_id' => $cmdId]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'QUEUE_FAILED']);
+        }
+    } catch (Exception $e) {
+        error_log("node_sync queue_command error: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'QUEUE_ERROR', 'message' => $e->getMessage()]);
+    }
 }

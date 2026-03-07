@@ -5572,7 +5572,7 @@ class RadiusDatabase
             return $result['router_id'];
         }
 
-        // 2. Essayer via zone_id de l'utilisateur
+        // 2. Essayer via zone_id de l'utilisateur → NAS de la zone
         $stmt = $this->pdo->prepare("
             SELECT n.router_id
             FROM pppoe_users pu
@@ -5586,12 +5586,14 @@ class RadiusDatabase
             return $result['router_id'];
         }
 
-        // 3. Essayer via la session active
+        // 3. Essayer via la session active → NAS de la zone du user
         $stmt = $this->pdo->prepare("
             SELECT n.router_id
             FROM pppoe_sessions ps
-            JOIN nas n ON ps.nas_ip = n.nasname
-            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL AND n.router_id IS NOT NULL
+            JOIN pppoe_users pu ON ps.pppoe_user_id = pu.id
+            JOIN nas n ON n.zone_id = pu.zone_id
+            WHERE ps.pppoe_user_id = ? AND ps.stop_time IS NULL
+              AND n.router_id IS NOT NULL AND n.router_id != ''
             LIMIT 1
         ");
         $stmt->execute([$userId]);
