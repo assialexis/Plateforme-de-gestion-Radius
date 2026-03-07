@@ -5854,7 +5854,7 @@ class RadiusDatabase
             return false;
         }
 
-        return $commandSender->restoreUserNormalSpeed(
+        return (bool)$commandSender->disconnectPPPoEUser(
             $routerId,
             $status['username']
         );
