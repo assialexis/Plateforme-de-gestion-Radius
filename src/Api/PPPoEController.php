@@ -1433,10 +1433,15 @@ class PPPoEController
             jsonError('NodePushService non disponible', 500);
         }
 
-        $nodeData = $this->pushService->queryNodeFupStatus($id, $user['zone_id'] ?? null);
+        $result = $this->pushService->queryNodeFupStatus($id, $user['zone_id'] ?? null);
 
-        if ($nodeData === null) {
-            jsonError('Nœud RADIUS injoignable', 503);
+        if ($result['error']) {
+            jsonError($result['error'], 503);
+        }
+
+        $nodeData = $result['data'];
+        if (!$nodeData) {
+            jsonError('Aucune donnée retournée par le nœud', 503);
         }
 
         // Formater pour l'affichage

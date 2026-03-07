@@ -1771,6 +1771,7 @@ function pppoeUserPage() {
             if (!this.userId) return;
 
             this.loadingNodeFup = true;
+            this.nodeStatus = null;
             try {
                 const response = await API.get(`/pppoe/users/${this.userId}/fup/node`);
                 if (response.success && response.data) {
@@ -1778,12 +1779,10 @@ function pppoeUserPage() {
                     showToast(__('pppoe_user.fup_node_sync_success'), 'success');
                 } else {
                     showToast(response.message || __('pppoe_user.fup_node_unreachable'), 'error');
-                    this.nodeStatus = null;
                 }
             } catch (error) {
                 console.error('Error loading node FUP status:', error);
-                showToast(__('pppoe_user.fup_node_unreachable'), 'error');
-                this.nodeStatus = null;
+                showToast(error.message || __('pppoe_user.fup_node_unreachable'), 'error');
             } finally {
                 this.loadingNodeFup = false;
             }

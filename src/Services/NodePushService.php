@@ -130,16 +130,41 @@ class NodePushService
     }
 
     /**
+     * Construire l'URL de base du webhook d'un nœud
+     */
+    private function buildNodeUrl(array $server): string
+    {
+        $host = $server['host'] ?? '';
+        $port = (int)($server['webhook_port'] ?? 443);
+
+        // Si le host inclut déjà le protocole, l'utiliser tel quel
+        if (preg_match('#^https?://#', $host)) {
+            $url = rtrim($host, '/');
+        } else {
+            // Choisir le protocole selon le port
+            $protocol = ($port === 443) ? 'https' : 'http';
+            $url = $protocol . '://' . $host;
+        }
+
+        // Ajouter le port seulement si non-standard
+        if ($port && $port != 443 && $port != 80) {
+            // Vérifier que le port n'est pas déjà dans l'URL
+            if (!preg_match('#:\d+$#', parse_url($url, PHP_URL_HOST) . '')) {
+                $url .= ':' . $port;
+            }
+        }
+
+        $url .= ($server['webhook_path'] ?? '/webhook.php');
+        return $url;
+    }
+
+    /**
      * Envoyer un webhook à un nœud RADIUS spécifique
      * Non-bloquant : si le push échoue, le nœud récupérera les données au prochain pull
      */
     private function pushToNode(array $server, string $event, array $data): void
     {
-        $url = 'https://' . $server['host'];
-        if (!empty($server['webhook_port']) && $server['webhook_port'] != 443) {
-            $url .= ':' . $server['webhook_port'];
-        }
-        $url .= ($server['webhook_path'] ?? '/webhook.php');
+        $url = $this->buildNodeUrl($server);
 
         $payload = json_encode([
             'event' => $event,
@@ -176,9 +201,9 @@ class NodePushService
 
     /**
      * Interroger le nœud RADIUS pour obtenir le statut FUP en temps réel
-     * Retourne les données du nœud ou null si injoignable
+     * Retourne ['data' => ..., 'error' => null] ou ['data' => null, 'error' => '...']
      */
-    public function queryNodeFupStatus(int $userId, ?int $zoneId): ?array
+    public function queryNodeFupStatus(int $userId, ?int $zoneId): array
     {
         $server = null;
 
@@ -197,26 +222,30 @@ class NodePushService
             }
         }
 
-        if (!$server || !$server['is_active']) {
-            return null;
+        if (!$server) {
+            return ['data' => null, 'error' => 'Aucun serveur RADIUS configuré'];
         }
 
-        $url = 'https://' . $server['host'];
-        if (!empty($server['webhook_port']) && $server['webhook_port'] != 443) {
-            $url .= ':' . $server['webhook_port'];
+        if (!$server['is_active']) {
+            return ['data' => null, 'error' => "Serveur RADIUS '{$server['name']}' désactivé"];
         }
-        $url .= ($server['webhook_path'] ?? '/webhook.php');
-        $url .= '?action=fup_status&user_id=' . $userId;
+
+        if (empty($server['host'])) {
+            return ['data' => null, 'error' => "Champ 'host' vide pour le serveur '{$server['name']}'"];
+        }
+
+        $url = $this->buildNodeUrl($server) . '?action=fup_status&user_id=' . $userId;
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
-                'X-Platform-Token: ' . $server['platform_token'],
+                'X-Platform-Token: ' . ($server['platform_token'] ?? ''),
             ],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 5,
             CURLOPT_CONNECTTIMEOUT => 3,
             CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_FOLLOWLOCATION => true,
         ]);
 
         $response = curl_exec($ch);
@@ -224,16 +253,25 @@ class NodePushService
         $error = curl_error($ch);
         curl_close($ch);
 
-        if ($httpCode !== 200 || $error || !$response) {
-            error_log("[NodePush] FUP query failed to {$server['code']} ({$server['host']}): HTTP {$httpCode}, Error: {$error}");
-            return null;
+        if ($error) {
+            error_log("[NodePush] FUP query failed to {$server['code']} ({$url}): {$error}");
+            return ['data' => null, 'error' => "Connexion échouée vers {$server['host']}: {$error}"];
+        }
+
+        if ($httpCode === 403) {
+            return ['data' => null, 'error' => 'Token rejeté par le nœud (vérifier platform_token)'];
+        }
+
+        if ($httpCode !== 200) {
+            error_log("[NodePush] FUP query failed to {$server['code']} ({$url}): HTTP {$httpCode}");
+            return ['data' => null, 'error' => "Nœud a répondu HTTP {$httpCode} ({$url})"];
         }
 
         $result = json_decode($response, true);
         if (!$result || ($result['status'] ?? '') !== 'ok') {
-            return null;
+            return ['data' => null, 'error' => 'Réponse invalide du nœud: ' . substr($response, 0, 200)];
         }
 
-        return $result['data'] ?? null;
+        return ['data' => $result['data'] ?? null, 'error' => null];
     }
 }
