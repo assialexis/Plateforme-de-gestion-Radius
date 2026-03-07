@@ -288,10 +288,15 @@ function applyPullData(PDO $pdo, array $data): array
                     zone_id = VALUES(zone_id), nas_id = VALUES(nas_id), admin_id = VALUES(admin_id),
                     fup_override = VALUES(fup_override)
             ");
-            // Préparer la requête pour propager les resets FUP du central vers le nœud
+            // Requête pour recalculer le total local des sessions
+            $stmtLocalTotal = $pdo->prepare("
+                SELECT COALESCE(SUM(input_octets + output_octets), 0) FROM pppoe_sessions WHERE pppoe_user_id = ?
+            ");
+
+            // Requête pour propager le reset FUP du central vers le nœud
             $stmtFupSync = $pdo->prepare("
                 UPDATE pppoe_users
-                SET fup_data_used = ?, fup_data_offset = ?, fup_triggered = ?,
+                SET fup_data_used = 0, fup_data_offset = ?, fup_triggered = ?,
                     fup_triggered_at = ?, fup_last_reset = ?
                 WHERE id = ? AND (fup_last_reset IS NULL OR fup_last_reset < ?)
             ");
@@ -310,11 +315,14 @@ function applyPullData(PDO $pdo, array $data): array
                 ]);
 
                 // Propager le reset FUP si le central a un reset plus récent que le nœud
+                // Utiliser le total LOCAL des sessions comme offset (pas celui du central)
                 $centralLastReset = $user['fup_last_reset'] ?? null;
                 if ($centralLastReset) {
+                    $stmtLocalTotal->execute([$user['id']]);
+                    $localTotal = (int)$stmtLocalTotal->fetchColumn();
+
                     $stmtFupSync->execute([
-                        $user['fup_data_used'] ?? 0,
-                        $user['fup_data_offset'] ?? 0,
+                        $localTotal,
                         $user['fup_triggered'] ?? 0,
                         $user['fup_triggered_at'] ?? null,
                         $centralLastReset,
