@@ -381,7 +381,7 @@ function applyPullData(PDO $pdo, array $data): array
                                 $syncToken = $config['platform']['sync_token'] ?? '';
 
                                 $escapedUsername = addslashes($user['username']);
-                                $command = ":foreach i in=[/ppp active find name=\"{$escapedUsername}\"] do={ /ppp active remove \$i }";
+                                $command = ":log info \"NAS: FUP reset sync - Deconnexion {$escapedUsername}\"\n:local found false\n:foreach activeId in=[/ppp active find name=\"{$escapedUsername}\"] do={\n    :set found true\n    /ppp active remove \$activeId\n    :log info \"NAS: Session PPPoE {$escapedUsername} deconnectee\"\n}\n:if (\$found = false) do={\n    :log info \"NAS: Utilisateur {$escapedUsername} n'est pas connecte\"\n}";
 
                                 $url = "{$platformUrl}/node_sync.php?action=queue_command&server={$serverCode}";
                                 $payload = [

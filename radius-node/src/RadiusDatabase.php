@@ -6313,9 +6313,9 @@ class RadiusDatabase
             return false;
         }
 
-        // Générer la commande MikroTik de déconnexion
+        // Générer la commande MikroTik de déconnexion (format RSC multi-ligne pour /import)
         $escapedUsername = addslashes($username);
-        $command = ":foreach i in=[/ppp active find name=\"{$escapedUsername}\"] do={ /ppp active remove \$i }";
+        $command = ":log info \"NAS: FUP {$reason} - Deconnexion {$escapedUsername}\"\n:local found false\n:foreach activeId in=[/ppp active find name=\"{$escapedUsername}\"] do={\n    :set found true\n    /ppp active remove \$activeId\n    :log info \"NAS: Session PPPoE {$escapedUsername} deconnectee\"\n}\n:if (\$found = false) do={\n    :log info \"NAS: Utilisateur {$escapedUsername} n'est pas connecte\"\n}";
 
         $result = $this->pushCommandToPlatform($routerId, $command, "FUP {$reason}: Déconnexion PPPoE {$username}", 'disconnect_pppoe', $adminId);
         error_log("FUP {$reason}: Push disconnect → " . ($result ? 'QUEUED' : 'FAILED') . " (user={$username}, router={$routerId}, admin={$adminId})");
