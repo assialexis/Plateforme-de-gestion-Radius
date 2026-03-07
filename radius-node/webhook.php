@@ -134,6 +134,10 @@ function handleEvent(PDO $pdo, string $event, array $data): string
             $pdo->prepare("DELETE FROM pppoe_users WHERE id = ?")->execute([$data['id']]);
             return 'deleted';
 
+        // --- FUP Reset (push instantané depuis le central) ---
+        case 'pppoe_user.fup_reset':
+            return handleFupReset($pdo, $data);
+
         default:
             return 'unknown_event';
     }
@@ -240,4 +244,28 @@ function upsertPPPoEUser(PDO $pdo, array $u): string
         $u['valid_until'] ?? null, $u['simultaneous_use'] ?? 1
     ]);
     return 'upserted';
+}
+
+function handleFupReset(PDO $pdo, array $data): string
+{
+    $userId = $data['id'] ?? 0;
+    if (!$userId) return 'missing_id';
+
+    $stmt = $pdo->prepare("
+        UPDATE pppoe_users SET
+            fup_triggered = 0,
+            fup_triggered_at = NULL,
+            fup_data_used = 0,
+            fup_data_offset = ?,
+            fup_last_reset = ?
+        WHERE id = ?
+    ");
+    $stmt->execute([
+        $data['fup_data_offset'] ?? 0,
+        $data['fup_last_reset'] ?? date('Y-m-d H:i:s'),
+        $userId
+    ]);
+
+    error_log("[Webhook] FUP reset for user #{$userId} ({$data['username'] ?? '?'}) - fup_triggered=0");
+    return 'fup_reset_applied';
 }

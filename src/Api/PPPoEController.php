@@ -10,12 +10,14 @@ class PPPoEController
     private RadiusDatabase $db;
     private AuthService $auth;
     private MikroTikCommandSender $commandSender;
+    private ?NodePushService $pushService;
 
-    public function __construct(RadiusDatabase $db, AuthService $auth)
+    public function __construct(RadiusDatabase $db, AuthService $auth, ?NodePushService $pushService = null)
     {
         $this->db = $db;
         $this->auth = $auth;
         $this->commandSender = new MikroTikCommandSender($db->getPdo());
+        $this->pushService = $pushService;
     }
 
     private function getAdminId(): ?int
@@ -1466,10 +1468,20 @@ class PPPoEController
         try {
             $this->db->resetFup($id, 'admin');
 
+            // Push instantané du reset FUP vers le nœud (sans attendre le pull sync 60s)
+            $status = $this->db->getPPPoEUserFupStatus($id);
+            if ($this->pushService && $status) {
+                try {
+                    $this->pushService->notifyFupReset($user, $status);
+                } catch (\Throwable $e) {
+                    // Non-bloquant : le pull sync rattrapera
+                    error_log("FUP reset push failed: " . $e->getMessage());
+                }
+            }
+
             // Déconnecter l'utilisateur sur le routeur
             $this->disconnectPPPoEUserFromRouter($user);
 
-            $status = $this->db->getPPPoEUserFupStatus($id);
             jsonSuccess($status, __('api.pppoe_fup_reset_success'));
         } catch (\Throwable $e) {
             jsonError(__('api.pppoe_fup_reset_failed') . ': ' . $e->getMessage(), 500);

@@ -77,6 +77,29 @@ class NodePushService
     }
 
     /**
+     * Notifier le nœud d'un reset FUP (instantané, sans attendre le pull sync)
+     */
+    public function notifyFupReset(array $user, array $fupStatus): void
+    {
+        $data = [
+            'id' => $user['id'],
+            'username' => $user['username'],
+            'fup_triggered' => 0,
+            'fup_triggered_at' => null,
+            'fup_data_used' => 0,
+            'fup_data_offset' => $fupStatus['fup_data_offset'] ?? 0,
+            'fup_last_reset' => $fupStatus['fup_last_reset'] ?? date('Y-m-d H:i:s'),
+        ];
+
+        $zoneId = $user['zone_id'] ?? null;
+        if ($zoneId === null) {
+            $this->pushToAllNodes('pppoe_user.fup_reset', $data);
+        } else {
+            $this->pushToZoneNodes($zoneId, 'pppoe_user.fup_reset', $data);
+        }
+    }
+
+    /**
      * Pousser un événement vers les nœuds d'une zone spécifique
      */
     private function pushToZoneNodes(?int $zoneId, string $event, array $data): void

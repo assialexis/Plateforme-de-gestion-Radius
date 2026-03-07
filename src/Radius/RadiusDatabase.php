@@ -5438,6 +5438,7 @@ class RadiusDatabase
                 pu.id,
                 pu.username,
                 pu.fup_data_used,
+                pu.fup_data_offset,
                 pu.fup_triggered,
                 pu.fup_triggered_at,
                 pu.fup_last_reset,
