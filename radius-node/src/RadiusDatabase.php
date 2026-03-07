@@ -6213,41 +6213,67 @@ class RadiusDatabase
 
     /**
      * Appliquer le débit FUP sur MikroTik en temps réel
+     * Envoie un Disconnect-Request CoA directement au NAS (instantané)
      */
     private function applyFupSpeedToMikrotik(int $userId, array $status): bool
     {
-        $routerId = $this->getRouterIdForUser($userId);
-        if (!$routerId) {
-            error_log("FUP: Impossible de trouver le router_id pour l'utilisateur PPPoE #{$userId}");
-            return false;
-        }
-
-        $username = addslashes($status['username']);
-        $upload = $this->formatSpeedForMikrotik($status['fup_upload_speed']);
-        $download = $this->formatSpeedForMikrotik($status['fup_download_speed']);
-        $rateLimit = "{$upload}/{$download}";
-
-        $command = ":log info \"NAS-FUP: Declenchement FUP {$username} ({$rateLimit})\"\n" .
-                   ":foreach i in=[/ppp active find name=\"{$username}\"] do={ /ppp active remove \$i }";
-
-        return $this->pushCommandToPlatform($routerId, $command, "FUP trigger {$username}", 'fup_trigger');
+        return $this->disconnectPPPoEUserFromNas($userId, $status['username'], 'FUP trigger');
     }
 
     /**
      * Appliquer le débit normal sur MikroTik (restauration FUP)
+     * Envoie un Disconnect-Request CoA directement au NAS (instantané)
      */
     private function applyNormalSpeedToMikrotik(int $userId, array $status): bool
     {
-        $routerId = $this->getRouterIdForUser($userId);
-        if (!$routerId) {
+        return $this->disconnectPPPoEUserFromNas($userId, $status['username'], 'FUP reset');
+    }
+
+    /**
+     * Déconnecter un utilisateur PPPoE du NAS via Disconnect-Request CoA
+     * Utilise le même mécanisme que les limites de vouchers (direct, fiable)
+     */
+    private function disconnectPPPoEUserFromNas(int $userId, string $username, string $reason): bool
+    {
+        require_once __DIR__ . '/RadiusServer.php';
+
+        // Trouver la session active pour obtenir le NAS IP et session ID
+        $stmt = $this->pdo->prepare("
+            SELECT acct_session_id, nas_ip FROM pppoe_sessions
+            WHERE pppoe_user_id = ? AND stop_time IS NULL
+            ORDER BY start_time DESC LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $session = $stmt->fetch();
+
+        if (!$session) {
+            error_log("FUP {$reason}: Pas de session active pour user #{$userId}");
             return false;
         }
 
-        $username = addslashes($status['username']);
-        $command = ":log info \"NAS-FUP: Reset FUP {$username}\"\n" .
-                   ":foreach i in=[/ppp active find name=\"{$username}\"] do={ /ppp active remove \$i }";
+        $nasIp = $session['nas_ip'];
+        $sessionId = $session['acct_session_id'];
 
-        return $this->pushCommandToPlatform($routerId, $command, "FUP reset {$username}", 'fup_reset');
+        // Récupérer le secret RADIUS du NAS
+        $secret = $this->getNasSecret($nasIp);
+        if (!$secret) {
+            error_log("FUP {$reason}: Secret NAS introuvable pour {$nasIp}");
+            return false;
+        }
+
+        $configFile = __DIR__ . '/../config/config.php';
+        $config = file_exists($configFile) ? require $configFile : [];
+        $disconnectPort = $config['radius']['disconnect_port'] ?? 3799;
+
+        $disconnected = RadiusServer::sendDisconnect($nasIp, $disconnectPort, $secret, $sessionId, $username);
+
+        if ($disconnected) {
+            error_log("FUP {$reason}: Disconnect-ACK reçu pour {$username} (session {$sessionId}, NAS {$nasIp})");
+        } else {
+            error_log("FUP {$reason}: Disconnect FAILED pour {$username} (session {$sessionId}, NAS {$nasIp})");
+        }
+
+        return $disconnected;
     }
 
     /**
